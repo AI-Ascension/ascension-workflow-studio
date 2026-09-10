@@ -93,6 +93,11 @@
       "scope": "synthetic live owner API evidence in phase1-live-api.json"
     },
     {
+      "command": "sts2-workflow serve + authenticated curl calls against /v1/studio",
+      "status": "passed",
+      "scope": "synthetic live authoring create/save/validate/publish/reload flow in phase2-live-authoring-api.json"
+    },
+    {
       "command": "vite preview + curl / and emitted assets",
       "status": "passed",
       "scope": "local static serving"
@@ -111,7 +116,7 @@
   "unverified": [
     "Firefox and WebKit browser-engine journeys because the verification image lacks their GTK/media libraries",
     "full responsive, 200/400 percent zoom, keyboard and manual screen-reader matrix",
-    "live authenticated harness process attachment and owner draft/publish/browser routes",
+    "live browser attachment and browser pairing/session routes",
     "production static host CSP/routing headers",
     "native D0-D1-D2-D3 Luna Max child-session lineage"
   ]

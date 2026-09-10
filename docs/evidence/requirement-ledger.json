@@ -273,7 +273,7 @@
       "mandatory": true,
       "work_package": "WP-08",
       "status": "partial",
-      "evidence": "Fixture validation and live owner validation are wired; merged owner PR #57 supplies a publication route with digest and validation checks, but no live process evidence is claimed.",
+      "evidence": "Fixture validation and live owner validation are wired; merged owner PR #57 supplies a publication route with digest and validation checks, and the synthetic live process completed validation/publication. Browser and native process evidence remain unavailable.",
       "acceptance_cases": [
         "AT-027"
       ]
@@ -463,7 +463,7 @@
       "mandatory": true,
       "work_package": "WP-15",
       "status": "partial",
-      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; no live process evidence is claimed.",
+      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the synthetic live process completed draft create and reload. Browser integration remains unverified.",
       "acceptance_cases": [
         "AT-046"
       ]
@@ -473,7 +473,7 @@
       "mandatory": true,
       "work_package": "WP-15",
       "status": "partial",
-      "evidence": "Merged owner PR #57 supplies conditional revision/etag writes and client mutation IDs with focused tests; no live process evidence is claimed.",
+      "evidence": "Merged owner PR #57 supplies conditional revision/etag writes and client mutation IDs with focused tests; the synthetic live process completed a conditional save. Browser integration remains unverified.",
       "acceptance_cases": [
         "AT-047"
       ]
@@ -553,7 +553,7 @@
       "mandatory": true,
       "work_package": "WP-18",
       "status": "partial",
-      "evidence": "Merged owner PR #57 supplies an immutable publication route through the existing definition authority; no live process evidence is claimed.",
+      "evidence": "Merged owner PR #57 supplies an immutable publication route through the existing definition authority; the synthetic live process completed publication and reloaded the published definition. Browser integration remains unverified.",
       "acceptance_cases": [
         "AT-055"
       ]
@@ -563,7 +563,7 @@
       "mandatory": true,
       "work_package": "WP-18",
       "status": "partial",
-      "evidence": "Merged owner PR #57 supplies a typed publication response with published, already-published, and conflict outcomes; no live process evidence is claimed.",
+      "evidence": "Merged owner PR #57 supplies a typed publication response with published, already-published, and conflict outcomes; the synthetic live process observed the published outcome. Browser integration remains unverified.",
       "acceptance_cases": [
         "AT-056"
       ]
