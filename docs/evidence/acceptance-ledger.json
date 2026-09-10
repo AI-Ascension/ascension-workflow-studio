@@ -138,7 +138,7 @@
       "status": "evidenced",
       "actual_command": "source review of docs/decisions/ADR-P2-011-permission-scopes.md",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Source evidence: docs/decisions/ADR-P2-011-permission-scopes.md defines scoped effects and explicit non-authorizations.",
       "actual_evidence_refs": [
@@ -209,7 +209,7 @@
       "status": "partial",
       "actual_command": "npm test -- --run",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Source and component evidence: unsupported schemas are classified read-only; exact original-byte retention and publish blocking need a browser journey.",
       "actual_evidence_refs": [
@@ -238,7 +238,7 @@
       "status": "partial",
       "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Typed guard/config/budget controls are present and Chromium smoke renders the designer; the required registry capability variants and value matrix were not exercised.",
       "actual_evidence_refs": [
@@ -311,7 +311,7 @@
       "status": "partial",
       "actual_command": "npm test -- --run",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Structured diagnostics are rendered as accessible focus buttons in source; owner delayed compiler and edge/property browser targets were not available.",
       "actual_evidence_refs": [
@@ -372,7 +372,7 @@
       "status": "partial",
       "actual_command": "npm test -- --run",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Reconnection is bounded and unit-tested; the real browser add/connect/reconnect/delete interaction matrix was not run.",
       "actual_evidence_refs": [
@@ -422,7 +422,7 @@
       "status": "partial",
       "actual_command": "npm test -- --run",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Copy/paste ID/reference remapping is unit-tested and surfaced in the designer; nested browser paste and shared-subworkflow cases remain unverified.",
       "actual_evidence_refs": [
@@ -483,7 +483,7 @@
       "status": "partial",
       "actual_command": "npm test -- --run",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Invalid text is retained and valid candidates apply atomically in source; the required browser repair/save sequence remains unverified.",
       "actual_evidence_refs": [
@@ -511,7 +511,7 @@
       "status": "evidenced",
       "actual_command": "npm test -- --run",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Bounded parser unit tests reject duplicate keys and unsafe numbers; the parser also enforces byte/depth/node/string bounds before schema admission.",
       "actual_evidence_refs": [
@@ -693,7 +693,7 @@
       "status": "partial",
       "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Chromium smoke clones a checked-in template and source records provenance; owner catalog digest and immutability checks are unavailable.",
       "actual_evidence_refs": [
@@ -777,7 +777,7 @@
       "status": "partial",
       "actual_command": "npm test -- --run",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Bounded SSE framing and exact event projection are unit-tested; owner stream framing and process evidence were not exercised.",
       "actual_evidence_refs": [
@@ -827,7 +827,7 @@
       "status": "partial",
       "actual_command": "npm test -- --run",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Projection resnapshot and retention behavior are unit-tested; slow-client owner queue and authorization-scope process evidence are unavailable.",
       "actual_evidence_refs": [
@@ -932,7 +932,7 @@
       "status": "partial",
       "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Replay invokes two fixture runs and reports definition paths; stable owner artifact/run-context matching is unavailable.",
       "actual_evidence_refs": [
@@ -1038,7 +1038,7 @@
       "status": "partial",
       "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Source includes responsive, light/dark and reduced-motion rules, and one Chromium screenshot was reviewed; the required viewport/zoom/keyboard matrix was not run.",
       "actual_evidence_refs": [
@@ -1198,7 +1198,7 @@
       "status": "partial",
       "actual_command": "npm audit --audit-level=moderate; npm sbom --sbom-format=spdx --sbom-type=application",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "The lockfile, npm audit, SPDX SBOM, static bundle and same-origin client boundary were reviewed; independent egress/license review remains.",
       "actual_evidence_refs": [
@@ -1260,7 +1260,7 @@
       "status": "evidenced",
       "actual_command": "npm run build; sha256sum -c docs/evidence/studio-bundle.SHA256SUMS; npm sbom --sbom-format=spdx --sbom-type=application",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "The static bundle, manifest, SHA-256 file, SPDX SBOM and compatibility evidence are checked in and locally verified.",
       "actual_evidence_refs": [
@@ -1399,7 +1399,7 @@
       "status": "evidenced",
       "actual_command": "gh pr view 2 --repo AI-Ascension/ascension-workflow-studio",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "Draft PR #2 is linked to issue #1, assigned to CompleteDotTech, and contains the pushed Studio branch; merge authorization is intentionally absent.",
       "actual_evidence_refs": [
@@ -1415,7 +1415,7 @@
       "status": "evidenced",
       "actual_command": "git show --stat; cat docs/evidence/FINAL_INTEGRATION_REPORT.md",
       "actual_source_heads": {
-        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+        "studio": "4b4788c"
       },
       "evidence": "The final integration report states exact pins, validation results, evidence levels and unresolved blockers without native/live claims.",
       "actual_evidence_refs": [
