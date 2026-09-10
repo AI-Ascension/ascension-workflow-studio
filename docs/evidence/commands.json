@@ -17,6 +17,7 @@
     { "command": "cargo test -p sts2-harness --test workflow_dynamic_runtime --locked", "status": "passed", "scope": "1 case at merged Phase 1 head" },
     { "command": "cargo test -p sts2-harness --test workflow_runtime --locked", "status": "passed", "scope": "4 cases at merged Phase 1 head" },
     { "command": "cargo test -p sts2-harness --test workflow_store --locked", "status": "passed", "scope": "7 cases at merged Phase 1 head" },
+    { "command": "sts2-workflow serve + authenticated curl calls against /v1", "status": "passed", "scope": "synthetic live owner API evidence in phase1-live-api.json" },
     { "command": "vite preview + curl / and emitted assets", "status": "passed", "scope": "local static serving; no browser engine installed" }
   ],
   "unverified": [

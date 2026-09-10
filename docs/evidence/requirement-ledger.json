@@ -303,7 +303,7 @@
       "mandatory": true,
       "work_package": "WP-09",
       "status": "partial",
-      "evidence": "The UI renders checked-in workflow definitions and fixture owner projections; live process browser evidence remains.",
+      "evidence": "apps/studio/src/features/runs/RunsView.tsx; docs/evidence/phase1-live-api.json; owner process snapshot/event evidence is real synthetic API, browser rendering remains unverified.",
       "acceptance_cases": [
         "AT-030"
       ]

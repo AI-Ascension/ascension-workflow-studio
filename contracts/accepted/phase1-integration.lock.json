@@ -53,6 +53,7 @@
     "token_storage": "memory_only",
     "notes": "No additive harness browser adapter was introduced in this slice; client capability gates remain explicit."
   },
+  "service_evidence": "docs/evidence/phase1-live-api.json",
   "native_hierarchy": {
     "status": "blocked_in_runtime",
     "required": "D0 -> D1 -> D2 -> D3 Luna Max child sessions",
