@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "implemented": 33,
-    "partial": 23,
-    "blocked": 44,
+    "partial": 24,
+    "blocked": 43,
     "not_started": 20
   },
   "requirements": [
@@ -942,8 +942,8 @@
       "id": "P2-094",
       "mandatory": true,
       "work_package": "WP-31",
-      "status": "blocked",
-      "evidence": "Real strict/dynamic owner round-trip process evidence is not yet attached.",
+      "status": "partial",
+      "evidence": "docs/evidence/phase1-workflow-tests.json; owner strict/dynamic contract/runtime tests pass, but Studio live browser round-trip is unverified.",
       "acceptance_cases": [
         "AT-094"
       ]

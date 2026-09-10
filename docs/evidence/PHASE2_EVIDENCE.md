@@ -11,6 +11,7 @@ This packet separates product evidence from package integrity and unresolved own
 - `npm audit --audit-level=moderate` passed with zero vulnerabilities for the pinned dependency graph.
 - A local `vite preview` served `index.html`, JavaScript, and CSS with HTTP 200 responses. No real browser engine is installed in the environment, so browser-engine and screenshot gates remain unverified.
 - The exact merged Phase 1 harness head passed its owner `management` suite (6 cases) and `management_sqlite` suite (5 cases) with `--locked`; see `phase1-owner-tests.json`.
+- The same head passed 28 workflow contract, dynamic planning, runtime, and durable store cases; see `phase1-workflow-tests.json`.
 - The checked-in catalog, contract schema, canonical vector, conformance fixture, and owner management source digests are pinned in `contracts/accepted/phase1-integration.lock.json`.
 
 ## Capability and evidence limits
