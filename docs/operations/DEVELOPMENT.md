@@ -11,6 +11,6 @@ npm run build
 npm run dev
 ```
 
-The development server is bound to `127.0.0.1:4173`. The default Studio mode is the explicit fixture adapter. Select Compatibility, choose Live owner API, and provide a bearer token in memory for the current tab when a Phase 1 loopback server is available. The live adapter only uses relative `/v1` paths.
+The development server is bound to `127.0.0.1:4173`. The default Studio mode is the explicit fixture adapter. Select Compatibility, choose Live owner API, provide a bearer token and the authenticated owner subject in memory for the current tab, and check the connection when a loopback server is available. The live adapter only uses relative `/v1` paths. The subject must match the owner identity bound to the token because the harness checks it on every control command.
 
 The static output is `dist/`. Build output does not contain source maps or credentials. This repository does not deploy or start the harness automatically.

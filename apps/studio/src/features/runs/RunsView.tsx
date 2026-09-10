@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { CommandKind, CommandResponse, EventPage, RunEvent, StatusResponse } from "@studio/contracts";
 import { applyEventPage, createProjection, type RunProjection, type StudioClient } from "@studio/client";
@@ -22,6 +22,7 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsView
   const [message, setMessage] = useState("");
   const [busyCommand, setBusyCommand] = useState<CommandKind | undefined>();
   const [lastCommand, setLastCommand] = useState<CommandResponse | undefined>();
+  const commandIds = useRef(new Map<string, string>());
 
   const refresh = useCallback(async (requestedRunId = runId): Promise<void> => {
     setState("loading");
@@ -61,7 +62,10 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsView
     if (!status) return;
     setBusyCommand(kind);
     try {
-      const response = await client.command(status.run.workflow_run_id, status.run.run_revision, kind);
+      const commandKey = `${status.run.workflow_run_id}:${status.run.run_revision}:${kind}`;
+      const commandId = commandIds.current.get(commandKey) ?? `studio.command.${Date.now()}.${commandIds.current.size}`;
+      commandIds.current.set(commandKey, commandId);
+      const response = await client.command(status.run.workflow_run_id, status.run.run_revision, kind, commandId);
       setLastCommand(response);
       await refresh(status.run.workflow_run_id);
     } catch (error: unknown) {

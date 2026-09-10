@@ -14,6 +14,9 @@ import {
   RunSnapshotSchema,
   RunSubmissionResponseSchema,
   StatusResponseSchema,
+  StudioOwnerDefinitionsResponseSchema,
+  StudioOwnerDraftSchema,
+  StudioOwnerPublishResponseSchema,
   ValidateResponseSchema,
   WorkflowDefinitionSchema,
   decodeWith,
@@ -31,6 +34,7 @@ import {
   type RunSnapshot,
   type RunSubmissionResponse,
   type StatusResponse,
+  type JsonObject,
   type ValidateResponse,
   type WorkflowDefinition,
 } from "@studio/contracts";
@@ -44,6 +48,14 @@ export interface DraftWrite {
   revision: number;
   etag: string;
   document: WorkflowDefinition;
+  layout: JsonObject;
+  clientMutationId?: string;
+}
+
+export interface PublishResult {
+  outcome: "published" | "already_published" | "conflict";
+  definition?: DefinitionRecord;
+  draft?: DraftRecord;
 }
 
 export interface StudioClient {
@@ -51,6 +63,7 @@ export interface StudioClient {
   listDefinitions(): Promise<DefinitionRecord[]>;
   getDraft(draftId: string): Promise<DraftRecord | undefined>;
   saveDraft(write: DraftWrite): Promise<DraftRecord>;
+  publishDraft(draftId: string, expectedRevision: number, etag: string, definitionDigest: string, clientMutationId?: string): Promise<PublishResult>;
   health(): Promise<{ status: string }>;
   capabilities(): Promise<CapabilityResponse>;
   validate(definition: WorkflowDefinition): Promise<ValidateResponse>;
@@ -64,7 +77,7 @@ export interface StudioClient {
   submitRun(definition: WorkflowDefinition, instanceId: string, profile: string): Promise<RunSubmissionResponse>;
   status(runId: string): Promise<StatusResponse>;
   events(runId: string, afterSequence: number, limit?: number): Promise<EventPage>;
-  command(runId: string, expectedRevision: number, kind: CommandKind): Promise<CommandResponse>;
+  command(runId: string, expectedRevision: number, kind: CommandKind, commandId?: string): Promise<CommandResponse>;
   replay(runId: string): Promise<ReplayResponse>;
   export(runId: string): Promise<ExportResponse>;
 }
@@ -90,6 +103,7 @@ export class CapabilityGateError extends ClientError {
 export interface OwnerApiClientOptions {
   baseUrl?: string;
   token?: string;
+  actorScope?: string;
   fetcher?: typeof fetch;
 }
 
@@ -98,27 +112,87 @@ export class OwnerApiClient implements StudioClient {
   private readonly baseUrl: string;
   private readonly fetcher: typeof fetch;
   private token: string | undefined;
+  private actorScope: string | undefined;
 
   public constructor(options: OwnerApiClientOptions = {}) {
     this.baseUrl = normalizeRelativeBase(options.baseUrl ?? "/v1");
     this.fetcher = options.fetcher ?? fetch;
     this.token = options.token;
+    this.actorScope = options.actorScope?.trim() || undefined;
   }
 
   public setToken(token: string | undefined): void {
     this.token = token?.trim() || undefined;
   }
 
+  public setActorScope(actorScope: string | undefined): void {
+    this.actorScope = actorScope?.trim() || undefined;
+  }
+
   public async listDefinitions(): Promise<DefinitionRecord[]> {
-    throw new CapabilityGateError("The admitted Phase 1 API has no definition-list route");
+    const response = await this.request("/studio/definitions", { method: "GET" });
+    const decoded = decodeWith(StudioOwnerDefinitionsResponseSchema, response, "Studio definition list");
+    return decoded.definitions.map(ownerDefinitionToRecord);
   }
 
-  public async getDraft(_draftId: string): Promise<DraftRecord | undefined> {
-    throw new CapabilityGateError("Draft persistence is not exported by the admitted Phase 1 API");
+  public async getDraft(draftId: string): Promise<DraftRecord | undefined> {
+    try {
+      const response = await this.request(`/studio/drafts/${encodeIdentifier(draftId)}`, { method: "GET" });
+      return ownerDraftToRecord(decodeWith(StudioOwnerDraftSchema, response, "Studio draft"));
+    } catch (error: unknown) {
+      if (error instanceof ClientError && error.status === 404) {
+        return undefined;
+      }
+      throw error;
+    }
   }
 
-  public async saveDraft(_write: DraftWrite): Promise<DraftRecord> {
-    throw new CapabilityGateError("Draft persistence is not exported by the admitted Phase 1 API");
+  public async saveDraft(write: DraftWrite): Promise<DraftRecord> {
+    const mutationId = write.clientMutationId ?? `studio.mutation.${cryptoRandomId()}`;
+    const body = {
+      schema_version: "ascension.studio-authoring/v1",
+      client_mutation_id: mutationId,
+      document: write.document,
+      layout: write.layout,
+    };
+    const creating = write.revision === 0 && write.etag === "fixture-0";
+    const response = creating
+      ? await this.request("/studio/drafts", {
+        method: "POST",
+        body: JSON.stringify({
+          ...body,
+          draft_id: write.draftId,
+          definition_id: write.definitionId,
+        }),
+      })
+      : await this.request(`/studio/drafts/${encodeIdentifier(write.draftId)}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          ...body,
+          expected_revision: write.revision,
+          etag: write.etag,
+        }),
+      });
+    return ownerDraftToRecord(decodeWith(StudioOwnerDraftSchema, response, "Studio draft save"));
+  }
+
+  public async publishDraft(draftId: string, expectedRevision: number, etag: string, definitionDigest: string, clientMutationId = `studio.publish.${cryptoRandomId()}`): Promise<PublishResult> {
+    const response = await this.request(`/studio/drafts/${encodeIdentifier(draftId)}/publish`, {
+      method: "POST",
+      body: JSON.stringify({
+        schema_version: "ascension.studio-authoring/v1",
+        expected_revision: expectedRevision,
+        etag,
+        client_mutation_id: clientMutationId,
+        expected_definition_digest: definitionDigest,
+      }),
+    });
+    const decoded = decodeWith(StudioOwnerPublishResponseSchema, response, "Studio publication");
+    return {
+      outcome: decoded.outcome,
+      definition: decoded.definition ? ownerDefinitionToRecord(decoded.definition) : undefined,
+      draft: decoded.draft ? ownerDraftToRecord(decoded.draft) : undefined,
+    };
   }
 
   public async health(): Promise<{ status: string }> {
@@ -132,12 +206,13 @@ export class OwnerApiClient implements StudioClient {
   }
 
   public async validate(definition: WorkflowDefinition): Promise<ValidateResponse> {
+    const capabilityResponse = await this.capabilities();
     const response = await this.request("/workflow-definitions/validate", {
       method: "POST",
       body: JSON.stringify({
         schema_version: "ascension.management/v1",
         definition,
-        capabilities: { capabilities: [] },
+        capabilities: capabilityResponse.capabilities,
       }),
     });
     return decodeWith(ValidateResponseSchema, response, "definition validation");
@@ -195,15 +270,19 @@ export class OwnerApiClient implements StudioClient {
     return decodeWith(EventPageSchema, response, "run events");
   }
 
-  public async command(runId: string, expectedRevision: number, kind: CommandKind): Promise<CommandResponse> {
+  public async command(runId: string, expectedRevision: number, kind: CommandKind, commandId?: string): Promise<CommandResponse> {
+    const actorScope = this.actorScope;
+    if (!actorScope) {
+      throw new ClientError("Configure the authenticated owner subject before sending a command", "actor_scope_required");
+    }
     const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}/commands`, {
       method: "POST",
       body: JSON.stringify({
         schema_version: "ascension.management/v1",
-        command_id: `studio.command.${cryptoRandomId()}`,
+        command_id: commandId ?? `studio.command.${cryptoRandomId()}`,
         run_id: runId,
         expected_revision: expectedRevision,
-        actor_scope: "workflow:control",
+        actor_scope: actorScope,
         kind,
         parameters: {},
       }),
@@ -275,6 +354,40 @@ function cryptoRandomId(): string {
   const bytes = new Uint8Array(12);
   globalThis.crypto?.getRandomValues(bytes);
   return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+function ownerDefinitionToRecord(owner: import("@studio/contracts").StudioOwnerDefinition): DefinitionRecord {
+  const definition = WorkflowDefinitionSchema.parse(owner.definition);
+  return DefinitionRecordSchema.parse({
+    id: owner.id,
+    title: owner.title,
+    description: owner.description,
+    source: owner.source,
+    updatedAt: `revision-${owner.published_revision}`,
+    definition,
+    capabilities: definition.capabilities.required,
+  });
+}
+
+function ownerDraftToRecord(owner: import("@studio/contracts").StudioOwnerDraft): DraftRecord {
+  const document = WorkflowDefinitionSchema.parse(owner.document);
+  const conflict = owner.conflict
+    ? {
+      serverRevision: owner.conflict.server_revision,
+      serverDocument: WorkflowDefinitionSchema.parse(owner.conflict.server_document),
+      serverLayout: owner.conflict.server_layout,
+    }
+    : null;
+  return DraftRecordSchema.parse({
+    draftId: owner.draft_id,
+    definitionId: owner.definition_id,
+    revision: owner.revision,
+    etag: owner.etag,
+    document,
+    layout: owner.layout,
+    updatedAt: owner.updated_at,
+    conflict,
+  });
 }
 
 export interface RunProjection {
@@ -400,28 +513,55 @@ export class FixtureClient implements StudioClient {
 
   public async saveDraft(write: DraftWrite): Promise<DraftRecord> {
     const current = this.drafts.get(write.draftId);
-    if (current && current.etag !== write.etag) {
+    if (current && (current.etag !== write.etag || current.revision !== write.revision)) {
       const conflict: DraftRecord = {
         ...current,
         conflict: {
           serverRevision: current.revision,
           serverDocument: cloneDocument(current.document),
+          serverLayout: JSON.parse(JSON.stringify(current.layout)) as JsonObject,
         },
       };
       this.drafts.set(write.draftId, conflict);
       return DraftRecordSchema.parse(JSON.parse(JSON.stringify(conflict)) as unknown);
     }
+    const revision = current ? current.revision + 1 : 0;
     const record: DraftRecord = {
       draftId: write.draftId,
       definitionId: write.definitionId,
-      revision: write.revision,
-      etag: `fixture-${write.revision}`,
+      revision,
+      etag: `fixture-${revision}`,
       document: cloneDocument(write.document),
+      layout: JSON.parse(JSON.stringify(write.layout)) as JsonObject,
       updatedAt: new Date().toISOString(),
       conflict: null,
     };
     this.drafts.set(write.draftId, record);
     return DraftRecordSchema.parse(JSON.parse(JSON.stringify(record)) as unknown);
+  }
+
+  public async publishDraft(draftId: string, expectedRevision: number, etag: string, definitionDigest: string): Promise<PublishResult> {
+    const current = this.drafts.get(draftId);
+    if (!current || current.revision !== expectedRevision || current.etag !== etag) {
+      return { outcome: "conflict", draft: current ? DraftRecordSchema.parse(JSON.parse(JSON.stringify({ ...current, conflict: { serverRevision: current.revision, serverDocument: current.document, serverLayout: current.layout } })) as unknown) : undefined };
+    }
+    const digest = await semanticDigest(current.document);
+    if (digest !== definitionDigest) {
+      return { outcome: "conflict", draft: DraftRecordSchema.parse(JSON.parse(JSON.stringify({ ...current, conflict: { serverRevision: current.revision, serverDocument: current.document, serverLayout: current.layout } })) as unknown) };
+    }
+    const existing = this.definitions.find((definition) => definition.id === digest);
+    if (existing) return { outcome: "already_published", definition: DefinitionRecordSchema.parse(JSON.parse(JSON.stringify(existing)) as unknown) };
+    const definition = DefinitionRecordSchema.parse({
+      id: digest,
+      title: current.document.workflow_id,
+      description: `Published revision ${current.document.version}`,
+      source: "published",
+      updatedAt: current.updatedAt,
+      definition: current.document,
+      capabilities: current.document.capabilities.required,
+    });
+    this.definitions.push(definition);
+    return { outcome: "published", definition: DefinitionRecordSchema.parse(JSON.parse(JSON.stringify(definition)) as unknown) };
   }
 
   public async health(): Promise<{ status: string }> {
@@ -525,7 +665,7 @@ export class FixtureClient implements StudioClient {
     };
   }
 
-  public async command(runId: string, expectedRevision: number, kind: CommandKind): Promise<CommandResponse> {
+  public async command(runId: string, expectedRevision: number, kind: CommandKind, _commandId?: string): Promise<CommandResponse> {
     const safe = buildSafeCommand(runId, expectedRevision, kind);
     const run = this.runs.get(runId) ?? this.createDefaultRun(runId);
     if (run.status.run.run_revision !== safe.expectedRevision) {

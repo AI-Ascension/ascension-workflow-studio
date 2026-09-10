@@ -11,8 +11,11 @@ for the current compatibility lock and local commands.
 
 The current product includes a checked-in catalog library, React Flow designer,
 keyboard list editor, semantic/layout separation, fixture and relative live
-adapters, owner validation, explicit draft capability gates, run inspection,
-revision-safe controls, event projection recovery, replay, and redacted export.
+adapters, owner validation, owner-backed draft and publication adapters,
+run inspection, revision-safe controls, event projection recovery, replay, and
+redacted export. The draft adapter targets the additive authoring PR recorded in
+`docs/architecture/phase1-integration.md`; a Phase 1-only owner still reports
+those routes as unavailable.
 The exact evidence boundary is recorded in `docs/evidence/PHASE2_EVIDENCE.md`;
 fixture behavior does not stand in for a live harness process.
 

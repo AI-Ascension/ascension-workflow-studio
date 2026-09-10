@@ -21,6 +21,7 @@ import {
 
 import {
   JsonObjectSchema,
+  LayoutSidecarSchema,
   type DefinitionRecord,
   type DraftRecord,
   type LayoutSidecar,
@@ -98,8 +99,21 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
   const [validationState, setValidationState] = useState<"idle" | "running" | "valid" | "invalid" | "error">("idle");
   const [validationMessage, setValidationMessage] = useState("");
   const [draft, setDraft] = useState<DraftState>({ revision: 0, etag: "fixture-0", state: "saved", message: "Draft changes are local until autosave completes." });
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const [publicationState, setPublicationState] = useState<"idle" | "publishing">("idle");
+  const draftRef = useRef(draft);
+  const persistedKeyRef = useRef<string | undefined>(undefined);
+  const mutationIdsRef = useRef(new Map<string, string>());
+  const publicationIdsRef = useRef(new Map<string, string>());
+  const saveGenerationRef = useRef(0);
   const history = useRef(new History(initialDocument, (value) => JSON.parse(JSON.stringify(value)) as WorkflowDefinition));
   const bundleInput = useRef<HTMLInputElement>(null);
+
+  draftRef.current = draft;
+
+  const draftId = `draft.${definition.id}`;
+
+  const valueKey = (nextDocument: SemanticDocument, nextLayout: LayoutSidecar): string => JSON.stringify({ document: nextDocument, layout: nextLayout });
 
   useEffect(() => {
     const nextLayout = createLayout(initialDocument, "pending");
@@ -115,31 +129,75 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
     setArchivalMessage(undefined);
     setDiagnostics(undefined);
     setValidationState("idle");
+    setDraftHydrated(false);
+    persistedKeyRef.current = undefined;
     setDraft({ revision: 0, etag: "fixture-0", state: "saved", message: "Draft changes are local until autosave completes." });
   }, [initialDocument]);
 
   useEffect(() => {
-    if (draft.state === "conflict") return;
+    let active = true;
+    const loadDraft = async (): Promise<void> => {
+      try {
+        const saved = await client.getDraft(draftId);
+        if (!active) return;
+        if (saved) {
+          const parsedLayout = LayoutSidecarSchema.safeParse(saved.layout);
+          const nextLayout = parsedLayout.success ? parsedLayout.data : createLayout(saved.document, "pending");
+          history.current = new History(saved.document, (value) => JSON.parse(JSON.stringify(value)) as WorkflowDefinition);
+          setDocument(saved.document);
+          setLayout(nextLayout);
+          setNodes(toFlowNodes(saved.document, nextLayout));
+          setRawText(JSON.stringify(saved.document, null, 2));
+          setDraft({ revision: saved.revision, etag: saved.etag, state: saved.conflict ? "conflict" : "saved", message: saved.conflict ? "The owner returned a persisted draft conflict." : "Loaded the owner-backed draft.", server: saved.conflict ? saved : undefined });
+          persistedKeyRef.current = valueKey(saved.document, nextLayout);
+        }
+      } catch (error: unknown) {
+        if (active && !(error instanceof CapabilityGateError)) {
+          setDraft((current) => ({ ...current, state: "offline", message: error instanceof Error ? error.message : "Draft load failed." }));
+        }
+      } finally {
+        if (active) setDraftHydrated(true);
+      }
+    };
+    void loadDraft();
+    return () => { active = false; };
+  }, [client, draftId]);
+
+  useEffect(() => {
+    if (!draftHydrated || draftRef.current.state === "conflict") return;
+    const currentDraft = draftRef.current;
+    const currentKey = valueKey(document, layout);
+    if (persistedKeyRef.current === currentKey) return;
+    const mutationKey = JSON.stringify({ draftId, currentDraft: { revision: currentDraft.revision, etag: currentDraft.etag }, value: currentKey });
+    const clientMutationId = mutationIdsRef.current.get(mutationKey) ?? `studio.mutation.${Date.now()}.${mutationIdsRef.current.size}`;
+    mutationIdsRef.current.set(mutationKey, clientMutationId);
+    const generation = saveGenerationRef.current + 1;
+    saveGenerationRef.current = generation;
     const timer = window.setTimeout(() => {
       setDraft((current) => ({ ...current, state: "saving", message: "Saving draft through the owner adapter…" }));
       void client.saveDraft({
-        draftId: `draft.${definition.id}`,
+        draftId,
         definitionId: definition.id,
-        revision: draft.revision + 1,
-        etag: draft.etag,
+        revision: currentDraft.revision,
+        etag: currentDraft.etag,
         document,
+        layout,
+        clientMutationId,
       }).then((saved) => {
+        if (generation !== saveGenerationRef.current) return;
+        persistedKeyRef.current = currentKey;
         setDraft({ revision: saved.revision, etag: saved.etag, state: saved.conflict ? "conflict" : "saved", message: saved.conflict ? "The owner reported a revision conflict." : "Autosaved to the active adapter.", server: saved.conflict ? saved : undefined });
       }).catch((error: unknown) => {
+        if (generation !== saveGenerationRef.current) return;
         if (error instanceof CapabilityGateError) {
-          setDraft((current) => ({ ...current, state: "offline", message: "Live draft persistence is not in the admitted Phase 1 surface; changes remain in this editor." }));
+          setDraft((current) => ({ ...current, state: "offline", message: "Draft persistence is unavailable through the active owner adapter." }));
         } else {
           setDraft((current) => ({ ...current, state: "offline", message: error instanceof Error ? error.message : "Draft save failed." }));
         }
       });
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [client, definition.id, document]);
+  }, [client, definition.id, draftHydrated, document, layout, draftId]);
 
   const selected = useMemo(() => findSelectedNode(document, selectedId), [document, selectedId]);
   const flowEdges = useMemo(() => toFlowEdges(document), [document]);
@@ -314,6 +372,43 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
     }
   };
 
+  const publish = async (): Promise<void> => {
+    if (draft.state !== "saved") {
+      setValidationState("error");
+      setValidationMessage("Wait for the draft to reach a saved revision before publishing.");
+      return;
+    }
+    setPublicationState("publishing");
+    setValidationState("running");
+    setValidationMessage("");
+    try {
+      const validation = await client.validate(document);
+      setDiagnostics(validation);
+      if (!validation.valid) {
+        setValidationState("invalid");
+        setValidationMessage("Publication was blocked by owner validation diagnostics.");
+        return;
+      }
+      const publishKey = `${draft.revision}:${draft.etag}:${validation.definition_digest}`;
+      const clientMutationId = publicationIdsRef.current.get(publishKey) ?? `studio.publish.${Date.now()}.${publicationIdsRef.current.size}`;
+      publicationIdsRef.current.set(publishKey, clientMutationId);
+      const result = await client.publishDraft(draftId, draft.revision, draft.etag, validation.definition_digest, clientMutationId);
+      if (result.outcome === "conflict" && result.draft) {
+        setDraft({ revision: result.draft.revision, etag: result.draft.etag, state: "conflict", message: "The owner returned a publication conflict.", server: result.draft });
+        setValidationState("error");
+        setValidationMessage("Publication needs conflict resolution before it can create an immutable revision.");
+      } else {
+        setValidationState("valid");
+        setValidationMessage(result.outcome === "already_published" ? "This exact semantic digest is already published." : "Published an immutable owner revision.");
+      }
+    } catch (error: unknown) {
+      setValidationState("error");
+      setValidationMessage(error instanceof Error ? error.message : "Publication failed.");
+    } finally {
+      setPublicationState("idle");
+    }
+  };
+
   const addNewNode = (): void => {
     const graph = document.graphs[0];
     if (!graph) return;
@@ -399,13 +494,20 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
   const keepRemoteConflict = (): void => {
     const remote = draft.server?.conflict?.serverDocument;
     if (!remote || !draft.server) return;
-    commit(remote);
+    const remoteLayoutResult = LayoutSidecarSchema.safeParse(draft.server.conflict?.serverLayout ?? draft.server.layout);
+    const remoteLayout = remoteLayoutResult.success ? remoteLayoutResult.data : createLayout(remote, "pending");
+    history.current = new History(remote, (value) => JSON.parse(JSON.stringify(value)) as WorkflowDefinition);
+    setDocument(remote);
+    setLayout(remoteLayout);
+    setNodes(toFlowNodes(remote, remoteLayout));
+    setRawText(JSON.stringify(remote, null, 2));
+    persistedKeyRef.current = valueKey(remote, remoteLayout);
     setDraft({ revision: draft.server.revision, etag: draft.server.etag, state: "saved", message: "Remote revision loaded; local conflict was discarded." });
   };
 
   const saveLocalAsNew = async (): Promise<void> => {
     try {
-      const saved = await client.saveDraft({ draftId: `draft.${definition.id}.copy.${Date.now()}`, definitionId: definition.id, revision: 0, etag: "fixture-0", document });
+      const saved = await client.saveDraft({ draftId: `draft.${definition.id}.copy.${Date.now()}`, definitionId: definition.id, revision: 0, etag: "fixture-0", document, layout, clientMutationId: `studio.copy.${Date.now()}` });
       setDraft({ revision: saved.revision, etag: saved.etag, state: "saved", message: "Local candidate was saved as a new draft." });
     } catch (error: unknown) {
       setDraft((current) => ({ ...current, state: "offline", message: error instanceof Error ? error.message : "Could not save a new draft." }));
@@ -438,7 +540,8 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
       </div>
       <div className="heading-actions">
         <StatusBadge tone={draft.state === "saved" ? "success" : draft.state === "conflict" ? "danger" : "warning"}>{draft.state}</StatusBadge>
-        <button className="button button-secondary" onClick={() => void validate()} disabled={validationState === "running"}>◈ Validate</button>
+        <button className="button button-secondary" onClick={() => void validate()} disabled={validationState === "running" || publicationState === "publishing"}>◈ Validate</button>
+        <button className="button button-primary" onClick={() => void publish()} disabled={publicationState === "publishing" || draft.state !== "saved"}>{publicationState === "publishing" ? "Publishing…" : "Publish revision"}</button>
         <button className="button button-primary" onClick={() => onRun(document)}>Run inspection</button>
       </div>
     </div>

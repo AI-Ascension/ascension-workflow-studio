@@ -290,13 +290,78 @@ export const DraftRecordSchema = z.object({
   revision: z.number().int().nonnegative(),
   etag: z.string(),
   document: WorkflowDefinitionSchema,
+  layout: JsonObjectSchema,
   updatedAt: z.string(),
   conflict: z.object({
     serverRevision: z.number().int().nonnegative(),
     serverDocument: WorkflowDefinitionSchema,
+    serverLayout: JsonObjectSchema,
   }).strict().nullable(),
 }).strict();
 export type DraftRecord = z.infer<typeof DraftRecordSchema>;
+
+export const StudioOwnerDefinitionSchema = z.object({
+  schema_version: z.literal("ascension.studio-authoring/v1"),
+  id: z.string(),
+  title: z.string(),
+  description: z.string(),
+  source: z.literal("published"),
+  version: z.string(),
+  definition_digest: z.string(),
+  definition: WorkflowDefinitionSchema,
+  published_revision: z.number().int().nonnegative(),
+}).strict();
+export type StudioOwnerDefinition = z.infer<typeof StudioOwnerDefinitionSchema>;
+
+export const StudioOwnerDefinitionsResponseSchema = z.object({
+  schema_version: z.literal("ascension.studio-authoring/v1"),
+  definitions: z.array(StudioOwnerDefinitionSchema),
+}).strict();
+
+export const StudioOwnerDraftConflictSchema = z.object({
+  server_revision: z.number().int().nonnegative(),
+  server_etag: z.string(),
+  server_document: JsonValueSchema,
+  server_layout: JsonObjectSchema,
+}).strict();
+
+export const StudioOwnerDraftSchema = z.object({
+  schema_version: z.literal("ascension.studio-authoring/v1"),
+  draft_id: z.string(),
+  definition_id: z.string(),
+  revision: z.number().int().nonnegative(),
+  etag: z.string(),
+  document: JsonValueSchema,
+  layout: JsonObjectSchema,
+  updated_at: z.string(),
+  conflict: StudioOwnerDraftConflictSchema.nullable(),
+}).strict();
+export type StudioOwnerDraft = z.infer<typeof StudioOwnerDraftSchema>;
+
+export const StudioOwnerCreateDraftRequestSchema = z.object({
+  schema_version: z.literal("ascension.studio-authoring/v1"),
+  draft_id: z.string(),
+  definition_id: z.string(),
+  document: JsonValueSchema,
+  layout: JsonObjectSchema,
+  client_mutation_id: z.string(),
+}).strict();
+
+export const StudioOwnerSaveDraftRequestSchema = z.object({
+  schema_version: z.literal("ascension.studio-authoring/v1"),
+  expected_revision: z.number().int().nonnegative(),
+  etag: z.string(),
+  client_mutation_id: z.string(),
+  document: JsonValueSchema,
+  layout: JsonObjectSchema,
+}).strict();
+
+export const StudioOwnerPublishResponseSchema = z.object({
+  schema_version: z.literal("ascension.studio-authoring/v1"),
+  outcome: z.enum(["published", "already_published", "conflict"]),
+  definition: StudioOwnerDefinitionSchema.nullable(),
+  draft: StudioOwnerDraftSchema.nullable(),
+}).strict();
 
 export const LayoutSidecarSchema = z.object({
   schemaVersion: z.literal("ascension.studio-layout/v1"),

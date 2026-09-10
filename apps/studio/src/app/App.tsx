@@ -40,6 +40,9 @@ export function App(): JSX.Element {
         setDefinitions(records);
         setSelectedDefinition(records[0]);
         setActiveDocument(records[0].definition);
+      } else if (mode === "live") {
+        setDefinitions(fixtureDefinitions);
+        setCatalogNotice("The owner returned no published definitions; showing the checked-in catalog for inspection.");
       }
     }).catch((error: unknown) => {
       if (!mounted) return;
@@ -49,7 +52,7 @@ export function App(): JSX.Element {
       if (mounted) setLoadingDefinitions(false);
     });
     return () => { mounted = false; };
-  }, [client]);
+  }, [client, mode]);
 
   const openDefinition = (definition: DefinitionRecord): void => {
     setSelectedDefinition(definition);

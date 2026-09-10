@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "evidenced": 38,
-    "partial": 29,
-    "blocked": 40,
+    "partial": 36,
+    "blocked": 33,
     "not_run": 13
   },
   "cases": [
@@ -328,7 +328,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Fixture validation and live owner validation are wired; publish admission is unavailable."
+      "evidence": "Fixture validation and live owner validation are wired; draft owner PR #57 supplies a publication route with digest and validation checks, but the route is still unmerged and has no live process evidence."
     },
     {
       "id": "AT-028",
@@ -558,10 +558,10 @@
         "P2-046"
       ],
       "work_package": "WP-15",
-      "status": "blocked",
+      "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Phase 1 has no draft persistence route."
+      "evidence": "Draft owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the PR is unmerged and has no live process evidence."
     },
     {
       "id": "AT-047",
@@ -569,10 +569,10 @@
         "P2-047"
       ],
       "work_package": "WP-15",
-      "status": "blocked",
+      "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Phase 1 has no conditional draft write route."
+      "evidence": "Draft owner PR #57 supplies conditional revision/etag writes and client mutation IDs with focused tests; the PR is unmerged and has no live process evidence."
     },
     {
       "id": "AT-048",
@@ -657,10 +657,10 @@
         "P2-055"
       ],
       "work_package": "WP-18",
-      "status": "blocked",
+      "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Phase 1 has no publish route."
+      "evidence": "Draft owner PR #57 supplies an immutable publication route through the existing definition authority; the PR is unmerged and has no live process evidence."
     },
     {
       "id": "AT-056",
@@ -668,10 +668,10 @@
         "P2-056"
       ],
       "work_package": "WP-18",
-      "status": "blocked",
+      "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Phase 1 has no publication response contract."
+      "evidence": "Draft owner PR #57 supplies a typed publication response with published, already-published, and conflict outcomes; the PR is unmerged and has no live process evidence."
     },
     {
       "id": "AT-057",
@@ -679,10 +679,10 @@
         "P2-057"
       ],
       "work_package": "WP-18",
-      "status": "blocked",
+      "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Immutable published digest launch cannot be proven without publish admission."
+      "evidence": "Draft owner PR #57 tests immutable publication and digest preconditions, but launch through a merged live owner remains unverified."
     },
     {
       "id": "AT-058",
@@ -1297,10 +1297,10 @@
         "P2-109"
       ],
       "work_package": "WP-36",
-      "status": "blocked",
+      "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Support docs are partial pending owner pairing/draft/publish contracts."
+      "evidence": "Support docs describe the owner subject, draft revision/etag conflict choices, and publication flow; browser pairing and live owner evidence remain unavailable while PR #57 is draft."
     },
     {
       "id": "AT-110",

@@ -28,7 +28,7 @@
   "merge_authorization": "Phase 1 merges explicitly authorized and complete; Phase 2 merge not authorized",
   "last_update": "2026-09-10",
   "verification": {
-    "vitest": "passed: 17 tests across 3 files",
+    "vitest": "passed: 20 tests across 3 files with one worker",
     "chromium_browser": "passed: 2 journeys with reviewed screenshot",
     "firefox_webkit": "blocked: host GTK/media libraries unavailable",
     "sbom": "passed: SPDX application report checked in",

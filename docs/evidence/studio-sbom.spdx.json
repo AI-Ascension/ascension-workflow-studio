@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "@ai-ascension/ascension-workflow-studio@0.1.0",
-  "documentNamespace": "http://spdx.org/spdxdocs/@ai-ascension%2fascension-workflow-studio-0.1.0-9f61bcff-49c8-4767-a4df-37150542e0fa",
+  "documentNamespace": "http://spdx.org/spdxdocs/@ai-ascension%2fascension-workflow-studio-0.1.0-ffa75570-c523-4105-90c4-0d12fb3d9aed",
   "creationInfo": {
-    "created": "2026-09-10T13:25:36.493Z",
+    "created": "2026-09-10T14:20:14.709Z",
     "creators": [
       "Tool: npm/cli-11.13.0"
     ]

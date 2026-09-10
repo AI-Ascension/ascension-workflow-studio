@@ -18,14 +18,14 @@
       "scope": "strict TypeScript lint gate"
     },
     {
-      "command": "npm test -- --run",
+      "command": "npm test -- --run --pool=threads --maxWorkers=1",
       "status": "passed",
-      "scope": "3 files, 17 tests"
+      "scope": "3 files, 20 tests"
     },
     {
       "command": "npm run build",
       "status": "passed",
-      "scope": "545783-byte source-map-free JavaScript and 35106-byte CSS bundle"
+      "scope": "553475-byte source-map-free JavaScript and 35106-byte CSS bundle"
     },
     {
       "command": "npm audit --audit-level=moderate",
