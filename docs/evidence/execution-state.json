@@ -22,16 +22,16 @@
     },
     "native_runtime_evidence": "blocked: no callable child-session API was exposed"
   },
-  "active_worktree": "codex/phase2-studio-implementation-20260910",
+  "active_worktree": "main (merged Studio PR #2)",
   "source_heads_locked": true,
   "product_mode": "fixture_default_live_capability_gated",
-  "merge_authorization": "Phase 1 merges explicitly authorized and complete; Phase 2 merge not authorized",
+  "merge_authorization": "User-authorized Phase 1 and Phase 2 merges completed in dependency order",
   "last_update": "2026-09-10",
   "verification": {
     "vitest": "passed: 20 tests across 3 files with one worker",
     "chromium_browser": "passed: 2 journeys with reviewed screenshot",
     "firefox_webkit": "blocked: host GTK/media libraries unavailable",
     "sbom": "passed: SPDX application report checked in",
-    "phase2_merge": "not authorized; draft PR remains open"
+    "phase2_merge": "merged: Studio PR #2 at a3ea6a727b1a0514dfc5faea5d1cdffadb2d6ac4"
   }
 }

@@ -1,7 +1,7 @@
 # Phase 2 final integration report
 
 Date: 2026-09-10  
-Readiness: ready for review as a draft candidate; blocked for Phase 2 merge and release.
+Readiness: merged Phase 2 implementation; release remains blocked by the recorded verification gates.
 
 ## Delivered product
 
@@ -14,7 +14,7 @@ The Phase 1 source pins are the merged heads recorded in `contracts/accepted/pha
 | [AI-Ascension/sts2-mcp-server](https://github.com/AI-Ascension/sts2-mcp-server) | [#37](https://github.com/AI-Ascension/sts2-mcp-server/pull/37) | [`a6b9215db1ddeeddabe4c111ed3b49476fb86e54`](https://github.com/AI-Ascension/sts2-mcp-server/commit/a6b9215db1ddeeddabe4c111ed3b49476fb86e54) |
 | [AI-Ascension/ascension-workflow](https://github.com/AI-Ascension/ascension-workflow) | [#2](https://github.com/AI-Ascension/ascension-workflow/pull/2) | [`45341c7bdfa8d51eb6b52aec1ccc5b9f1a73a688`](https://github.com/AI-Ascension/ascension-workflow/commit/45341c7bdfa8d51eb6b52aec1ccc5b9f1a73a688) |
 
-The Phase 2 candidate is [AI-Ascension/ascension-workflow-studio](https://github.com/AI-Ascension/ascension-workflow-studio), issue [#1](https://github.com/AI-Ascension/ascension-workflow-studio/issues/1), and draft PR [#2](https://github.com/AI-Ascension/ascension-workflow-studio/pull/2). It is on branch `codex/phase2-studio-implementation-20260910`; the current review head is pushed to that PR, which is assigned to `CompleteDotTech` and remains open and draft. The additive owner contract is in draft [sts2-harness PR #57](https://github.com/AI-Ascension/sts2-harness/pull/57), currently at `ac84032`.
+The Phase 2 implementation is [AI-Ascension/ascension-workflow-studio](https://github.com/AI-Ascension/ascension-workflow-studio), issue [#1](https://github.com/AI-Ascension/ascension-workflow-studio/issues/1), merged through [PR #2](https://github.com/AI-Ascension/ascension-workflow-studio/pull/2) as [`a3ea6a727b1a0514dfc5faea5d1cdffadb2d6ac4`](https://github.com/AI-Ascension/ascension-workflow-studio/commit/a3ea6a727b1a0514dfc5faea5d1cdffadb2d6ac4). Its additive owner contract dependency merged through [sts2-harness PR #57](https://github.com/AI-Ascension/sts2-harness/pull/57) as [`172b41022e0de9d66ab5ee94b06ac4b99238cad2`](https://github.com/AI-Ascension/sts2-harness/commit/172b41022e0de9d66ab5ee94b06ac4b99238cad2).
 
 The usable Studio surface includes the React Flow canvas and equivalent semantic list editor, typed definition limits and node fields, ordered guards, bounded raw JSON admission, read-only future-schema classification, secret-safe portable bundles, template cloning with provenance, bounded copy/paste ID remapping, guarded edge reconnection, layout alignment, diagnostics target navigation, bounded history and event projection helpers, draft conflict inspection with three-way merge, run command outcomes, replay comparison, and explicit fixture/live capability states. The permission-scope decision is in `docs/decisions/ADR-P2-011-permission-scopes.md`.
 
@@ -51,8 +51,8 @@ D0 is the active root implementation worktree. The environment did not expose a 
 
 ## Delivery operations
 
-The Studio branch and draft PR are pushed and assigned to the authenticated operator. Phase 1 merges were completed as listed above. Nothing in Phase 2 was merged, released, deployed to a production host, attached to a live game session, or used to claim native hierarchy completion. `npm ci` only installed the local verification dependencies in this worktree.
+The Studio and owner PRs were merged in dependency order after their review checks passed. No release or production deployment occurred, no live game session was attached, and no native hierarchy completion was claimed. `npm ci` only installed the local verification dependencies in this worktree.
 
 ## Remaining gaps
 
-The mandatory unresolved work is explicit in the ledgers. The main blockers are the missing native child-session runtime; the unmerged owner authoring candidate; absent browser pairing, session revocation, plan/artifact retrieval and live owner attachment; Firefox/WebKit host dependencies; the full accessibility/viewport/zoom matrix; production CSP/static-host review; independent runtime egress and license review; and CI workflow/evidence configuration. Completing those requires the corresponding runtime, owner-surface, host-image, or repository-scope change. The candidate is reviewable, but it is not ready for a Phase 2 merge or release decision.
+The mandatory unresolved work is explicit in the ledgers. The main blockers are the missing native child-session runtime; absent browser pairing, session revocation, plan/artifact retrieval and live owner attachment; Firefox/WebKit host dependencies; the full accessibility/viewport/zoom matrix; production CSP/static-host review; independent runtime egress and license review; and CI workflow/evidence configuration. Completing those requires the corresponding runtime, owner-surface, host-image, or repository-scope change. The implementation is merged, but it is not ready for a release decision.
