@@ -2,10 +2,10 @@
   "schema_version": 1,
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
-    "evidenced": 33,
-    "partial": 24,
-    "blocked": 43,
-    "not_run": 20
+    "evidenced": 38,
+    "partial": 29,
+    "blocked": 40,
+    "not_run": 13
   },
   "cases": [
     {
@@ -135,10 +135,15 @@
         "P2-012"
       ],
       "work_package": "WP-03",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "evidenced",
+      "actual_command": "source review of docs/decisions/ADR-P2-011-permission-scopes.md",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Source evidence: docs/decisions/ADR-P2-011-permission-scopes.md defines scoped effects and explicit non-authorizations.",
+      "actual_evidence_refs": [
+        "docs/decisions/ADR-P2-011-permission-scopes.md"
+      ]
     },
     {
       "id": "AT-013",
@@ -202,9 +207,16 @@
       ],
       "work_package": "WP-05",
       "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Reference artifacts are preserved and decoded strictly, but no future-schema archival UI exists."
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Source and component evidence: unsupported schemas are classified read-only; exact original-byte retention and publish blocking need a browser journey.",
+      "actual_evidence_refs": [
+        "packages/document/src/index.test.ts",
+        "apps/studio/src/app/App.test.tsx",
+        "apps/studio/src/features/designer/DesignerView.tsx"
+      ]
     },
     {
       "id": "AT-019",
@@ -224,9 +236,16 @@
       ],
       "work_package": "WP-06",
       "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Node kind/config editing is typed and bounded; complete guard/budget forms remain."
+      "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Typed guard/config/budget controls are present and Chromium smoke renders the designer; the required registry capability variants and value matrix were not exercised.",
+      "actual_evidence_refs": [
+        "tests/browser/studio.spec.ts",
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "docs/evidence/screenshots/studio-designer-chromium.png"
+      ]
     },
     {
       "id": "AT-021",
@@ -290,9 +309,15 @@
       ],
       "work_package": "WP-08",
       "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Diagnostics show structured paths; graph target focus navigation remains."
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Structured diagnostics are rendered as accessible focus buttons in source; owner delayed compiler and edge/property browser targets were not available.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "apps/studio/src/app/App.test.tsx"
+      ]
     },
     {
       "id": "AT-027",
@@ -345,9 +370,15 @@
       ],
       "work_package": "WP-10",
       "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Placement, connection and deletion are implemented; reconnection review is incomplete."
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Reconnection is bounded and unit-tested; the real browser add/connect/reconnect/delete interaction matrix was not run.",
+      "actual_evidence_refs": [
+        "packages/document/src/index.test.ts",
+        "apps/studio/src/features/designer/DesignerView.tsx"
+      ]
     },
     {
       "id": "AT-032",
@@ -388,10 +419,16 @@
         "P2-035"
       ],
       "work_package": "WP-11",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "partial",
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Copy/paste ID/reference remapping is unit-tested and surfaced in the designer; nested browser paste and shared-subworkflow cases remain unverified.",
+      "actual_evidence_refs": [
+        "packages/document/src/index.test.ts",
+        "apps/studio/src/features/designer/DesignerView.tsx"
+      ]
     },
     {
       "id": "AT-036",
@@ -444,9 +481,15 @@
       ],
       "work_package": "WP-13",
       "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Config edits validate atomically on blur; raw invalid text preservation is incomplete."
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Invalid text is retained and valid candidates apply atomically in source; the required browser repair/save sequence remains unverified.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "packages/document/src/index.ts"
+      ]
     },
     {
       "id": "AT-041",
@@ -465,10 +508,16 @@
         "P2-042"
       ],
       "work_package": "WP-13",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "evidenced",
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Bounded parser unit tests reject duplicate keys and unsafe numbers; the parser also enforces byte/depth/node/string bounds before schema admission.",
+      "actual_evidence_refs": [
+        "packages/document/src/index.test.ts",
+        "packages/document/src/index.ts"
+      ]
     },
     {
       "id": "AT-043",
@@ -641,10 +690,17 @@
         "P2-058"
       ],
       "work_package": "WP-19",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "partial",
+      "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Chromium smoke clones a checked-in template and source records provenance; owner catalog digest and immutability checks are unavailable.",
+      "actual_evidence_refs": [
+        "tests/browser/studio.spec.ts",
+        "apps/studio/src/app/App.tsx",
+        "apps/studio/src/features/library/LibraryView.tsx"
+      ]
     },
     {
       "id": "AT-059",
@@ -718,10 +774,16 @@
         "P2-065"
       ],
       "work_package": "WP-21",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "partial",
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Bounded SSE framing and exact event projection are unit-tested; owner stream framing and process evidence were not exercised.",
+      "actual_evidence_refs": [
+        "packages/client/src/index.ts",
+        "packages/client/src/index.test.ts"
+      ]
     },
     {
       "id": "AT-066",
@@ -762,10 +824,16 @@
         "P2-069"
       ],
       "work_package": "WP-22",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "partial",
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Projection resnapshot and retention behavior are unit-tested; slow-client owner queue and authorization-scope process evidence are unavailable.",
+      "actual_evidence_refs": [
+        "packages/client/src/index.ts",
+        "packages/client/src/index.test.ts"
+      ]
     },
     {
       "id": "AT-070",
@@ -862,9 +930,16 @@
       ],
       "work_package": "WP-25",
       "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Replay and self-compare are present; multi-run comparison remains."
+      "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Replay invokes two fixture runs and reports definition paths; stable owner artifact/run-context matching is unavailable.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/replay/ReplayView.tsx",
+        "packages/document/src/index.ts",
+        "tests/browser/studio.spec.ts"
+      ]
     },
     {
       "id": "AT-079",
@@ -961,9 +1036,15 @@
       ],
       "work_package": "WP-28",
       "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Responsive narrow layout is present; theme/reduced-motion variants remain."
+      "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Source includes responsive, light/dark and reduced-motion rules, and one Chromium screenshot was reviewed; the required viewport/zoom/keyboard matrix was not run.",
+      "actual_evidence_refs": [
+        "apps/studio/src/styles.css",
+        "docs/evidence/screenshots/studio-designer-chromium.png"
+      ]
     },
     {
       "id": "AT-088",
@@ -1114,10 +1195,17 @@
         "P2-101"
       ],
       "work_package": "WP-33",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "partial",
+      "actual_command": "npm audit --audit-level=moderate; npm sbom --sbom-format=spdx --sbom-type=application",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "The lockfile, npm audit, SPDX SBOM, static bundle and same-origin client boundary were reviewed; independent egress/license review remains.",
+      "actual_evidence_refs": [
+        "package-lock.json",
+        "docs/evidence/studio-sbom.spdx.json",
+        "docs/evidence/studio-bundle-manifest.json"
+      ]
     },
     {
       "id": "AT-102",
@@ -1169,10 +1257,17 @@
         "P2-106"
       ],
       "work_package": "WP-35",
-      "status": "blocked",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Checksums exist locally after build; SBOM/license bundle is not yet generated."
+      "status": "evidenced",
+      "actual_command": "npm run build; sha256sum -c docs/evidence/studio-bundle.SHA256SUMS; npm sbom --sbom-format=spdx --sbom-type=application",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "The static bundle, manifest, SHA-256 file, SPDX SBOM and compatibility evidence are checked in and locally verified.",
+      "actual_evidence_refs": [
+        "docs/evidence/studio-bundle.SHA256SUMS",
+        "docs/evidence/studio-bundle-manifest.json",
+        "docs/evidence/studio-sbom.spdx.json"
+      ]
     },
     {
       "id": "AT-107",
@@ -1301,10 +1396,15 @@
         "P2-118"
       ],
       "work_package": "WP-39",
-      "status": "blocked",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Draft PR delivery is pending after final verification."
+      "status": "evidenced",
+      "actual_command": "gh pr view 2 --repo AI-Ascension/ascension-workflow-studio",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "Draft PR #2 is linked to issue #1, assigned to CompleteDotTech, and contains the pushed Studio branch; merge authorization is intentionally absent.",
+      "actual_evidence_refs": [
+        "docs/evidence/FINAL_INTEGRATION_REPORT.md"
+      ]
     },
     {
       "id": "AT-119",
@@ -1312,10 +1412,16 @@
         "P2-119"
       ],
       "work_package": "WP-39",
-      "status": "blocked",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Final report is pending completion of the remaining gates."
+      "status": "evidenced",
+      "actual_command": "git show --stat; cat docs/evidence/FINAL_INTEGRATION_REPORT.md",
+      "actual_source_heads": {
+        "studio": "335fb74e5faa098a1c025673d3473c648c354f8d"
+      },
+      "evidence": "The final integration report states exact pins, validation results, evidence levels and unresolved blockers without native/live claims.",
+      "actual_evidence_refs": [
+        "docs/evidence/FINAL_INTEGRATION_REPORT.md",
+        "docs/evidence/PHASE2_EVIDENCE.md"
+      ]
     },
     {
       "id": "AT-120",

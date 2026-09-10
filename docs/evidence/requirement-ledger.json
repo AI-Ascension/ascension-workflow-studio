@@ -2,10 +2,10 @@
   "schema_version": 1,
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
-    "implemented": 33,
+    "implemented": 43,
     "partial": 24,
-    "blocked": 43,
-    "not_started": 20
+    "blocked": 40,
+    "not_started": 13
   },
   "requirements": [
     {
@@ -122,8 +122,8 @@
       "id": "P2-012",
       "mandatory": true,
       "work_package": "WP-03",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "docs/decisions/ADR-P2-011-permission-scopes.md defines independent inspect, author, publish, operate and session capabilities with explicit fixture/live boundaries.",
       "acceptance_cases": [
         "AT-012"
       ]
@@ -183,7 +183,7 @@
       "mandatory": true,
       "work_package": "WP-05",
       "status": "partial",
-      "evidence": "Reference artifacts are preserved and decoded strictly, but no future-schema archival UI exists.",
+      "evidence": "Unsupported schema imports are classified and shown read-only by packages/document/src/index.ts and DesignerView.tsx; exact original byte preservation is not claimed.",
       "acceptance_cases": [
         "AT-018"
       ]
@@ -203,7 +203,7 @@
       "mandatory": true,
       "work_package": "WP-06",
       "status": "partial",
-      "evidence": "Node kind/config editing is typed and bounded; complete guard/budget forms remain.",
+      "evidence": "Typed node, guard and budget fields with explicit unset/unavailable states are implemented; full admitted registry variants and browser acceptance remain unverified.",
       "acceptance_cases": [
         "AT-020"
       ]
@@ -262,8 +262,8 @@
       "id": "P2-026",
       "mandatory": true,
       "work_package": "WP-08",
-      "status": "partial",
-      "evidence": "Diagnostics show structured paths; graph target focus navigation remains.",
+      "status": "implemented",
+      "evidence": "DesignerView.tsx renders diagnostics as target buttons and focuses the matching list-editor node while keeping raw diagnostic paths bounded.",
       "acceptance_cases": [
         "AT-026"
       ]
@@ -312,8 +312,8 @@
       "id": "P2-031",
       "mandatory": true,
       "work_package": "WP-10",
-      "status": "partial",
-      "evidence": "Placement, connection and deletion are implemented; reconnection review is incomplete.",
+      "status": "implemented",
+      "evidence": "packages/document/src/index.ts and DesignerView.tsx implement bounded add/connect/reconnect/delete operations with duplicate-edge checks; browser interaction coverage remains partial.",
       "acceptance_cases": [
         "AT-031"
       ]
@@ -352,8 +352,8 @@
       "id": "P2-035",
       "mandatory": true,
       "work_package": "WP-11",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "copyNodes and pasteNodes enforce graph/size bounds, remap local IDs and local references, and retain external references; unit coverage is in packages/document/src/index.test.ts.",
       "acceptance_cases": [
         "AT-035"
       ]
@@ -403,7 +403,7 @@
       "mandatory": true,
       "work_package": "WP-13",
       "status": "partial",
-      "evidence": "Config edits validate atomically on blur; raw invalid text preservation is incomplete.",
+      "evidence": "Raw JSON and typed fields retain invalid draft text and apply only validated candidates; a complete browser repair/save journey remains unverified.",
       "acceptance_cases": [
         "AT-040"
       ]
@@ -422,8 +422,8 @@
       "id": "P2-042",
       "mandatory": true,
       "work_package": "WP-13",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "BoundedJsonParser rejects duplicate keys, unsafe integers, non-finite values, excess depth/nodes/strings and oversized input before schema admission; unit coverage is checked in.",
       "acceptance_cases": [
         "AT-042"
       ]
@@ -582,8 +582,8 @@
       "id": "P2-058",
       "mandatory": true,
       "work_package": "WP-19",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "partial",
+      "evidence": "Library cloning records template_source and template_version provenance and has Chromium smoke coverage; live catalog immutability/digest acceptance is unavailable.",
       "acceptance_cases": [
         "AT-058"
       ]
@@ -652,8 +652,8 @@
       "id": "P2-065",
       "mandatory": true,
       "work_package": "WP-21",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "SSE parsing has byte/frame limits and projection decoding enforces exact identifiers; packages/client/src/index.test.ts covers the bounded frame rejection.",
       "acceptance_cases": [
         "AT-065"
       ]
@@ -692,8 +692,8 @@
       "id": "P2-069",
       "mandatory": true,
       "work_package": "WP-22",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "Event projection resnapshots on gaps, future pages, identity/schema changes and bounded retention; client unit coverage is checked in.",
       "acceptance_cases": [
         "AT-069"
       ]
@@ -783,7 +783,7 @@
       "mandatory": true,
       "work_package": "WP-25",
       "status": "partial",
-      "evidence": "Replay and self-compare are present; multi-run comparison remains.",
+      "evidence": "Replay invokes two fixture runs and reports definition differences by changed paths; layout/run-context comparison and owner artifact evidence remain unavailable.",
       "acceptance_cases": [
         "AT-078"
       ]
@@ -873,7 +873,7 @@
       "mandatory": true,
       "work_package": "WP-28",
       "status": "partial",
-      "evidence": "Responsive narrow layout is present; theme/reduced-motion variants remain.",
+      "evidence": "Responsive grids, light/dark color variables and reduced-motion rules are present, with one reviewed Chromium screenshot; the full viewport/zoom matrix is not run.",
       "acceptance_cases": [
         "AT-087"
       ]
@@ -1012,8 +1012,8 @@
       "id": "P2-101",
       "mandatory": true,
       "work_package": "WP-33",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "partial",
+      "evidence": "npm audit, SPDX SBOM, bundle inspection and same-origin/no-CDN code boundaries are recorded; an independent runtime egress and license review remains.",
       "acceptance_cases": [
         "AT-101"
       ]
@@ -1062,8 +1062,8 @@
       "id": "P2-106",
       "mandatory": true,
       "work_package": "WP-35",
-      "status": "blocked",
-      "evidence": "Checksums exist locally after build; SBOM/license bundle is not yet generated.",
+      "status": "implemented",
+      "evidence": "docs/evidence/studio-bundle.SHA256SUMS, studio-bundle-manifest.json, studio-sbom.spdx.json and the static bundle are generated and checked in.",
       "acceptance_cases": [
         "AT-106"
       ]
@@ -1182,8 +1182,8 @@
       "id": "P2-118",
       "mandatory": true,
       "work_package": "WP-39",
-      "status": "blocked",
-      "evidence": "Draft PR delivery is pending after final verification.",
+      "status": "implemented",
+      "evidence": "Scoped implementation commits are pushed to the assigned draft PR #2 in AI-Ascension/ascension-workflow-studio; the PR remains draft and unmerged.",
       "acceptance_cases": [
         "AT-118"
       ]
@@ -1192,8 +1192,8 @@
       "id": "P2-119",
       "mandatory": true,
       "work_package": "WP-39",
-      "status": "blocked",
-      "evidence": "Final report is pending completion of the remaining gates.",
+      "status": "implemented",
+      "evidence": "FINAL_INTEGRATION_REPORT.md records exact Phase 1 pins, Studio revision, evidence tiers, capabilities and remaining blockers.",
       "acceptance_cases": [
         "AT-119"
       ]

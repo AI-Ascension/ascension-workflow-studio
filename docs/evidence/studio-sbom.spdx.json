@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "@ai-ascension/ascension-workflow-studio@0.1.0",
-  "documentNamespace": "http://spdx.org/spdxdocs/@ai-ascension%2fascension-workflow-studio-0.1.0-829e803a-f0e8-43c0-84f1-d833a1454974",
+  "documentNamespace": "http://spdx.org/spdxdocs/@ai-ascension%2fascension-workflow-studio-0.1.0-9f61bcff-49c8-4767-a4df-37150542e0fa",
   "creationInfo": {
-    "created": "2026-09-10T12:26:10.856Z",
+    "created": "2026-09-10T13:25:36.493Z",
     "creators": [
       "Tool: npm/cli-11.13.0"
     ]
@@ -19,7 +19,7 @@
       "SPDXID": "SPDXRef-Package-ai-ascension.ascension-workflow-studio-0.1.0",
       "versionInfo": "0.1.0",
       "packageFileName": "",
-      "primaryPackagePurpose": "LIBRARY",
+      "primaryPackagePurpose": "APPLICATION",
       "downloadLocation": "NOASSERTION",
       "filesAnalyzed": false,
       "homepage": "NOASSERTION",
@@ -461,6 +461,30 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "11f71cfa21748f705febb62312a22a5976d7e5775d5e82bf330e0ad7f26e5f044267c375e9547b893db79e509cf57aef785561fc4e51aacd92b53d15f2ff4b74"
+        }
+      ]
+    },
+    {
+      "name": "@playwright/test",
+      "SPDXID": "SPDXRef-Package-playwright.test-1.63.0",
+      "versionInfo": "1.63.0",
+      "packageFileName": "node_modules/@playwright/test",
+      "description": "A high-level API to automate web browsers",
+      "downloadLocation": "https://registry.npmjs.org/@playwright/test/-/test-1.63.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://playwright.dev",
+      "licenseDeclared": "Apache-2.0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40playwright/test@1.63.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "a3130ae2f96507d44ae4d436975a6ad487ce7f602f9c4ba3fef6060e3d07da732d9ad6692ad0b0b7f974d0610eeb18c67e904d02f8e8bef61d0a6e74751424a5"
         }
       ]
     },
@@ -2192,6 +2216,54 @@
       ]
     },
     {
+      "name": "playwright",
+      "SPDXID": "SPDXRef-Package-playwright-1.63.0",
+      "versionInfo": "1.63.0",
+      "packageFileName": "node_modules/playwright",
+      "description": "A high-level API to automate web browsers",
+      "downloadLocation": "https://registry.npmjs.org/playwright/-/playwright-1.63.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://playwright.dev",
+      "licenseDeclared": "Apache-2.0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/playwright@1.63.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "fbbce204b89d4b835a34276de7b4940d3fb062699de5f9a241e8d489cfe46fe62c61208fc8e384f6c79bccc8cd990aec9cda4326a778587bd5ffc95f29f50352"
+        }
+      ]
+    },
+    {
+      "name": "playwright-core",
+      "SPDXID": "SPDXRef-Package-playwright-core-1.63.0",
+      "versionInfo": "1.63.0",
+      "packageFileName": "node_modules/playwright-core",
+      "description": "A high-level API to automate web browsers",
+      "downloadLocation": "https://registry.npmjs.org/playwright-core/-/playwright-core-1.63.0.tgz",
+      "filesAnalyzed": false,
+      "homepage": "https://playwright.dev",
+      "licenseDeclared": "Apache-2.0",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/playwright-core@1.63.0"
+        }
+      ],
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "ad80ac045fcce478d4721e766dbb5538d1058efe97bbcb26f21ef674d951e5bcc81357ef0bf6f182ca7392349f53e3307843263ccf0a25e6c6ea79f2c68e660a"
+        }
+      ]
+    },
+    {
       "name": "postcss",
       "SPDXID": "SPDXRef-Package-postcss-8.5.28",
       "versionInfo": "8.5.28",
@@ -3155,6 +3227,11 @@
       "relationshipType": "DEPENDENCY_OF"
     },
     {
+      "spdxElementId": "SPDXRef-Package-playwright.test-1.63.0",
+      "relatedSpdxElement": "SPDXRef-Package-ai-ascension.ascension-workflow-studio-0.1.0",
+      "relationshipType": "DEV_DEPENDENCY_OF"
+    },
+    {
       "spdxElementId": "SPDXRef-Package-testing-library.jest-dom-7.0.1",
       "relatedSpdxElement": "SPDXRef-Package-ai-ascension.ascension-workflow-studio-0.1.0",
       "relationshipType": "DEV_DEPENDENCY_OF"
@@ -3322,6 +3399,11 @@
     {
       "spdxElementId": "SPDXRef-Package-jridgewell.sourcemap-codec-1.6.0",
       "relatedSpdxElement": "SPDXRef-Package-jridgewell.trace-mapping-0.3.31",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-playwright-1.63.0",
+      "relatedSpdxElement": "SPDXRef-Package-playwright.test-1.63.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {
@@ -3857,6 +3939,11 @@
     {
       "spdxElementId": "SPDXRef-Package-entities-8.1.0",
       "relatedSpdxElement": "SPDXRef-Package-parse5-8.0.1",
+      "relationshipType": "DEPENDENCY_OF"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-playwright-core-1.63.0",
+      "relatedSpdxElement": "SPDXRef-Package-playwright-1.63.0",
       "relationshipType": "DEPENDENCY_OF"
     },
     {

@@ -4,16 +4,23 @@ This packet separates product evidence from package integrity and unresolved own
 
 ## Product evidence currently available
 
-- `npm run typecheck` passed.
-- `npm run lint` is wired to the same strict TypeScript project check and is expected to pass with typecheck.
-- `npm test` passed: 3 files, 13 tests. The tests cover canonical semantic identity, layout binding, edit history, digest-bound bundle round-trips, secret-like field rejection, owner event projection recovery, SSE framing, same-origin enforcement, runtime owner decoding, safe commands, and the rendered library/designer/list-editor shell.
-- `npm run build` passed. Vite emitted a static source-map-free bundle under `dist/`.
+- `npm ci` passed with the pinned lockfile, including `@playwright/test` 1.63.0.
+- `npm run typecheck` and `npm run lint` passed for the strict app and Vite configuration projects.
+- `npm test -- --run` passed: 3 files, 17 tests. Coverage includes semantic identity and layout binding, bounded history, digest-bound bundles, secret-like field rejection, hostile JSON input rejection, future-schema archival classification, copy/paste ID remapping, guarded reconnection, alignment, three-way merge, owner event projection recovery, bounded SSE framing, same-origin enforcement, runtime owner decoding, safe commands, and the rendered library/designer/list-editor shell.
+- `npm run build` passed. The source-map-free Vite bundle is 545,783 bytes of JavaScript and 35,106 bytes of CSS; the emitted manifest and SHA-256 file are checked in.
 - `npm audit --audit-level=moderate` passed with zero vulnerabilities for the pinned dependency graph.
-- A local `vite preview` served `index.html`, JavaScript, and CSS with HTTP 200 responses. No real browser engine is installed in the environment, so browser-engine and screenshot gates remain unverified.
+- `npm sbom --sbom-format=spdx --sbom-type=application` passed and produced `studio-sbom.spdx.json` for the checked-in application dependency graph.
+- A local `vite preview` served `index.html`, JavaScript, and CSS with HTTP 200 responses. The Chromium Playwright project then passed both real browser journeys (2/2) with an isolated user-local Debian library/font root and `--disable-dev-shm-usage`; the reviewed screenshot is `screenshots/studio-designer-chromium.png`.
+- The configured browser matrix contains Chromium, Firefox, and WebKit. The Chromium project passed 2/2. Firefox and WebKit launch checks remain blocked by host libraries absent from the verification image; their downloaded engines and exact missing-library output are recorded in the command history.
 - The exact merged Phase 1 harness head passed its owner `management` suite (6 cases) and `management_sqlite` suite (5 cases) with `--locked`; see `phase1-owner-tests.json`.
 - The same head passed 28 workflow contract, dynamic planning, runtime, and durable store cases; see `phase1-workflow-tests.json`.
 - A real temporary `sts2-workflow serve` process at the same source head returned the admitted health, capability, validation, inspect, run, status, events, replay, and redacted export responses; see `phase1-live-api.json`.
 - The checked-in catalog, contract schema, canonical vector, conformance fixture, and owner management source digests are pinned in `contracts/accepted/phase1-integration.lock.json`.
+- The copied Phase 2 package passes its integrity verifier and its 34 checker unit tests.
+
+## Product changes covered by this packet
+
+The Studio draft now includes a non-canvas semantic list editor alongside the React Flow canvas, typed definition limits and node fields, ordered guard editing, bounded raw JSON import, archival handling for unsupported schemas, secret-safe portable bundles, template cloning with provenance, multi-selection copy/paste ID remapping, guarded edge reconnection, layout alignment, diagnostics-to-target navigation, bounded history and SSE projection helpers, draft conflict inspection with three-way merge, bounded run controls, replay comparison, and explicit fixture/live capability states. The permission-scope ADR, checksummed bundle, SPDX SBOM, and browser screenshot are included as review artifacts.
 
 ## Capability and evidence limits
 
@@ -21,8 +28,10 @@ The live adapter is real code against the merged owner routes, but this worktree
 
 The runtime did not expose callable D0→D1→D2→D3 Luna Max child sessions. No subprocess chain or false attestation was substituted. The exact blocked and partial requirement entries are in `requirement-ledger.json`.
 
-The production bundle contains a single minified JavaScript chunk of roughly 518 kB before gzip because React Flow is included in the initial route. Vite reports this as a chunk-size warning; the static bundle is usable, and route-level code splitting is a follow-up.
+The Chromium browser smoke covered the desktop fixture journeys. The full Firefox/WebKit launch matrix, 390px through desktop responsive matrix, 200/400 percent zoom, manual screen-reader review, production host CSP headers, live owner attachment, and browser permission/revocation states remain unverified. The production bundle contains a single minified JavaScript chunk of 545,783 bytes because React Flow is included in the initial route; Vite reports a chunk-size warning, and route-level code splitting remains a follow-up.
+
+Phase 2 is still a draft PR. No merge, release, deployment, live game session, or native hierarchy claim is made by this packet.
 
 ## Next verification gates
 
-Attach a served static bundle to a real authenticated harness process, exercise strict and dynamic owner round-trips, run browser engine/accessibility/security checks, generate the delivery checksum/SBOM packet, and review the remaining owner adapter gaps before any Phase 2 merge or release decision.
+Attach a served static bundle to a real authenticated harness process, exercise strict and dynamic owner round-trips, complete the cross-browser/accessibility/security matrix, and review the remaining owner adapter gaps before any Phase 2 merge or release decision.

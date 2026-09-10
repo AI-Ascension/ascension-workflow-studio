@@ -1,22 +1,22 @@
 {
   "schema_version": 1,
-  "bundle": "artifacts/studio-bundle",
-  "source_maps": false,
+  "bundle": "ascension-workflow-studio",
+  "generated_on": "2026-09-10",
   "files": [
     {
-      "path": "artifacts/studio-bundle/assets/index-D7ZZBWeo.js",
-      "bytes": 517917
+      "path": "assets/index-DGZHDDHC.css",
+      "bytes": 35106,
+      "sha256": "024b6362513c218968e0278a9a5f766e2a95ce20581700af0fdeda68b758ed0b"
     },
     {
-      "path": "artifacts/studio-bundle/assets/index-DR9AUPxe.css",
-      "bytes": 31726
+      "path": "assets/index-wVATvJGg.js",
+      "bytes": 545783,
+      "sha256": "feced75f5e064daaaf91a652880428ccdba7aebf1e8041ea25cc34a1b3b34e86"
     },
     {
-      "path": "artifacts/studio-bundle/index.html",
-      "bytes": 700
+      "path": "index.html",
+      "bytes": 700,
+      "sha256": "0f4ecc210b1bb94a63d298c0630a3721c3c98980c8e7461bd9c4a72e1192211c"
     }
-  ],
-  "checksums": "docs/evidence/studio-bundle.SHA256SUMS",
-  "sbom": "docs/evidence/studio-sbom.spdx.json",
-  "network_policy": "production_network_false"
+  ]
 }

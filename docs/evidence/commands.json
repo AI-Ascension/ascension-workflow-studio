@@ -2,28 +2,117 @@
   "schema_version": 1,
   "generated_on": "2026-09-10",
   "commands": [
-    { "command": "npm ci", "status": "passed", "scope": "clean dependency installation" },
-    { "command": "npm run typecheck", "status": "passed", "scope": "strict app and Vite config TypeScript" },
-    { "command": "npm run lint", "status": "passed", "scope": "strict TypeScript lint gate" },
-    { "command": "npm test", "status": "passed", "scope": "3 files, 13 tests" },
-    { "command": "npm run build", "status": "passed", "scope": "static source-map-free Vite bundle" },
-    { "command": "npm audit --audit-level=moderate", "status": "passed", "scope": "pinned dependency graph" },
-    { "command": "python3 docs/reference/phase2-package/tools/verify_package.py", "status": "passed", "scope": "package integrity and seed checks" },
-    { "command": "python3 -m unittest discover -s docs/reference/phase2-package/tools -p 'test_*.py'", "status": "passed", "scope": "34 package checker tests" },
-    { "command": "cargo test -p sts2-harness --test management --locked", "status": "passed", "scope": "6 cases at merged Phase 1 head" },
-    { "command": "cargo test -p sts2-harness --test management_sqlite --locked", "status": "passed", "scope": "5 cases at merged Phase 1 head" },
-    { "command": "cargo test -p sts2-harness --test workflow_contracts --locked", "status": "passed", "scope": "12 cases at merged Phase 1 head" },
-    { "command": "cargo test -p sts2-harness --test workflow_dynamic --locked", "status": "passed", "scope": "4 cases at merged Phase 1 head" },
-    { "command": "cargo test -p sts2-harness --test workflow_dynamic_runtime --locked", "status": "passed", "scope": "1 case at merged Phase 1 head" },
-    { "command": "cargo test -p sts2-harness --test workflow_runtime --locked", "status": "passed", "scope": "4 cases at merged Phase 1 head" },
-    { "command": "cargo test -p sts2-harness --test workflow_store --locked", "status": "passed", "scope": "7 cases at merged Phase 1 head" },
-    { "command": "sts2-workflow serve + authenticated curl calls against /v1", "status": "passed", "scope": "synthetic live owner API evidence in phase1-live-api.json" },
-    { "command": "vite preview + curl / and emitted assets", "status": "passed", "scope": "local static serving; no browser engine installed" }
+    {
+      "command": "npm ci",
+      "status": "passed",
+      "scope": "clean dependency installation with Playwright test dependency"
+    },
+    {
+      "command": "npm run typecheck",
+      "status": "passed",
+      "scope": "strict app and Vite config TypeScript"
+    },
+    {
+      "command": "npm run lint",
+      "status": "passed",
+      "scope": "strict TypeScript lint gate"
+    },
+    {
+      "command": "npm test -- --run",
+      "status": "passed",
+      "scope": "3 files, 17 tests"
+    },
+    {
+      "command": "npm run build",
+      "status": "passed",
+      "scope": "545783-byte source-map-free JavaScript and 35106-byte CSS bundle"
+    },
+    {
+      "command": "npm audit --audit-level=moderate",
+      "status": "passed",
+      "scope": "pinned dependency graph"
+    },
+    {
+      "command": "npm sbom --sbom-format=spdx --sbom-type=application",
+      "status": "passed",
+      "scope": "SPDX application SBOM at docs/evidence/studio-sbom.spdx.json"
+    },
+    {
+      "command": "sha256sum -c docs/evidence/studio-bundle.SHA256SUMS",
+      "status": "passed",
+      "scope": "checked-in static bundle manifest"
+    },
+    {
+      "command": "python3 docs/reference/phase2-package/tools/verify_package.py",
+      "status": "passed",
+      "scope": "package integrity and seed checks"
+    },
+    {
+      "command": "python3 -m unittest discover -s docs/reference/phase2-package/tools -p 'test_*.py'",
+      "status": "passed",
+      "scope": "34 package checker tests"
+    },
+    {
+      "command": "cargo test -p sts2-harness --test management --locked",
+      "status": "passed",
+      "scope": "6 cases at merged Phase 1 head"
+    },
+    {
+      "command": "cargo test -p sts2-harness --test management_sqlite --locked",
+      "status": "passed",
+      "scope": "5 cases at merged Phase 1 head"
+    },
+    {
+      "command": "cargo test -p sts2-harness --test workflow_contracts --locked",
+      "status": "passed",
+      "scope": "12 cases at merged Phase 1 head"
+    },
+    {
+      "command": "cargo test -p sts2-harness --test workflow_dynamic --locked",
+      "status": "passed",
+      "scope": "4 cases at merged Phase 1 head"
+    },
+    {
+      "command": "cargo test -p sts2-harness --test workflow_dynamic_runtime --locked",
+      "status": "passed",
+      "scope": "1 case at merged Phase 1 head"
+    },
+    {
+      "command": "cargo test -p sts2-harness --test workflow_runtime --locked",
+      "status": "passed",
+      "scope": "4 cases at merged Phase 1 head"
+    },
+    {
+      "command": "cargo test -p sts2-harness --test workflow_store --locked",
+      "status": "passed",
+      "scope": "7 cases at merged Phase 1 head"
+    },
+    {
+      "command": "sts2-workflow serve + authenticated curl calls against /v1",
+      "status": "passed",
+      "scope": "synthetic live owner API evidence in phase1-live-api.json"
+    },
+    {
+      "command": "vite preview + curl / and emitted assets",
+      "status": "passed",
+      "scope": "local static serving"
+    },
+    {
+      "command": "LD_LIBRARY_PATH=/tmp/ascension-browser-libs/root-20260910/usr/lib/x86_64-linux-gnu:/tmp/ascension-browser-libs/root-20260910/lib/x86_64-linux-gnu FONTCONFIG_FILE=/tmp/ascension-browser-libs/fontconfig-runtime.conf ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
+      "status": "passed",
+      "scope": "2 real Chromium journeys passed (2/2) with reviewed screenshot"
+    },
+    {
+      "command": "LD_LIBRARY_PATH=/tmp/ascension-browser-libs/root-20260910/usr/lib/x86_64-linux-gnu:/tmp/ascension-browser-libs/root-20260910/lib/x86_64-linux-gnu FONTCONFIG_FILE=/tmp/ascension-browser-libs/fontconfig-runtime.conf ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --workers=1",
+      "status": "partial",
+      "scope": "Chromium 2/2 passed; Firefox/WebKit launch blocked by missing host libraries"
+    }
   ],
   "unverified": [
-    "real browser engine journeys and screenshots",
-    "live authenticated harness process attachment",
-    "CSP/static host headers",
+    "Firefox and WebKit browser-engine journeys because the verification image lacks their GTK/media libraries",
+    "full responsive, 200/400 percent zoom, keyboard and manual screen-reader matrix",
+    "live authenticated harness process attachment and owner draft/publish/browser routes",
+    "production static host CSP/routing headers",
     "native D0-D1-D2-D3 Luna Max child-session lineage"
   ]
 }

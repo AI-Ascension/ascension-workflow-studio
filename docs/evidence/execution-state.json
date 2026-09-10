@@ -3,15 +3,35 @@
   "goal": "ascension-workflow-phase2-package/00_START_HERE.md",
   "status": "in_progress_with_blockers",
   "hierarchy": {
-    "d0": { "status": "active", "role": "root implementation orchestrator", "worktree": "worktrees/studio-phase2-implementation" },
-    "d1": { "status": "not_launched", "role": "Luna Max workstream lead" },
-    "d2": { "status": "not_launched", "role": "Luna Max work-package coordinator" },
-    "d3": { "status": "not_launched", "role": "Luna Max implementer/verifier" },
+    "d0": {
+      "status": "active",
+      "role": "root implementation orchestrator",
+      "worktree": "worktrees/studio-phase2-implementation"
+    },
+    "d1": {
+      "status": "not_launched",
+      "role": "Luna Max workstream lead"
+    },
+    "d2": {
+      "status": "not_launched",
+      "role": "Luna Max work-package coordinator"
+    },
+    "d3": {
+      "status": "not_launched",
+      "role": "Luna Max implementer/verifier"
+    },
     "native_runtime_evidence": "blocked: no callable child-session API was exposed"
   },
   "active_worktree": "codex/phase2-studio-implementation-20260910",
   "source_heads_locked": true,
   "product_mode": "fixture_default_live_capability_gated",
   "merge_authorization": "Phase 1 merges explicitly authorized and complete; Phase 2 merge not authorized",
-  "last_update": "2026-09-10"
+  "last_update": "2026-09-10",
+  "verification": {
+    "vitest": "passed: 17 tests across 3 files",
+    "chromium_browser": "passed: 2 journeys with reviewed screenshot",
+    "firefox_webkit": "blocked: host GTK/media libraries unavailable",
+    "sbom": "passed: SPDX application report checked in",
+    "phase2_merge": "not authorized; draft PR remains open"
+  }
 }
