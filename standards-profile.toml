@@ -1,0 +1,10 @@
+profile = "ascension-workflow-studio-typescript-v1"
+language = "typescript"
+node = "24.16.0"
+package_manager = "npm"
+package_manager_version = "11.13.0"
+strict = true
+source_maps = false
+production_network = false
+required_commands = ["npm ci", "npm run typecheck", "npm run lint", "npm test", "npm run build"]
+policy_note = "Studio owns browser presentation and adapters; Phase 1 remains the execution authority."
