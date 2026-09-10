@@ -1,0 +1,19 @@
+{
+  "schema_version": 1,
+  "repository": "AI-Ascension/sts2-harness",
+  "source_head": "651a5225cc608303710014cc5ddf0160541662f9",
+  "process": "sts2-workflow serve --listen 127.0.0.1:8800 --store <temporary SQLite path> --auth-profile default",
+  "profile_evidence_scope": "synthetic",
+  "calls": [
+    { "route": "GET /v1/health", "status": 200, "result": "ok" },
+    { "route": "GET /v1/capabilities", "status": 200, "result": "synthetic capability manifest" },
+    { "route": "GET /v1/studio/definitions", "status": 200, "result": "empty catalog before publication" },
+    { "route": "POST /v1/studio/drafts", "status": 200, "result": "draft created at revision 0" },
+    { "route": "PUT /v1/studio/drafts/draft.live.actual", "status": 200, "result": "conditional save advanced to revision 1" },
+    { "route": "POST /v1/workflow-definitions/validate", "status": 200, "result": "valid true with admitted synthetic capabilities" },
+    { "route": "POST /v1/studio/drafts/draft.live.actual/publish", "status": 200, "result": "published" },
+    { "route": "GET /v1/studio/drafts/draft.live.actual", "status": 200, "result": "revision 1 reloaded" },
+    { "route": "GET /v1/studio/definitions", "status": 200, "result": "one published definition reloaded" }
+  ],
+  "limitation": "This is a real authenticated synthetic management process. It is not native gameplay/provider execution and it is not a browser-engine journey."
+}

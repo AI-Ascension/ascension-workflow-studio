@@ -17,7 +17,7 @@ This packet separates product evidence from package integrity and unresolved own
 - A real temporary `sts2-workflow serve` process at the same source head returned the admitted health, capability, validation, inspect, run, status, events, replay, and redacted export responses; see `phase1-live-api.json`.
 - The checked-in catalog, contract schema, canonical vector, conformance fixture, and owner management source digests are pinned in `contracts/accepted/phase1-integration.lock.json`.
 - The copied Phase 2 package passes its integrity verifier and its 34 checker unit tests.
-- The additive owner authoring contract merged through [PR #57](https://github.com/AI-Ascension/sts2-harness/pull/57) as [`172b41022e0de9d66ab5ee94b06ac4b99238cad2`](https://github.com/AI-Ascension/sts2-harness/commit/172b41022e0de9d66ab5ee94b06ac4b99238cad2). Its focused owner checks passed for revision-bounded draft writes, idempotency, conflicts, immutable publication, secret-like rejection, SQLite reopen, HTTP route mapping, and missing-draft 404 behavior. No live browser-to-owner process run is claimed.
+- The additive owner authoring contract merged through [PR #57](https://github.com/AI-Ascension/sts2-harness/pull/57) as [`172b41022e0de9d66ab5ee94b06ac4b99238cad2`](https://github.com/AI-Ascension/sts2-harness/commit/172b41022e0de9d66ab5ee94b06ac4b99238cad2), with the `max_output_tokens` live-filter fix merged through [PR #64](https://github.com/AI-Ascension/sts2-harness/pull/64) as [`651a5225cc608303710014cc5ddf0160541662f9`](https://github.com/AI-Ascension/sts2-harness/commit/651a5225cc608303710014cc5ddf0160541662f9). Its focused owner checks passed for revision-bounded draft writes, idempotency, conflicts, immutable publication, secret-like rejection, SQLite reopen, HTTP route mapping, and missing-draft 404 behavior. A real authenticated synthetic process also completed the authoring flow; no live browser attachment is claimed.
 
 ## Product changes covered by this packet
 
@@ -25,7 +25,7 @@ The Studio draft now includes a non-canvas semantic list editor alongside the Re
 
 ## Capability and evidence limits
 
-The live adapter is real code against the merged owner routes, including draft persistence, conditional save, capability validation, and publication. This worktree does not claim a live process run. Browser pairing, session revocation, plan inspection, and artifact retrieval are absent or unavailable. Fixture mode is explicit and deterministic; its evidence cannot satisfy live process acceptance.
+The live adapter is real code against the merged owner routes, including draft persistence, conditional save, capability validation, and publication. A live synthetic process completed create, save, validate, publish, and reload checks. Browser pairing, session revocation, plan inspection, artifact retrieval, and live browser attachment are absent or unavailable. Fixture mode is explicit and deterministic; its evidence cannot satisfy native gameplay acceptance.
 
 The runtime did not expose callable D0→D1→D2→D3 Luna Max child sessions. No subprocess chain or false attestation was substituted. The exact blocked and partial requirement entries are in `requirement-ledger.json`.
 
