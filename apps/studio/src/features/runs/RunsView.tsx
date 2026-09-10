@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import type { CommandKind, EventPage, RunEvent, StatusResponse } from "@studio/contracts";
+import type { CommandKind, CommandResponse, EventPage, RunEvent, StatusResponse } from "@studio/contracts";
 import { applyEventPage, createProjection, type RunProjection, type StudioClient } from "@studio/client";
 
 import { Notice } from "../../components/Notice";
@@ -21,6 +21,7 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsView
   const [state, setState] = useState<"idle" | "loading" | "ready" | "error" | "resnapshot">("idle");
   const [message, setMessage] = useState("");
   const [busyCommand, setBusyCommand] = useState<CommandKind | undefined>();
+  const [lastCommand, setLastCommand] = useState<CommandResponse | undefined>();
 
   const refresh = useCallback(async (requestedRunId = runId): Promise<void> => {
     setState("loading");
@@ -44,6 +45,11 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsView
     void refresh();
   }, [refresh]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => { void refresh(); }, mode === "live" ? 5_000 : 10_000);
+    return () => window.clearInterval(timer);
+  }, [mode, refresh]);
+
   const selectRun = (): void => {
     const next = runInput.trim();
     if (!next) return;
@@ -55,7 +61,8 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsView
     if (!status) return;
     setBusyCommand(kind);
     try {
-      await client.command(status.run.workflow_run_id, status.run.run_revision, kind);
+      const response = await client.command(status.run.workflow_run_id, status.run.run_revision, kind);
+      setLastCommand(response);
       await refresh(status.run.workflow_run_id);
     } catch (error: unknown) {
       setState("error");
@@ -73,7 +80,7 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsView
   return <section className="view-stack" aria-labelledby="runs-title">
     <div className="view-heading">
       <div><p className="eyebrow">Workspace / Runs</p><h1 id="runs-title">Run inspector</h1><p className="lede">Observe owner snapshots and retained events with revision-safe controls.</p></div>
-      <StatusBadge tone={mode === "fixture" ? "fixture" : "live"}>{mode === "fixture" ? "fixture projection" : "live API"}</StatusBadge>
+      <div className="heading-actions"><StatusBadge tone={mode === "fixture" ? "fixture" : "live"}>{mode === "fixture" ? "fixture projection" : "live API"}</StatusBadge><span className="muted">bounded polling · {mode === "live" ? "5s" : "10s"}</span></div>
     </div>
     <div className="run-selector">
       <label className="field-label">Run ID<input value={runInput} onChange={(event) => setRunInput(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") selectRun(); }} placeholder="run.fixture.1" /></label>
@@ -93,6 +100,7 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsView
         <section className="panel-card controls-card" aria-labelledby="controls-title">
           <div className="panel-title"><div><p className="eyebrow">Safe controls</p><h2 id="controls-title">Operator actions</h2></div><span className="muted">actor scope: workflow:control</span></div>
           <p className="muted">Every command includes this run ID and the displayed revision. The owner remains responsible for admission and settlement.</p>
+          {lastCommand ? <div className="command-outcome" role="status"><StatusBadge tone={lastCommand.outcome === "applied" ? "success" : lastCommand.outcome === "pending" ? "warning" : "muted"}>{lastCommand.outcome}</StatusBadge><span>Command <code>{lastCommand.command_id}</code> reached revision {lastCommand.run_revision}; acceptance is not settlement.</span></div> : null}
           <div className="control-grid">
             <CommandButton label="Pause" kind="pause" enabled={Boolean(canPause)} busy={busyCommand} onClick={sendCommand} />
             <CommandButton label="Resume" kind="resume" enabled={Boolean(canResume)} busy={busyCommand} onClick={sendCommand} />
@@ -102,9 +110,10 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsView
         </section>
         <section className="panel-card" aria-labelledby="authority-title">
           <div className="panel-title"><div><p className="eyebrow">Authority boundary</p><h2 id="authority-title">Control plane state</h2></div><StatusBadge tone={status.authority.state === "healthy" ? "success" : "warning"}>{status.authority.state}</StatusBadge></div>
-          <dl className="detail-list"><div><dt>Definition digest</dt><dd><code>{status.run.definition_digest}</code></dd></div><div><dt>Game outcome</dt><dd>{status.run.game_outcome.replaceAll("_", " ")}</dd></div><div><dt>Cleanup</dt><dd>{status.run.cleanup.replaceAll("_", " ")}</dd></div><div><dt>Waiting reason</dt><dd>{status.waiting_reason ?? "—"}</dd></div></dl>
+          <dl className="detail-list"><div><dt>Definition digest</dt><dd><code>{status.run.definition_digest}</code></dd></div><div><dt>Game outcome</dt><dd>{status.run.game_outcome.replaceAll("_", " ")}</dd></div><div><dt>Cleanup</dt><dd>{status.run.cleanup.replaceAll("_", " ")}</dd></div><div><dt>Waiting reason</dt><dd>{status.waiting_reason ?? "—"}</dd></div><div><dt>Pending operation</dt><dd>{status.run.pending_operation ? `${status.run.pending_operation.operation_id} · ${status.run.pending_operation.state}` : "None"}</dd></div></dl>
         </section>
       </div>
+      <section className="panel-card" aria-labelledby="budget-title"><div className="panel-title"><div><p className="eyebrow">Resource projection</p><h2 id="budget-title">Budget and invocation</h2></div><span className="muted">owner snapshot</span></div><div className="budget-grid"><Metric label="Provider calls" value={`${status.run.budget.provider_calls_consumed} / ${status.run.budget.provider_calls_reserved}`} /><Metric label="Node steps" value={String(status.run.budget.node_steps_consumed)} /><Metric label="Replans" value={String(status.run.budget.replans_consumed)} /><Metric label="Node execution" value={status.run.cursor.node_execution_id} /></div></section>
       <section className="panel-card timeline-card" aria-labelledby="timeline-title">
         <div className="panel-title"><div><p className="eyebrow">Retained event projection</p><h2 id="timeline-title">Timeline</h2></div><span className="muted">{projection?.events.length ?? 0} events</span></div>
         {projection?.events.length ? <ol className="event-timeline">{projection.events.map((event) => <EventRow event={event} key={event.sequence} />)}</ol> : <p className="muted">No retained events were returned.</p>}

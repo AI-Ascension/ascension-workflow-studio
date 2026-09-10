@@ -16,4 +16,18 @@ describe("Studio shell", () => {
     await user.click(screen.getByRole("tab", { name: "List editor" }));
     expect(screen.getByText("Semantic node list")).toBeInTheDocument();
   });
+
+  it("exposes bounded raw JSON and template provenance entry points", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await screen.findByRole("heading", { name: "Workflow library" });
+    await user.click(screen.getAllByRole("button", { name: "Clone draft" })[0]);
+    expect(await screen.findByRole("heading", { name: /draft$/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("tab", { name: "List editor" }));
+    await user.click(screen.getAllByRole("button", { name: /observe|decide|execute/i })[0]);
+    expect(screen.getByText("Typed fields")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "JSON mode" }));
+    expect(screen.getByRole("textbox", { name: "Raw workflow definition JSON" })).toBeInTheDocument();
+    expect(screen.getByText("Bounded JSON mode")).toBeInTheDocument();
+  });
 });

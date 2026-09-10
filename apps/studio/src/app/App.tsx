@@ -58,11 +58,11 @@ export function App(): JSX.Element {
     setAppMessage(undefined);
   };
 
-  const createDraft = (): void => {
-    const base = definitions[0] ?? fixtureDefinitions[0];
+  const createDraft = (template?: DefinitionRecord): void => {
+    const base = template ?? definitions[0] ?? fixtureDefinitions[0];
     const draft = cloneDocument(base.definition);
     draft.version = `${draft.version}-draft`;
-    draft.annotations = { ...(draft.annotations ?? {}), studioDraft: true };
+    draft.annotations = { ...(draft.annotations ?? {}), studioDraft: true, template_source: base.id, template_version: base.definition.version };
     setSelectedDefinition({ ...base, title: `${base.title} draft`, source: "draft", description: "Unsaved Studio draft with explicit adapter state." });
     setActiveDocument(draft);
     setView("designer");

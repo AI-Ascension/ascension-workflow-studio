@@ -4,6 +4,8 @@ import {
   type JsonValue,
   type LayoutSidecar,
   type WorkflowDefinition,
+  type WorkflowEdge,
+  type WorkflowNode,
   WorkflowDefinitionSchema,
 } from "@studio/contracts";
 
@@ -40,6 +42,54 @@ export interface StudioBundleEnvelope {
   layout: LayoutSidecar;
 }
 
+export interface JsonImportLimits {
+  maxBytes: number;
+  maxDepth: number;
+  maxNodes: number;
+  maxStringBytes: number;
+}
+
+const defaultJsonImportLimits: JsonImportLimits = {
+  maxBytes: 2 * 1024 * 1024,
+  maxDepth: 32,
+  maxNodes: 20_000,
+  maxStringBytes: 64 * 1024,
+};
+
+export type DefinitionImport =
+  | { kind: "supported"; document: SemanticDocument }
+  | { kind: "archival"; schemaVersion: string; raw: JsonValue; reason: string };
+
+export interface MergeConflict {
+  path: string;
+  base: JsonValue | undefined;
+  local: JsonValue | undefined;
+  remote: JsonValue | undefined;
+}
+
+export interface DocumentMergeResult {
+  document: SemanticDocument | undefined;
+  conflicts: MergeConflict[];
+  changedPaths: string[];
+}
+
+export interface LayoutMergeResult {
+  layout: LayoutSidecar | undefined;
+  conflicts: MergeConflict[];
+}
+
+export interface NodeClipboard {
+  sourceGraphId: string;
+  nodes: WorkflowNode[];
+  edges: WorkflowEdge[];
+}
+
+export interface PasteResult {
+  document: SemanticDocument;
+  selectedIds: string[];
+  idMap: Record<string, string>;
+}
+
 export interface DocumentChange {
   path: string;
   before: JsonValue | undefined;
@@ -65,7 +115,7 @@ export function canonicalize(value: unknown): JsonValue {
   }
   if (typeof value === "object") {
     const record = value as Record<string, unknown>;
-    const output: JsonObject = {};
+    const output = Object.create(null) as JsonObject;
     for (const key of Object.keys(record).sort()) {
       if (key === "annotations") {
         continue;
@@ -79,6 +129,209 @@ export function canonicalize(value: unknown): JsonValue {
 
 export function canonicalJson(value: unknown): string {
   return JSON.stringify(canonicalize(value));
+}
+
+export function parseBoundedJson(raw: string, requestedLimits: Partial<JsonImportLimits> = {}): JsonValue {
+  const limits = { ...defaultJsonImportLimits, ...requestedLimits };
+  const bytes = new TextEncoder().encode(raw).byteLength;
+  if (bytes > limits.maxBytes) {
+    throw new Error(`JSON input exceeds the ${limits.maxBytes}-byte limit`);
+  }
+  return new BoundedJsonParser(raw, limits).parse();
+}
+
+export function parseDefinitionImport(raw: string, requestedLimits: Partial<JsonImportLimits> = {}): DefinitionImport {
+  const parsed = parseBoundedJson(raw, requestedLimits);
+  if (!isJsonRecord(parsed)) {
+    throw new Error("workflow import must be a JSON object");
+  }
+  const schemaVersion = typeof parsed.schema_version === "string" ? parsed.schema_version : "unknown";
+  if (schemaVersion !== "ascension.workflow/v1") {
+    return {
+      kind: "archival",
+      schemaVersion,
+      raw: parsed,
+      reason: "This schema version is unsupported by the active owner contract; the raw bytes remain read-only.",
+    };
+  }
+  return { kind: "supported", document: WorkflowDefinitionSchema.parse(parsed) };
+}
+
+function isJsonRecord(value: unknown): value is JsonObject {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+class BoundedJsonParser {
+  private index = 0;
+  private nodes = 0;
+
+  public constructor(private readonly source: string, private readonly limits: JsonImportLimits) {}
+
+  public parse(): JsonValue {
+    this.skipWhitespace();
+    if (this.index >= this.source.length) {
+      throw new Error("JSON input is empty");
+    }
+    const value = this.parseValue(0);
+    this.skipWhitespace();
+    if (this.index !== this.source.length) {
+      throw new Error(`JSON input has trailing data at offset ${this.index}`);
+    }
+    return value;
+  }
+
+  private parseValue(depth: number): JsonValue {
+    this.nodes += 1;
+    if (this.nodes > this.limits.maxNodes) {
+      throw new Error(`JSON input exceeds the ${this.limits.maxNodes}-node limit`);
+    }
+    if (depth > this.limits.maxDepth) {
+      throw new Error(`JSON input exceeds the ${this.limits.maxDepth}-level nesting limit`);
+    }
+    this.skipWhitespace();
+    const character = this.source[this.index];
+    if (character === '"') return this.parseString();
+    if (character === "{") return this.parseObject(depth);
+    if (character === "[") return this.parseArray(depth);
+    if (this.source.startsWith("true", this.index)) {
+      this.index += 4;
+      return true;
+    }
+    if (this.source.startsWith("false", this.index)) {
+      this.index += 5;
+      return false;
+    }
+    if (this.source.startsWith("null", this.index)) {
+      this.index += 4;
+      return null;
+    }
+    return this.parseNumber();
+  }
+
+  private parseString(): string {
+    const start = this.index;
+    this.index += 1;
+    let escaped = false;
+    while (this.index < this.source.length) {
+      const character = this.source[this.index];
+      if (character === "\n" || character === "\r") {
+        throw new Error(`JSON string contains an unescaped line break at offset ${this.index}`);
+      }
+      if (escaped) {
+        escaped = false;
+        this.index += 1;
+        continue;
+      }
+      if (character === "\\") {
+        escaped = true;
+        this.index += 1;
+        continue;
+      }
+      if (character === '"') {
+        this.index += 1;
+        const encoded = this.source.slice(start, this.index);
+        if (new TextEncoder().encode(encoded).byteLength > this.limits.maxStringBytes) {
+          throw new Error(`JSON string exceeds the ${this.limits.maxStringBytes}-byte limit`);
+        }
+        const value: unknown = JSON.parse(encoded);
+        if (typeof value !== "string") {
+          throw new Error(`JSON string is invalid at offset ${start}`);
+        }
+        return value;
+      }
+      this.index += 1;
+    }
+    throw new Error(`JSON string is unterminated at offset ${start}`);
+  }
+
+  private parseObject(depth: number): JsonObject {
+    this.index += 1;
+    const output = Object.create(null) as JsonObject;
+    const keys = new Set<string>();
+    this.skipWhitespace();
+    if (this.source[this.index] === "}") {
+      this.index += 1;
+      return output;
+    }
+    while (this.index < this.source.length) {
+      this.skipWhitespace();
+      if (this.source[this.index] !== '"') {
+        throw new Error(`JSON object key expected at offset ${this.index}`);
+      }
+      const key = this.parseString();
+      if (keys.has(key)) {
+        throw new Error(`JSON object contains a duplicate key: ${key}`);
+      }
+      keys.add(key);
+      this.skipWhitespace();
+      if (this.source[this.index] !== ":") {
+        throw new Error(`JSON object colon expected at offset ${this.index}`);
+      }
+      this.index += 1;
+      output[key] = this.parseValue(depth + 1);
+      this.skipWhitespace();
+      if (this.source[this.index] === "}") {
+        this.index += 1;
+        return output;
+      }
+      if (this.source[this.index] !== ",") {
+        throw new Error(`JSON object separator expected at offset ${this.index}`);
+      }
+      this.index += 1;
+    }
+    throw new Error("JSON object is unterminated");
+  }
+
+  private parseArray(depth: number): JsonValue[] {
+    this.index += 1;
+    const output: JsonValue[] = [];
+    this.skipWhitespace();
+    if (this.source[this.index] === "]") {
+      this.index += 1;
+      return output;
+    }
+    while (this.index < this.source.length) {
+      output.push(this.parseValue(depth + 1));
+      this.skipWhitespace();
+      if (this.source[this.index] === "]") {
+        this.index += 1;
+        return output;
+      }
+      if (this.source[this.index] !== ",") {
+        throw new Error(`JSON array separator expected at offset ${this.index}`);
+      }
+      this.index += 1;
+      this.skipWhitespace();
+      if (this.source[this.index] === "]") {
+        throw new Error(`JSON array has a trailing comma at offset ${this.index}`);
+      }
+    }
+    throw new Error("JSON array is unterminated");
+  }
+
+  private parseNumber(): number {
+    const remainder = this.source.slice(this.index);
+    const match = remainder.match(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/);
+    if (!match) {
+      throw new Error(`JSON value is invalid at offset ${this.index}`);
+    }
+    const token = match[0];
+    const value = Number(token);
+    if (!Number.isFinite(value)) {
+      throw new Error(`JSON number is not finite at offset ${this.index}`);
+    }
+    if (/^-?\d+$/.test(token) && !Number.isSafeInteger(value)) {
+      throw new Error(`JSON integer is outside the safe range at offset ${this.index}`);
+    }
+    this.index += token.length;
+    return value;
+  }
+
+  private skipWhitespace(): void {
+    while (/\s/.test(this.source[this.index] ?? "")) {
+      this.index += 1;
+    }
+  }
 }
 
 export async function sha256Hex(value: string): Promise<string> {
@@ -111,16 +364,11 @@ export async function serializeStudioBundle(bundle: DocumentBundle): Promise<str
 }
 
 export async function parseStudioBundle(raw: string): Promise<DocumentBundle> {
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw) as unknown;
-  } catch {
-    throw new Error("Studio bundle is not valid JSON");
-  }
-  if (typeof parsed !== "object" || parsed === null) {
+  const parsed = parseBoundedJson(raw);
+  if (!isJsonRecord(parsed)) {
     throw new Error("Studio bundle must be a JSON object");
   }
-  const record = parsed as Record<string, unknown>;
+  const record = parsed;
   if (record.bundleVersion !== "ascension.studio-bundle/v1") {
     throw new Error("Studio bundle version is unsupported");
   }
@@ -338,11 +586,227 @@ export function addEdge(
   return WorkflowDefinitionSchema.parse(next);
 }
 
+export function reconnectEdge(
+  document: SemanticDocument,
+  graphId: string,
+  edgeIndex: number,
+  from: string,
+  to: string,
+): SemanticDocument {
+  const next = cloneDocument(document);
+  const graph = next.graphs.find((candidate) => candidate.id === graphId);
+  if (!graph || !graph.nodes.some((node) => node.id === from) || !graph.nodes.some((node) => node.id === to)) {
+    throw new Error("reconnected edges must target nodes in the same graph");
+  }
+  const edge = graph.edges[edgeIndex];
+  if (!edge) {
+    throw new Error(`edge ${edgeIndex} does not exist in graph ${graphId}`);
+  }
+  if (graph.edges.some((candidate, index) => index !== edgeIndex && candidate.from === from && candidate.to === to && candidate.on === edge.on)) {
+    throw new Error("reconnection would create a duplicate guarded edge");
+  }
+  graph.edges[edgeIndex] = { ...edge, from, to };
+  return WorkflowDefinitionSchema.parse(next);
+}
+
+export function copyNodes(document: SemanticDocument, qualifiedIds: string[]): NodeClipboard {
+  if (qualifiedIds.length === 0) {
+    throw new Error("select at least one node before copying");
+  }
+  const parsed = qualifiedIds.map(parseQualifiedId);
+  const graphIds = new Set(parsed.map((value) => value.graphId));
+  if (graphIds.size !== 1) {
+    throw new Error("copy a single graph selection at a time");
+  }
+  const sourceGraphId = parsed[0].graphId;
+  const graph = document.graphs.find((candidate) => candidate.id === sourceGraphId);
+  if (!graph) {
+    throw new Error(`graph ${sourceGraphId} does not exist`);
+  }
+  const ids = new Set(parsed.map((value) => value.nodeId));
+  const nodes = graph.nodes.filter((node) => ids.has(node.id)).map((node) => cloneJson(node));
+  if (nodes.length !== parsed.length) {
+    throw new Error("copy selection contains an unknown node");
+  }
+  const edges = graph.edges.filter((edge) => ids.has(edge.from) && ids.has(edge.to)).map((edge) => cloneJson(edge));
+  return { sourceGraphId, nodes, edges };
+}
+
+export function pasteNodes(
+  document: SemanticDocument,
+  graphId: string,
+  clipboard: NodeClipboard,
+  offset = { x: 32, y: 32 },
+): PasteResult {
+  const next = cloneDocument(document);
+  const graph = next.graphs.find((candidate) => candidate.id === graphId);
+  if (!graph) {
+    throw new Error(`graph ${graphId} does not exist`);
+  }
+  if (graph.nodes.length + clipboard.nodes.length > 512) {
+    throw new Error("pasting these nodes would exceed the graph node bound");
+  }
+  const existing = new Set(graph.nodes.map((node) => node.id));
+  const idMap: Record<string, string> = {};
+  for (const node of clipboard.nodes) {
+    const base = `${node.id}_copy`;
+    let candidate = base;
+    let suffix = 2;
+    while (existing.has(candidate)) {
+      candidate = `${base}_${suffix}`;
+      suffix += 1;
+    }
+    existing.add(candidate);
+    idMap[node.id] = candidate;
+  }
+  if (graph.edges.length + clipboard.edges.length > 2048) {
+    throw new Error("pasting these nodes would exceed the graph edge bound");
+  }
+  for (const node of clipboard.nodes) {
+    const remapped = remapLocalReferences(node.config, idMap, clipboard.sourceGraphId, graphId);
+    graph.nodes.push({ ...cloneJson(node), id: idMap[node.id], config: remapped });
+  }
+  for (const edge of clipboard.edges) {
+    const from = idMap[edge.from];
+    const to = idMap[edge.to];
+    if (!from || !to) continue;
+    graph.edges.push({ ...cloneJson(edge), from, to });
+  }
+  return {
+    document: WorkflowDefinitionSchema.parse(next),
+    selectedIds: clipboard.nodes.map((node) => qualifiedNodeId(graphId, idMap[node.id])),
+    idMap,
+  };
+}
+
+export function alignLayout(
+  layout: LayoutSidecar,
+  qualifiedIds: string[],
+  axis: "x" | "y" | "both",
+): LayoutSidecar {
+  if (qualifiedIds.length < 2) return LayoutSidecarSchema.parse(layout);
+  const positions = qualifiedIds.map((id) => layout.positions[id]).filter((position): position is { x: number; y: number } => position !== undefined);
+  if (positions.length !== qualifiedIds.length) {
+    throw new Error("alignment selection contains an unknown layout node");
+  }
+  const anchor = positions[0];
+  const next = { ...layout.positions };
+  for (const id of qualifiedIds) {
+    const position = next[id];
+    if (!position) continue;
+    next[id] = {
+      x: axis === "y" ? position.x : anchor.x,
+      y: axis === "x" ? position.y : anchor.y,
+    };
+  }
+  return LayoutSidecarSchema.parse({ ...layout, positions: next });
+}
+
+export function mergeDocuments(
+  base: SemanticDocument,
+  local: SemanticDocument,
+  remote: SemanticDocument,
+): DocumentMergeResult {
+  const conflicts: MergeConflict[] = [];
+  const merged = mergeJson(base, local, remote, "$", conflicts);
+  if (conflicts.length > 0) {
+    return { document: undefined, conflicts, changedPaths: conflicts.map((conflict) => conflict.path) };
+  }
+  const parsed = WorkflowDefinitionSchema.safeParse(merged);
+  if (!parsed.success) {
+    return {
+      document: undefined,
+      conflicts: [{ path: "$", base: cloneJson(base), local: cloneJson(local), remote: cloneJson(remote) }],
+      changedPaths: ["$"],
+    };
+  }
+  return { document: parsed.data, conflicts: [], changedPaths: diffDocuments(base, parsed.data).map((change) => change.path) };
+}
+
+export function mergeLayoutSidecars(
+  base: LayoutSidecar,
+  local: LayoutSidecar,
+  remote: LayoutSidecar,
+): LayoutMergeResult {
+  const conflicts: MergeConflict[] = [];
+  const merged = mergeJson(base, local, remote, "$", conflicts);
+  if (conflicts.length > 0) return { layout: undefined, conflicts };
+  const parsed = LayoutSidecarSchema.safeParse(merged);
+  return parsed.success ? { layout: parsed.data, conflicts: [] } : {
+    layout: undefined,
+    conflicts: [{ path: "$", base: cloneJson(base), local: cloneJson(local), remote: cloneJson(remote) }],
+  };
+}
+
+function parseQualifiedId(value: string): { graphId: string; nodeId: string } {
+  const separator = value.indexOf(":");
+  if (separator <= 0 || separator === value.length - 1) {
+    throw new Error(`invalid qualified node ID: ${value}`);
+  }
+  return { graphId: value.slice(0, separator), nodeId: value.slice(separator + 1) };
+}
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function remapLocalReferences(value: JsonObject, idMap: Record<string, string>, sourceGraphId: string, targetGraphId: string): JsonObject {
+  const remap = (current: JsonValue): JsonValue => {
+    if (typeof current === "string") {
+      if (idMap[current]) return idMap[current];
+      const qualifiedPrefix = `${sourceGraphId}:`;
+      if (current.startsWith(qualifiedPrefix) && idMap[current.slice(qualifiedPrefix.length)]) {
+        return `${targetGraphId}:${idMap[current.slice(qualifiedPrefix.length)]}`;
+      }
+      return current;
+    }
+    if (Array.isArray(current)) return current.map(remap);
+    if (current !== null && typeof current === "object") {
+      const output = Object.create(null) as JsonObject;
+      for (const [key, child] of Object.entries(current)) output[key] = remap(child);
+      return output;
+    }
+    return current;
+  };
+  return remap(value) as JsonObject;
+}
+
+function mergeJson(
+  base: unknown,
+  local: unknown,
+  remote: unknown,
+  path: string,
+  conflicts: MergeConflict[],
+): JsonValue | undefined {
+  if (sameJson(local, base)) return toJsonValueOrUndefined(remote);
+  if (sameJson(remote, base) || sameJson(local, remote)) return toJsonValueOrUndefined(local);
+  if (isJsonRecord(base) && isJsonRecord(local) && isJsonRecord(remote)) {
+    const output = Object.create(null) as JsonObject;
+    const keys = new Set([...Object.keys(base), ...Object.keys(local), ...Object.keys(remote)]);
+    for (const key of [...keys].sort()) {
+      const value = mergeJson(base[key], local[key], remote[key], `${path}.${key}`, conflicts);
+      if (value !== undefined) output[key] = value;
+    }
+    return output;
+  }
+  if (Array.isArray(base) && Array.isArray(local) && Array.isArray(remote)) {
+    conflicts.push({ path, base: toJsonValueOrUndefined(base), local: toJsonValueOrUndefined(local), remote: toJsonValueOrUndefined(remote) });
+    return undefined;
+  }
+  conflicts.push({ path, base: toJsonValueOrUndefined(base), local: toJsonValueOrUndefined(local), remote: toJsonValueOrUndefined(remote) });
+  return undefined;
+}
+
+function sameJson(first: unknown, second: unknown): boolean {
+  if (first === undefined || second === undefined) return first === second;
+  return canonicalJson(first) === canonicalJson(second);
+}
+
 export class History<T> {
   private readonly past: T[] = [];
   private readonly future: T[] = [];
 
-  public constructor(private current: T, private readonly copy: (value: T) => T) {}
+  public constructor(private current: T, private readonly copy: (value: T) => T, private readonly maxEntries = 128) {}
 
   public present(): T {
     return this.copy(this.current);
@@ -350,6 +814,7 @@ export class History<T> {
 
   public commit(next: T): T {
     this.past.push(this.copy(this.current));
+    if (this.past.length > this.maxEntries) this.past.shift();
     this.current = this.copy(next);
     this.future.length = 0;
     return this.present();

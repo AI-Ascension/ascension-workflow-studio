@@ -34,7 +34,7 @@ import {
   type ValidateResponse,
   type WorkflowDefinition,
 } from "@studio/contracts";
-import { canonicalJson, cloneDocument, semanticDigest } from "@studio/document";
+import { canonicalJson, cloneDocument, diffDocuments, semanticDigest } from "@studio/document";
 
 export type ClientMode = "fixture" | "live";
 
@@ -280,6 +280,7 @@ function cryptoRandomId(): string {
 export interface RunProjection {
   runId: string;
   definitionDigest: string;
+  schemaVersion: string;
   lastSequence: number;
   events: RunEvent[];
 }
@@ -290,7 +291,7 @@ export type ProjectionResult =
   | { kind: "resnapshot"; reason: string; projection: RunProjection };
 
 export function createProjection(runId: string, definitionDigest: string): RunProjection {
-  return { runId, definitionDigest, lastSequence: 0, events: [] };
+  return { runId, definitionDigest, schemaVersion: "ascension.workflow-event/v1", lastSequence: 0, events: [] };
 }
 
 export function applyEventPage(projection: RunProjection, page: EventPage): ProjectionResult {
@@ -299,6 +300,9 @@ export function applyEventPage(projection: RunProjection, page: EventPage): Proj
   }
   if (page.gap) {
     return { kind: "resnapshot", reason: "owner reported an event retention gap", projection };
+  }
+  if (page.after_sequence > projection.lastSequence) {
+    return { kind: "resnapshot", reason: "event page starts after an unseen sequence", projection };
   }
   if (page.events.length === 0) {
     return { kind: "duplicate", projection };
@@ -310,7 +314,7 @@ export function applyEventPage(projection: RunProjection, page: EventPage): Proj
   let added = 0;
   for (const rawEvent of page.events) {
     const event = decodeWith(RunEventSchema, rawEvent, "event page");
-    if (event.workflow_run_id !== projection.runId || event.definition_digest !== projection.definitionDigest) {
+    if (event.schema_version !== projection.schemaVersion || event.workflow_run_id !== projection.runId || event.definition_digest !== projection.definitionDigest) {
       return { kind: "resnapshot", reason: "event identity or definition digest changed", projection };
     }
     const existing = next.events.find((candidate) => candidate.sequence === event.sequence);
@@ -325,6 +329,9 @@ export function applyEventPage(projection: RunProjection, page: EventPage): Proj
     }
     next.events.push(event);
     next.lastSequence = event.sequence;
+    if (next.events.length > 2048) {
+      return { kind: "resnapshot", reason: "event projection exceeded its bounded retention window", projection };
+    }
     added += 1;
   }
   if (added === 0) {
@@ -333,12 +340,18 @@ export function applyEventPage(projection: RunProjection, page: EventPage): Proj
   return { kind: "applied", projection: next, added };
 }
 
-export function parseSseDataChunk(chunk: string): unknown[] {
+export function parseSseDataChunk(chunk: string, maxFrames = 64, maxBytes = 512 * 1024): unknown[] {
+  if (new TextEncoder().encode(chunk).byteLength > maxBytes) {
+    throw new ClientError("SSE chunk exceeds the bounded transport limit", "sse_oversize");
+  }
   const records: unknown[] = [];
   let dataLines: string[] = [];
   const flush = (): void => {
     if (dataLines.length === 0) {
       return;
+    }
+    if (records.length >= maxFrames) {
+      throw new ClientError("SSE chunk exceeds the bounded frame limit", "sse_frame_limit");
     }
     const text = dataLines.join("\n");
     records.push(JSON.parse(text) as unknown);
@@ -470,7 +483,7 @@ export class FixtureClient implements StudioClient {
       old_definition_digest: oldDigest,
       new_definition_digest: newDigest,
       semantic_change: oldDigest !== newDigest,
-      changed_paths: oldDigest === newDigest ? [] : ["$"],
+      changed_paths: oldDigest === newDigest ? [] : diffDocuments(oldDefinition, newDefinition).map((change) => change.path),
     };
   }
 

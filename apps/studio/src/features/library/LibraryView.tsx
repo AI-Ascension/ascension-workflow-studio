@@ -10,7 +10,7 @@ interface LibraryViewProps {
   loading: boolean;
   catalogNotice: string | undefined;
   onOpen: (definition: DefinitionRecord) => void;
-  onCreate: () => void;
+  onCreate: (template?: DefinitionRecord) => void;
 }
 
 export function LibraryView({ definitions, loading, catalogNotice, onOpen, onCreate }: LibraryViewProps): JSX.Element {
@@ -28,7 +28,7 @@ export function LibraryView({ definitions, loading, catalogNotice, onOpen, onCre
         <h1 id="library-title">Workflow library</h1>
         <p className="lede">Admitted workflow definitions and durable editing entry points.</p>
       </div>
-      <button className="button button-primary" onClick={onCreate}>＋ New draft</button>
+      <button className="button button-primary" onClick={() => onCreate()}>＋ New draft</button>
     </div>
     {catalogNotice ? <div className="notice notice-warning"><strong>Catalog source</strong><span>{catalogNotice}</span></div> : null}
     <div className="toolbar-row">
@@ -40,7 +40,7 @@ export function LibraryView({ definitions, loading, catalogNotice, onOpen, onCre
       <span className="toolbar-meta">{filtered.length} definition{filtered.length === 1 ? "" : "s"}</span>
     </div>
     {loading ? <div className="loading-line">Loading admitted catalog…</div> : null}
-    {!loading && filtered.length === 0 ? <EmptyState title="No matching definitions" detail="Change the filter or create a draft from the admitted contract." action={{ label: "Create draft", onClick: onCreate }} /> : null}
+    {!loading && filtered.length === 0 ? <EmptyState title="No matching definitions" detail="Change the filter or create a draft from the admitted contract." action={{ label: "Create draft", onClick: () => onCreate() }} /> : null}
     <div className="library-grid">
       {filtered.map((definition) => <article className="definition-card" key={definition.id}>
         <div className="card-topline">
@@ -55,7 +55,7 @@ export function LibraryView({ definitions, loading, catalogNotice, onOpen, onCre
         </div>
         <div className="card-footer">
           <span className="muted">Updated {new Date(definition.updatedAt).toLocaleDateString()}</span>
-          <button className="button button-secondary" onClick={() => onOpen(definition)}>Open designer</button>
+          <div className="card-actions"><button className="button button-quiet" onClick={() => onCreate(definition)}>Clone draft</button><button className="button button-secondary" onClick={() => onOpen(definition)}>Open designer</button></div>
         </div>
       </article>)}
     </div>

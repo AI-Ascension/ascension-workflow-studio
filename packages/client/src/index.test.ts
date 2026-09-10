@@ -61,12 +61,17 @@ describe("owner event projection", () => {
     if (applied.kind !== "applied") throw new Error("fixture did not apply");
     const conflicting = applyEventPage(applied.projection, page([{ ...event(1), payload: { ...event(1).payload, reason_code: "tampered" } }]));
     expect(conflicting.kind).toBe("resnapshot");
+    const futurePage = applyEventPage(applied.projection, { ...page([event(2)]), after_sequence: 4 });
+    expect(futurePage.kind).toBe("resnapshot");
+    const schemaPage = applyEventPage(applied.projection, page([{ ...event(2), schema_version: "future/v2" }]));
+    expect(schemaPage.kind).toBe("resnapshot");
   });
 
   it("parses framed SSE data and rejects unsafe command inputs", () => {
     expect(parseSseDataChunk("event: update\ndata: {\"sequence\":1}\n\ndata: {\"sequence\":2}\n\n")).toEqual([{ sequence: 1 }, { sequence: 2 }]);
     expect(buildSafeCommand("run.fixture.1", 3, "pause")).toEqual({ runId: "run.fixture.1", expectedRevision: 3, kind: "pause" });
     expect(() => buildSafeCommand("run/foreign", 3, "pause")).toThrow("qualified run ID");
+    expect(() => parseSseDataChunk("data: {}\n\ndata: {}\n\n", 1)).toThrow("frame limit");
   });
 });
 

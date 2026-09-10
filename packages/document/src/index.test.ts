@@ -4,12 +4,19 @@ import type { WorkflowDefinition } from "@studio/contracts";
 
 import {
   History,
+  alignLayout,
   canonicalJson,
+  copyNodes,
   createLayout,
   diffDocuments,
   layoutOnlyChange,
   layoutIsValid,
+  mergeDocuments,
+  parseBoundedJson,
+  parseDefinitionImport,
   parseStudioBundle,
+  pasteNodes,
+  reconnectEdge,
   serializeStudioBundle,
   semanticDigest,
 } from "./index";
@@ -86,5 +93,42 @@ describe("workflow document identity", () => {
     document.graphs[0].nodes[0].config = { apiKey: "never-export" };
     const digest = await semanticDigest(document);
     await expect(serializeStudioBundle({ semantic: document, layout: createLayout(document, digest) })).rejects.toThrow("secret-like");
+  });
+
+  it("rejects duplicate keys, unsafe numbers, and future schemas before editing", () => {
+    expect(() => parseBoundedJson('{"x":1,"x":2}')).toThrow("duplicate key");
+    expect(() => parseBoundedJson("9007199254740993")).toThrow("safe range");
+    parseBoundedJson('{"__proto__":{"polluted":true}}');
+    expect(({} as { polluted?: boolean }).polluted).toBeUndefined();
+    const archival = parseDefinitionImport('{"schema_version":"ascension.workflow/v2","graphs":[]}');
+    expect(archival.kind).toBe("archival");
+    if (archival.kind === "archival") expect(archival.schemaVersion).toBe("ascension.workflow/v2");
+  });
+
+  it("remaps copied node IDs and retains only internal edges", () => {
+    const document = definition();
+    document.graphs[0].nodes[0].config = { target: "done", external_ref: "owner.registry" };
+    const clipboard = copyNodes(document, ["main:start", "main:done"]);
+    const pasted = pasteNodes(document, "main", clipboard);
+    expect(pasted.selectedIds).toEqual(["main:start_copy", "main:done_copy"]);
+    expect(pasted.document.graphs[0].edges.at(-1)).toMatchObject({ from: "start_copy", to: "done_copy" });
+    expect(pasted.document.graphs[0].nodes.find((node) => node.id === "start_copy")?.config).toEqual({ target: "done_copy", external_ref: "owner.registry" });
+  });
+
+  it("supports guarded reconnection, alignment, and non-overlapping three-way merge", async () => {
+    const original = definition();
+    const reconnected = reconnectEdge(original, "main", 0, "done", "start");
+    expect(reconnected.graphs[0].edges[0]).toMatchObject({ from: "done", to: "start" });
+    const digest = await semanticDigest(original);
+    const aligned = alignLayout(createLayout(original, digest), ["main:start", "main:done"], "x");
+    expect(aligned.positions["main:start"].x).toBe(aligned.positions["main:done"].x);
+    const local = { ...original, version: "1.1.0" };
+    const remote = { ...original, game_profile: "remote-profile" };
+    const merged = mergeDocuments(original, local, remote);
+    expect(merged.conflicts).toHaveLength(0);
+    expect(merged.document?.version).toBe("1.1.0");
+    expect(merged.document?.game_profile).toBe("remote-profile");
+    const conflict = mergeDocuments(original, { ...original, version: "1.1.0" }, { ...original, version: "1.2.0" });
+    expect(conflict.conflicts.map((item) => item.path)).toContain("$.version");
   });
 });
