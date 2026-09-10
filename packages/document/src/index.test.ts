@@ -80,4 +80,11 @@ describe("workflow document identity", () => {
     expect(parsed.semantic.workflow_id).toBe(document.workflow_id);
     await expect(parseStudioBundle(raw.replace('"test.workflow"', '"tampered.workflow"'))).rejects.toThrow("digest");
   });
+
+  it("refuses secret-like fields in portable bundles", async () => {
+    const document = definition();
+    document.graphs[0].nodes[0].config = { apiKey: "never-export" };
+    const digest = await semanticDigest(document);
+    await expect(serializeStudioBundle({ semantic: document, layout: createLayout(document, digest) })).rejects.toThrow("secret-like");
+  });
 });

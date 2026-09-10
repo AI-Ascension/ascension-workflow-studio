@@ -5,7 +5,7 @@
     { "command": "npm ci", "status": "passed", "scope": "clean dependency installation" },
     { "command": "npm run typecheck", "status": "passed", "scope": "strict app and Vite config TypeScript" },
     { "command": "npm run lint", "status": "passed", "scope": "strict TypeScript lint gate" },
-    { "command": "npm test", "status": "passed", "scope": "3 files, 12 tests" },
+    { "command": "npm test", "status": "passed", "scope": "3 files, 13 tests" },
     { "command": "npm run build", "status": "passed", "scope": "static source-map-free Vite bundle" },
     { "command": "npm audit --audit-level=moderate", "status": "passed", "scope": "pinned dependency graph" },
     { "command": "python3 docs/reference/phase2-package/tools/verify_package.py", "status": "passed", "scope": "package integrity and seed checks" },
