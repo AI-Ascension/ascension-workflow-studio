@@ -1,0 +1,11 @@
+flowchart TB
+    LIVE[Live inspector] --> CMD[Explicit pause/resume/step/cancel request]
+    CMD --> OWNER[Harness command admission and durable result]
+    OWNER -->|Accepted only| WAIT[Pending display]
+    OWNER -->|Applied receipt| CURRENT[Refresh authoritative state]
+    CMD -->|Lost response| LOOKUP[Lookup same command ID]
+    LOOKUP --> OWNER
+    HISTORY[Historical inspector] --> READ[Read retained snapshots and events]
+    READ --> OFFLINE[Owner offline replay if admitted]
+    OFFLINE --> ZERO[Zero game and provider calls]
+    DRAFT[Fork historical definition into draft] --> NEW[Separate explicit publish and start]

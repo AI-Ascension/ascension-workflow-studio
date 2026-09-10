@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "status": "proposed_targets_not_measurements",
+  "rules": [
+    "Measure production build on recorded hardware/browser/OS.",
+    "Use actual Phase-1 graph bounds; document any lower owner ceiling.",
+    "A changed threshold needs reviewed justification before acceptance; do not hide regressions."
+  ],
+  "profiles": [
+    {
+      "id": "PERF-01",
+      "name": "medium_graph_open",
+      "input": "250 nodes / 500 edges, or actual admitted ceiling",
+      "metric": "first_useful_render_p95_ms",
+      "target_max": 2000
+    },
+    {
+      "id": "PERF-02",
+      "name": "medium_edit",
+      "input": "250 nodes / 500 edges; 100 measured edits",
+      "metric": "input_to_visible_feedback_p95_ms",
+      "target_max": 100
+    },
+    {
+      "id": "PERF-03",
+      "name": "large_graph_handling",
+      "input": "1000 nodes / 2000 edges if admitted",
+      "metric": "parse_and_useful_view_p95_ms",
+      "target_max": 5000
+    },
+    {
+      "id": "PERF-04",
+      "name": "event_steady",
+      "input": "100 events/s for 60s; deterministic owner stream",
+      "metric": "projection_lag_p95_ms",
+      "target_max": 500
+    },
+    {
+      "id": "PERF-05",
+      "name": "burst_backpressure",
+      "input": "1000 events/s for 10s or owner max",
+      "metric": "bounded_queue_and_recovery",
+      "target": "No unbounded queue; explicit resnapshot on overflow; no lost authority evidence."
+    },
+    {
+      "id": "PERF-06",
+      "name": "history_window",
+      "input": "100000 retained records, paginated",
+      "metric": "browser_retained_event_count",
+      "target_max": 5000
+    },
+    {
+      "id": "PERF-07",
+      "name": "lifecycle_cleanup",
+      "input": "50 open/close/logout cycles after warmup",
+      "metric": "owned_subscription_worker_leak_count",
+      "target_max": 0
+    },
+    {
+      "id": "PERF-08",
+      "name": "static_core_bundle",
+      "input": "initial core route, excluding lazy panels",
+      "metric": "gzip_javascript_bytes",
+      "target_max": 1500000
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": "ascension.studio-projection-fixture/v1-seed",
+  "snapshot": {
+    "run_id": "run.synthetic.1",
+    "definition_artifact_sha256": "3a4d50a4572058d2a9abd20e5a58d5a22508a2f2f7c225fe9a107766cb0f78b7",
+    "sequence": 10,
+    "display_status": "running"
+  },
+  "events": [
+    {
+      "run_id": "run.synthetic.1",
+      "definition_artifact_sha256": "3a4d50a4572058d2a9abd20e5a58d5a22508a2f2f7c225fe9a107766cb0f78b7",
+      "sequence": 11,
+      "event_id": "evt.synthetic.11",
+      "kind": "status",
+      "value": "paused"
+    },
+    {
+      "run_id": "run.synthetic.1",
+      "definition_artifact_sha256": "3a4d50a4572058d2a9abd20e5a58d5a22508a2f2f7c225fe9a107766cb0f78b7",
+      "sequence": 11,
+      "event_id": "evt.synthetic.11",
+      "kind": "status",
+      "value": "paused"
+    }
+  ]
+}

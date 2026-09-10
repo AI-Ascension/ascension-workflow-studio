@@ -1,0 +1,214 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "status": {
+      "enum": [
+        "not_run",
+        "blocked",
+        "requested_only",
+        "verified"
+      ]
+    },
+    "client_version": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "agent_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "parent_agent_id": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "depth": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "requested_model": {
+      "const": "gpt-5.6-luna"
+    },
+    "requested_effort": {
+      "const": "max"
+    },
+    "observed_model": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "observed_effort": {
+      "anyOf": [
+        {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "evidence_quality": {
+      "enum": [
+        "none",
+        "requested_only",
+        "accepted_config",
+        "effective_runtime"
+      ]
+    },
+    "native_parentage_verified": {
+      "type": "boolean"
+    },
+    "may_spawn": {
+      "anyOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "evidence_refs": {
+      "type": "array",
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 1024
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "status",
+    "client_version",
+    "agent_id",
+    "parent_agent_id",
+    "depth",
+    "requested_model",
+    "requested_effort",
+    "observed_model",
+    "observed_effort",
+    "evidence_quality",
+    "native_parentage_verified",
+    "may_spawn",
+    "evidence_refs"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ascension:orchestration:agent-attestation:v1",
+  "description": "An empty template validates structurally but does not attest any actual agent. Verified requires effective-runtime evidence.",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "verified"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "client_version": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "agent_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "parent_agent_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "depth": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3
+          },
+          "observed_model": {
+            "const": "gpt-5.6-luna"
+          },
+          "observed_effort": {
+            "const": "max"
+          },
+          "evidence_quality": {
+            "const": "effective_runtime"
+          },
+          "native_parentage_verified": {
+            "const": true
+          },
+          "may_spawn": {
+            "type": "boolean"
+          },
+          "evidence_refs": {
+            "minItems": 1
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "depth": {
+            "const": 3
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "may_spawn": {
+            "const": false
+          }
+        }
+      }
+    }
+  ]
+}

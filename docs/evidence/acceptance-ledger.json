@@ -1,0 +1,1438 @@
+{
+  "schema_version": 1,
+  "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
+  "status_summary": {
+    "evidenced": 38,
+    "partial": 36,
+    "blocked": 33,
+    "not_run": 13
+  },
+  "cases": [
+    {
+      "id": "AT-001",
+      "requirement_ids": [
+        "P2-001"
+      ],
+      "work_package": "WP-00",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Required Luna Max child runtime was not callable in this environment."
+    },
+    {
+      "id": "AT-002",
+      "requirement_ids": [
+        "P2-002"
+      ],
+      "work_package": "WP-00",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No callable native D0-D1-D2-D3 child-session API was available."
+    },
+    {
+      "id": "AT-003",
+      "requirement_ids": [
+        "P2-003"
+      ],
+      "work_package": "WP-00",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No descendant runtime was launched, so slot evidence cannot be produced."
+    },
+    {
+      "id": "AT-004",
+      "requirement_ids": [
+        "P2-004"
+      ],
+      "work_package": "WP-01",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "repository bootstrap and branch are present"
+    },
+    {
+      "id": "AT-005",
+      "requirement_ids": [
+        "P2-005"
+      ],
+      "work_package": "WP-01",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "standards-profile.toml and strict compiler scripts"
+    },
+    {
+      "id": "AT-006",
+      "requirement_ids": [
+        "P2-006"
+      ],
+      "work_package": "WP-01",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "isolated implementation worktree and scoped branch"
+    },
+    {
+      "id": "AT-007",
+      "requirement_ids": [
+        "P2-007"
+      ],
+      "work_package": "WP-02",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "contracts/accepted/phase1-integration.lock.json"
+    },
+    {
+      "id": "AT-008",
+      "requirement_ids": [
+        "P2-008"
+      ],
+      "work_package": "WP-02",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "contracts/accepted/phase1-integration.lock.json"
+    },
+    {
+      "id": "AT-009",
+      "requirement_ids": [
+        "P2-009"
+      ],
+      "work_package": "WP-02",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No browser/draft owner projection was admitted; additive owner change was not authorized or implemented in this slice."
+    },
+    {
+      "id": "AT-010",
+      "requirement_ids": [
+        "P2-010"
+      ],
+      "work_package": "WP-03",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "docs/architecture/phase1-integration.md"
+    },
+    {
+      "id": "AT-011",
+      "requirement_ids": [
+        "P2-011"
+      ],
+      "work_package": "WP-03",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "docs/architecture/README.md"
+    },
+    {
+      "id": "AT-012",
+      "requirement_ids": [
+        "P2-012"
+      ],
+      "work_package": "WP-03",
+      "status": "evidenced",
+      "actual_command": "source review of docs/decisions/ADR-P2-011-permission-scopes.md",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Source evidence: docs/decisions/ADR-P2-011-permission-scopes.md defines scoped effects and explicit non-authorizations.",
+      "actual_evidence_refs": [
+        "docs/decisions/ADR-P2-011-permission-scopes.md"
+      ]
+    },
+    {
+      "id": "AT-013",
+      "requirement_ids": [
+        "P2-013"
+      ],
+      "work_package": "WP-04",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "packages/contracts/src/index.ts and packages/client/src/index.ts"
+    },
+    {
+      "id": "AT-014",
+      "requirement_ids": [
+        "P2-014"
+      ],
+      "work_package": "WP-04",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "apps/studio/src/features/compatibility/CompatibilityView.tsx"
+    },
+    {
+      "id": "AT-015",
+      "requirement_ids": [
+        "P2-015"
+      ],
+      "work_package": "WP-04",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "packages/client/src/index.ts"
+    },
+    {
+      "id": "AT-016",
+      "requirement_ids": [
+        "P2-016"
+      ],
+      "work_package": "WP-05",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "packages/document/src/index.ts"
+    },
+    {
+      "id": "AT-017",
+      "requirement_ids": [
+        "P2-017"
+      ],
+      "work_package": "WP-05",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "packages/document/src/index.ts"
+    },
+    {
+      "id": "AT-018",
+      "requirement_ids": [
+        "P2-018"
+      ],
+      "work_package": "WP-05",
+      "status": "partial",
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Source and component evidence: unsupported schemas are classified read-only; exact original-byte retention and publish blocking need a browser journey.",
+      "actual_evidence_refs": [
+        "packages/document/src/index.test.ts",
+        "apps/studio/src/app/App.test.tsx",
+        "apps/studio/src/features/designer/DesignerView.tsx"
+      ]
+    },
+    {
+      "id": "AT-019",
+      "requirement_ids": [
+        "P2-019"
+      ],
+      "work_package": "WP-06",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Palette is bounded to checked-in catalog metadata; a live registry route is gated."
+    },
+    {
+      "id": "AT-020",
+      "requirement_ids": [
+        "P2-020"
+      ],
+      "work_package": "WP-06",
+      "status": "partial",
+      "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Typed guard/config/budget controls are present and Chromium smoke renders the designer; the required registry capability variants and value matrix were not exercised.",
+      "actual_evidence_refs": [
+        "tests/browser/studio.spec.ts",
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "docs/evidence/screenshots/studio-designer-chromium.png"
+      ]
+    },
+    {
+      "id": "AT-021",
+      "requirement_ids": [
+        "P2-021"
+      ],
+      "work_package": "WP-06",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "docs/decisions/ADR-P2-008-drafts-and-secrets.md"
+    },
+    {
+      "id": "AT-022",
+      "requirement_ids": [
+        "P2-022"
+      ],
+      "work_package": "WP-07",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "packages/document/src/index.test.ts"
+    },
+    {
+      "id": "AT-023",
+      "requirement_ids": [
+        "P2-023"
+      ],
+      "work_package": "WP-07",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "JSON arrays/order/nulls are preserved through canonicalization; complete owner round-trip evidence remains."
+    },
+    {
+      "id": "AT-024",
+      "requirement_ids": [
+        "P2-024"
+      ],
+      "work_package": "WP-07",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "packages/document/src/index.test.ts and DesignerView.tsx"
+    },
+    {
+      "id": "AT-025",
+      "requirement_ids": [
+        "P2-025"
+      ],
+      "work_package": "WP-08",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Diagnostics are bound to the active candidate digest; policy/registry versions are not exported by Phase 1."
+    },
+    {
+      "id": "AT-026",
+      "requirement_ids": [
+        "P2-026"
+      ],
+      "work_package": "WP-08",
+      "status": "partial",
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Structured diagnostics are rendered as accessible focus buttons in source; owner delayed compiler and edge/property browser targets were not available.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "apps/studio/src/app/App.test.tsx"
+      ]
+    },
+    {
+      "id": "AT-027",
+      "requirement_ids": [
+        "P2-027"
+      ],
+      "work_package": "WP-08",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Fixture validation and live owner validation are wired; draft owner PR #57 supplies a publication route with digest and validation checks, but the route is still unmerged and has no live process evidence."
+    },
+    {
+      "id": "AT-028",
+      "requirement_ids": [
+        "P2-028"
+      ],
+      "work_package": "WP-09",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "apps/studio/src/app/App.tsx"
+    },
+    {
+      "id": "AT-029",
+      "requirement_ids": [
+        "P2-029"
+      ],
+      "work_package": "WP-09",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "apps/studio/src/app/App.tsx"
+    },
+    {
+      "id": "AT-030",
+      "requirement_ids": [
+        "P2-030"
+      ],
+      "work_package": "WP-09",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "apps/studio/src/features/runs/RunsView.tsx; docs/evidence/phase1-live-api.json; owner process snapshot/event evidence is real synthetic API, browser rendering remains unverified."
+    },
+    {
+      "id": "AT-031",
+      "requirement_ids": [
+        "P2-031"
+      ],
+      "work_package": "WP-10",
+      "status": "partial",
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Reconnection is bounded and unit-tested; the real browser add/connect/reconnect/delete interaction matrix was not run.",
+      "actual_evidence_refs": [
+        "packages/document/src/index.test.ts",
+        "apps/studio/src/features/designer/DesignerView.tsx"
+      ]
+    },
+    {
+      "id": "AT-032",
+      "requirement_ids": [
+        "P2-032"
+      ],
+      "work_package": "WP-10",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "apps/studio/src/features/designer/DesignerView.tsx"
+    },
+    {
+      "id": "AT-033",
+      "requirement_ids": [
+        "P2-033"
+      ],
+      "work_package": "WP-10",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "apps/studio/src/features/designer/DesignerView.tsx"
+    },
+    {
+      "id": "AT-034",
+      "requirement_ids": [
+        "P2-034"
+      ],
+      "work_package": "WP-11",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Undo/redo exists; compound semantic/layout transaction grouping remains."
+    },
+    {
+      "id": "AT-035",
+      "requirement_ids": [
+        "P2-035"
+      ],
+      "work_package": "WP-11",
+      "status": "partial",
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Copy/paste ID/reference remapping is unit-tested and surfaced in the designer; nested browser paste and shared-subworkflow cases remain unverified.",
+      "actual_evidence_refs": [
+        "packages/document/src/index.test.ts",
+        "apps/studio/src/features/designer/DesignerView.tsx"
+      ]
+    },
+    {
+      "id": "AT-036",
+      "requirement_ids": [
+        "P2-036"
+      ],
+      "work_package": "WP-11",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No evidence recorded yet."
+    },
+    {
+      "id": "AT-037",
+      "requirement_ids": [
+        "P2-037"
+      ],
+      "work_package": "WP-12",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Graph sections and bounded loop nodes render; breadcrumbs/subworkflow views remain."
+    },
+    {
+      "id": "AT-038",
+      "requirement_ids": [
+        "P2-038"
+      ],
+      "work_package": "WP-12",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Branch labels are rendered; typed guard editing remains."
+    },
+    {
+      "id": "AT-039",
+      "requirement_ids": [
+        "P2-039"
+      ],
+      "work_package": "WP-12",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "docs/decisions/ADR-P2-006-adaptive-protection.md"
+    },
+    {
+      "id": "AT-040",
+      "requirement_ids": [
+        "P2-040"
+      ],
+      "work_package": "WP-13",
+      "status": "partial",
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Invalid text is retained and valid candidates apply atomically in source; the required browser repair/save sequence remains unverified.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "packages/document/src/index.ts"
+      ]
+    },
+    {
+      "id": "AT-041",
+      "requirement_ids": [
+        "P2-041"
+      ],
+      "work_package": "WP-13",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Redacted owner export exists; Studio bundle import/export remains."
+    },
+    {
+      "id": "AT-042",
+      "requirement_ids": [
+        "P2-042"
+      ],
+      "work_package": "WP-13",
+      "status": "evidenced",
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Bounded parser unit tests reject duplicate keys and unsafe numbers; the parser also enforces byte/depth/node/string bounds before schema admission.",
+      "actual_evidence_refs": [
+        "packages/document/src/index.test.ts",
+        "packages/document/src/index.ts"
+      ]
+    },
+    {
+      "id": "AT-043",
+      "requirement_ids": [
+        "P2-043"
+      ],
+      "work_package": "WP-14",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Protected command set and adaptive region gate exist; full policy editor remains."
+    },
+    {
+      "id": "AT-044",
+      "requirement_ids": [
+        "P2-044"
+      ],
+      "work_package": "WP-14",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Adaptive authored region is protected; plan-layer projection is not exported."
+    },
+    {
+      "id": "AT-045",
+      "requirement_ids": [
+        "P2-045"
+      ],
+      "work_package": "WP-14",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No evidence recorded yet."
+    },
+    {
+      "id": "AT-046",
+      "requirement_ids": [
+        "P2-046"
+      ],
+      "work_package": "WP-15",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Draft owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the PR is unmerged and has no live process evidence."
+    },
+    {
+      "id": "AT-047",
+      "requirement_ids": [
+        "P2-047"
+      ],
+      "work_package": "WP-15",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Draft owner PR #57 supplies conditional revision/etag writes and client mutation IDs with focused tests; the PR is unmerged and has no live process evidence."
+    },
+    {
+      "id": "AT-048",
+      "requirement_ids": [
+        "P2-048"
+      ],
+      "work_package": "WP-15",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No evidence recorded yet."
+    },
+    {
+      "id": "AT-049",
+      "requirement_ids": [
+        "P2-049"
+      ],
+      "work_package": "WP-16",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "apps/studio/src/features/designer/DesignerView.tsx"
+    },
+    {
+      "id": "AT-050",
+      "requirement_ids": [
+        "P2-050"
+      ],
+      "work_package": "WP-16",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Capability-gated live saves are explicit; durable offline reconciliation is not admitted."
+    },
+    {
+      "id": "AT-051",
+      "requirement_ids": [
+        "P2-051"
+      ],
+      "work_package": "WP-16",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No evidence recorded yet."
+    },
+    {
+      "id": "AT-052",
+      "requirement_ids": [
+        "P2-052"
+      ],
+      "work_package": "WP-17",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No evidence recorded yet."
+    },
+    {
+      "id": "AT-053",
+      "requirement_ids": [
+        "P2-053"
+      ],
+      "work_package": "WP-17",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No evidence recorded yet."
+    },
+    {
+      "id": "AT-054",
+      "requirement_ids": [
+        "P2-054"
+      ],
+      "work_package": "WP-17",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Layout is excluded from semantic identity; conflict merge tooling remains."
+    },
+    {
+      "id": "AT-055",
+      "requirement_ids": [
+        "P2-055"
+      ],
+      "work_package": "WP-18",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Draft owner PR #57 supplies an immutable publication route through the existing definition authority; the PR is unmerged and has no live process evidence."
+    },
+    {
+      "id": "AT-056",
+      "requirement_ids": [
+        "P2-056"
+      ],
+      "work_package": "WP-18",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Draft owner PR #57 supplies a typed publication response with published, already-published, and conflict outcomes; the PR is unmerged and has no live process evidence."
+    },
+    {
+      "id": "AT-057",
+      "requirement_ids": [
+        "P2-057"
+      ],
+      "work_package": "WP-18",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Draft owner PR #57 tests immutable publication and digest preconditions, but launch through a merged live owner remains unverified."
+    },
+    {
+      "id": "AT-058",
+      "requirement_ids": [
+        "P2-058"
+      ],
+      "work_package": "WP-19",
+      "status": "partial",
+      "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Chromium smoke clones a checked-in template and source records provenance; owner catalog digest and immutability checks are unavailable.",
+      "actual_evidence_refs": [
+        "tests/browser/studio.spec.ts",
+        "apps/studio/src/app/App.tsx",
+        "apps/studio/src/features/library/LibraryView.tsx"
+      ]
+    },
+    {
+      "id": "AT-059",
+      "requirement_ids": [
+        "P2-059"
+      ],
+      "work_package": "WP-19",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No evidence recorded yet."
+    },
+    {
+      "id": "AT-060",
+      "requirement_ids": [
+        "P2-060"
+      ],
+      "work_package": "WP-19",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No evidence recorded yet."
+    },
+    {
+      "id": "AT-061",
+      "requirement_ids": [
+        "P2-061"
+      ],
+      "work_package": "WP-20",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Phase 1 has no browser pairing route."
+    },
+    {
+      "id": "AT-062",
+      "requirement_ids": [
+        "P2-062"
+      ],
+      "work_package": "WP-20",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Phase 1 has no browser session contract."
+    },
+    {
+      "id": "AT-063",
+      "requirement_ids": [
+        "P2-063"
+      ],
+      "work_package": "WP-20",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Static bundle builds locally; owner-host acceptance is unverified."
+    },
+    {
+      "id": "AT-064",
+      "requirement_ids": [
+        "P2-064"
+      ],
+      "work_package": "WP-21",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No browser attachment stream contract was admitted."
+    },
+    {
+      "id": "AT-065",
+      "requirement_ids": [
+        "P2-065"
+      ],
+      "work_package": "WP-21",
+      "status": "partial",
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Bounded SSE framing and exact event projection are unit-tested; owner stream framing and process evidence were not exercised.",
+      "actual_evidence_refs": [
+        "packages/client/src/index.ts",
+        "packages/client/src/index.test.ts"
+      ]
+    },
+    {
+      "id": "AT-066",
+      "requirement_ids": [
+        "P2-066"
+      ],
+      "work_package": "WP-21",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Polling is available through the client interface, but revocation is not admitted."
+    },
+    {
+      "id": "AT-067",
+      "requirement_ids": [
+        "P2-067"
+      ],
+      "work_package": "WP-22",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "packages/client/src/index.ts and packages/client/src/index.test.ts"
+    },
+    {
+      "id": "AT-068",
+      "requirement_ids": [
+        "P2-068"
+      ],
+      "work_package": "WP-22",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "packages/client/src/index.ts and packages/client/src/index.test.ts"
+    },
+    {
+      "id": "AT-069",
+      "requirement_ids": [
+        "P2-069"
+      ],
+      "work_package": "WP-22",
+      "status": "partial",
+      "actual_command": "npm test -- --run",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Projection resnapshot and retention behavior are unit-tested; slow-client owner queue and authorization-scope process evidence are unavailable.",
+      "actual_evidence_refs": [
+        "packages/client/src/index.ts",
+        "packages/client/src/index.test.ts"
+      ]
+    },
+    {
+      "id": "AT-070",
+      "requirement_ids": [
+        "P2-070"
+      ],
+      "work_package": "WP-23",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "apps/studio/src/features/runs/RunsView.tsx"
+    },
+    {
+      "id": "AT-071",
+      "requirement_ids": [
+        "P2-071"
+      ],
+      "work_package": "WP-23",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Plan detail route is not exported."
+    },
+    {
+      "id": "AT-072",
+      "requirement_ids": [
+        "P2-072"
+      ],
+      "work_package": "WP-23",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Artifact route is present but intentionally unavailable."
+    },
+    {
+      "id": "AT-073",
+      "requirement_ids": [
+        "P2-073"
+      ],
+      "work_package": "WP-24",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "packages/client/src/index.ts and RunsView.tsx"
+    },
+    {
+      "id": "AT-074",
+      "requirement_ids": [
+        "P2-074"
+      ],
+      "work_package": "WP-24",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No evidence recorded yet."
+    },
+    {
+      "id": "AT-075",
+      "requirement_ids": [
+        "P2-075"
+      ],
+      "work_package": "WP-24",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Unsupported controls are disabled by status; historical identity policy needs owner metadata."
+    },
+    {
+      "id": "AT-076",
+      "requirement_ids": [
+        "P2-076"
+      ],
+      "work_package": "WP-25",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No evidence recorded yet."
+    },
+    {
+      "id": "AT-077",
+      "requirement_ids": [
+        "P2-077"
+      ],
+      "work_package": "WP-25",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "apps/studio/src/features/replay/ReplayView.tsx"
+    },
+    {
+      "id": "AT-078",
+      "requirement_ids": [
+        "P2-078"
+      ],
+      "work_package": "WP-25",
+      "status": "partial",
+      "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Replay invokes two fixture runs and reports definition paths; stable owner artifact/run-context matching is unavailable.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/replay/ReplayView.tsx",
+        "packages/document/src/index.ts",
+        "tests/browser/studio.spec.ts"
+      ]
+    },
+    {
+      "id": "AT-079",
+      "requirement_ids": [
+        "P2-079"
+      ],
+      "work_package": "WP-26",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Owner-side authz exists; browser object/session permission evidence is unavailable."
+    },
+    {
+      "id": "AT-080",
+      "requirement_ids": [
+        "P2-080"
+      ],
+      "work_package": "WP-26",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "CSP/static host headers are outside this repository and not yet verified."
+    },
+    {
+      "id": "AT-081",
+      "requirement_ids": [
+        "P2-081"
+      ],
+      "work_package": "WP-26",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "docs/decisions/ADR-P2-008-drafts-and-secrets.md"
+    },
+    {
+      "id": "AT-082",
+      "requirement_ids": [
+        "P2-082"
+      ],
+      "work_package": "WP-27",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No evidence recorded yet."
+    },
+    {
+      "id": "AT-083",
+      "requirement_ids": [
+        "P2-083"
+      ],
+      "work_package": "WP-27",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No evidence recorded yet."
+    },
+    {
+      "id": "AT-084",
+      "requirement_ids": [
+        "P2-084"
+      ],
+      "work_package": "WP-27",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Missing optional integrations are gated without breaking fixture core flows."
+    },
+    {
+      "id": "AT-085",
+      "requirement_ids": [
+        "P2-085"
+      ],
+      "work_package": "WP-28",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "apps/studio/src/features/designer/DesignerView.tsx"
+    },
+    {
+      "id": "AT-086",
+      "requirement_ids": [
+        "P2-086"
+      ],
+      "work_package": "WP-28",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "apps/studio/src/styles.css and App.tsx"
+    },
+    {
+      "id": "AT-087",
+      "requirement_ids": [
+        "P2-087"
+      ],
+      "work_package": "WP-28",
+      "status": "partial",
+      "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Source includes responsive, light/dark and reduced-motion rules, and one Chromium screenshot was reviewed; the required viewport/zoom/keyboard matrix was not run.",
+      "actual_evidence_refs": [
+        "apps/studio/src/styles.css",
+        "docs/evidence/screenshots/studio-designer-chromium.png"
+      ]
+    },
+    {
+      "id": "AT-088",
+      "requirement_ids": [
+        "P2-088"
+      ],
+      "work_package": "WP-29",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Route and event page bounds are honored; worker/history quotas remain."
+    },
+    {
+      "id": "AT-089",
+      "requirement_ids": [
+        "P2-089"
+      ],
+      "work_package": "WP-29",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No evidence recorded yet."
+    },
+    {
+      "id": "AT-090",
+      "requirement_ids": [
+        "P2-090"
+      ],
+      "work_package": "WP-29",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "ReplayView.tsx and DesignerView.tsx cleanup paths"
+    },
+    {
+      "id": "AT-091",
+      "requirement_ids": [
+        "P2-091"
+      ],
+      "work_package": "WP-30",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Real browser journey engines and attached owner process are not yet available."
+    },
+    {
+      "id": "AT-092",
+      "requirement_ids": [
+        "P2-092"
+      ],
+      "work_package": "WP-30",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Real forbidden/conflict/disconnected browser states need owner attachment."
+    },
+    {
+      "id": "AT-093",
+      "requirement_ids": [
+        "P2-093"
+      ],
+      "work_package": "WP-30",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Production static host CSP/routing acceptance is unverified."
+    },
+    {
+      "id": "AT-094",
+      "requirement_ids": [
+        "P2-094"
+      ],
+      "work_package": "WP-31",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "docs/evidence/phase1-workflow-tests.json; owner strict/dynamic contract/runtime tests pass, but Studio live browser round-trip is unverified."
+    },
+    {
+      "id": "AT-095",
+      "requirement_ids": [
+        "P2-095"
+      ],
+      "work_package": "WP-31",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Durable browser/web attachment restart evidence is unavailable."
+    },
+    {
+      "id": "AT-096",
+      "requirement_ids": [
+        "P2-096"
+      ],
+      "work_package": "WP-31",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "No actual accepted dynamic plan stream is exported."
+    },
+    {
+      "id": "AT-097",
+      "requirement_ids": [
+        "P2-097"
+      ],
+      "work_package": "WP-32",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Lost-save/publication/concurrent-editor owner contracts are unavailable."
+    },
+    {
+      "id": "AT-098",
+      "requirement_ids": [
+        "P2-098"
+      ],
+      "work_package": "WP-32",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Browser stream/revocation process evidence is unavailable."
+    },
+    {
+      "id": "AT-099",
+      "requirement_ids": [
+        "P2-099"
+      ],
+      "work_package": "WP-32",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Native server/adapter restart ownership evidence is unavailable."
+    },
+    {
+      "id": "AT-100",
+      "requirement_ids": [
+        "P2-100"
+      ],
+      "work_package": "WP-33",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Independent host auth/CSP review is pending."
+    },
+    {
+      "id": "AT-101",
+      "requirement_ids": [
+        "P2-101"
+      ],
+      "work_package": "WP-33",
+      "status": "partial",
+      "actual_command": "npm audit --audit-level=moderate; npm sbom --sbom-format=spdx --sbom-type=application",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "The lockfile, npm audit, SPDX SBOM, static bundle and same-origin client boundary were reviewed; independent egress/license review remains.",
+      "actual_evidence_refs": [
+        "package-lock.json",
+        "docs/evidence/studio-sbom.spdx.json",
+        "docs/evidence/studio-bundle-manifest.json"
+      ]
+    },
+    {
+      "id": "AT-102",
+      "requirement_ids": [
+        "P2-102"
+      ],
+      "work_package": "WP-33",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Readiness remains blocked until material security boundaries are verified."
+    },
+    {
+      "id": "AT-103",
+      "requirement_ids": [
+        "P2-103"
+      ],
+      "work_package": "WP-34",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Required screenshot matrix has not been run against a served build."
+    },
+    {
+      "id": "AT-104",
+      "requirement_ids": [
+        "P2-104"
+      ],
+      "work_package": "WP-34",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Manual screen-reader/pointer assessment is pending."
+    },
+    {
+      "id": "AT-105",
+      "requirement_ids": [
+        "P2-105"
+      ],
+      "work_package": "WP-34",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Exact screenshot review is pending."
+    },
+    {
+      "id": "AT-106",
+      "requirement_ids": [
+        "P2-106"
+      ],
+      "work_package": "WP-35",
+      "status": "evidenced",
+      "actual_command": "npm run build; sha256sum -c docs/evidence/studio-bundle.SHA256SUMS; npm sbom --sbom-format=spdx --sbom-type=application",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "The static bundle, manifest, SHA-256 file, SPDX SBOM and compatibility evidence are checked in and locally verified.",
+      "actual_evidence_refs": [
+        "docs/evidence/studio-bundle.SHA256SUMS",
+        "docs/evidence/studio-bundle-manifest.json",
+        "docs/evidence/studio-sbom.spdx.json"
+      ]
+    },
+    {
+      "id": "AT-107",
+      "requirement_ids": [
+        "P2-107"
+      ],
+      "work_package": "WP-35",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Harness static hosting acceptance is pending."
+    },
+    {
+      "id": "AT-108",
+      "requirement_ids": [
+        "P2-108"
+      ],
+      "work_package": "WP-35",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "docs/operations/RUNBOOK.md and DEVELOPMENT.md"
+    },
+    {
+      "id": "AT-109",
+      "requirement_ids": [
+        "P2-109"
+      ],
+      "work_package": "WP-36",
+      "status": "partial",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Support docs describe the owner subject, draft revision/etag conflict choices, and publication flow; browser pairing and live owner evidence remain unavailable while PR #57 is draft."
+    },
+    {
+      "id": "AT-110",
+      "requirement_ids": [
+        "P2-110"
+      ],
+      "work_package": "WP-36",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Additive owner changes and rollback compatibility are not admitted."
+    },
+    {
+      "id": "AT-111",
+      "requirement_ids": [
+        "P2-111"
+      ],
+      "work_package": "WP-36",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "docs/architecture/phase1-integration.md and this ledger"
+    },
+    {
+      "id": "AT-112",
+      "requirement_ids": [
+        "P2-112"
+      ],
+      "work_package": "WP-37",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "CI workflow is not configured in this initial delivery."
+    },
+    {
+      "id": "AT-113",
+      "requirement_ids": [
+        "P2-113"
+      ],
+      "work_package": "WP-37",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Generated client regeneration is not configured."
+    },
+    {
+      "id": "AT-114",
+      "requirement_ids": [
+        "P2-114"
+      ],
+      "work_package": "WP-37",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "CI evidence is not configured."
+    },
+    {
+      "id": "AT-115",
+      "requirement_ids": [
+        "P2-115"
+      ],
+      "work_package": "WP-38",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Final combined source-head verification remains."
+    },
+    {
+      "id": "AT-116",
+      "requirement_ids": [
+        "P2-116"
+      ],
+      "work_package": "WP-38",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "The ledger exists, but unresolved mandatory entries remain."
+    },
+    {
+      "id": "AT-117",
+      "requirement_ids": [
+        "P2-117"
+      ],
+      "work_package": "WP-38",
+      "status": "blocked",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "Native lineage/model and worker closure evidence is unavailable."
+    },
+    {
+      "id": "AT-118",
+      "requirement_ids": [
+        "P2-118"
+      ],
+      "work_package": "WP-39",
+      "status": "evidenced",
+      "actual_command": "gh pr view 2 --repo AI-Ascension/ascension-workflow-studio",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "Draft PR #2 is linked to issue #1, assigned to CompleteDotTech, and contains the pushed Studio branch; merge authorization is intentionally absent.",
+      "actual_evidence_refs": [
+        "docs/evidence/FINAL_INTEGRATION_REPORT.md"
+      ]
+    },
+    {
+      "id": "AT-119",
+      "requirement_ids": [
+        "P2-119"
+      ],
+      "work_package": "WP-39",
+      "status": "evidenced",
+      "actual_command": "git show --stat; cat docs/evidence/FINAL_INTEGRATION_REPORT.md",
+      "actual_source_heads": {
+        "studio": "4b4788c"
+      },
+      "evidence": "The final integration report states exact pins, validation results, evidence levels and unresolved blockers without native/live claims.",
+      "actual_evidence_refs": [
+        "docs/evidence/FINAL_INTEGRATION_REPORT.md",
+        "docs/evidence/PHASE2_EVIDENCE.md"
+      ]
+    },
+    {
+      "id": "AT-120",
+      "requirement_ids": [
+        "P2-120"
+      ],
+      "work_package": "WP-39",
+      "status": "evidenced",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "evidence": "docs/operations/RUNBOOK.md and this ledger"
+    }
+  ]
+}

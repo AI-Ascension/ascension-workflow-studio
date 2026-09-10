@@ -1,0 +1,25 @@
+flowchart TB
+    U[Operator browser]
+    subgraph STUDIO[ascension-workflow-studio]
+      V[Designer and run inspector]
+      A[Typed API client and display reducer]
+      L[Inert layout and draft editor state]
+      V <--> L
+      V <--> A
+    end
+    U --> V
+    subgraph HARNESS[sts2-harness]
+      B[Same-origin browser admission and static adapter]
+      D[(Durable drafts and definitions)]
+      E[Authoritative validator and workflow executor]
+      C[Existing command and event services]
+      B --> D
+      B --> C
+      B --> E
+    end
+    A <--> B
+    E --> MCP[MCP]
+    MCP --> GW[Gateway fencing]
+    GW --> MOD[Game mod and host]
+    CAT[ascension-workflow pinned catalog] --> E
+    C -. Read-only correlations .-> O[Observability]

@@ -1,0 +1,54 @@
+{
+  "schema_version": "ascension.workflow/v1",
+  "workflow_id": "sts2.rest.strict",
+  "version": "0.1.0",
+  "mode": "strict",
+  "game_profile": "sts2-synthetic-v1",
+  "policy_ref": "sts2.fair-play.v1",
+  "capabilities": {
+    "required": [
+      "observe.fair-play.v1",
+      "actions.catalog.v1",
+      "actions.settlement.v1",
+      "authority.generation-fence.v1",
+      "actions.rest.v1"
+    ],
+    "optional": ["actions.selection.v1"]
+  },
+  "limits": {
+    "max_steps": 24,
+    "max_subworkflow_depth": 1,
+    "max_provider_calls": 2,
+    "max_parallel_analyses": 1,
+    "max_output_tokens": 4096
+  },
+  "entry_graph": "main",
+  "graphs": [
+    {
+      "id": "main",
+      "entry_node": "observe",
+      "nodes": [
+        {"id": "observe", "kind": "observe", "config": {"projection_ref": "sts2.rest.fair-play.v1"}},
+        {"id": "decide", "kind": "decide", "config": {"decision_profile_ref": "sts2.rest.decision.v1", "context_ref": "sts2.rest.context.v1"}},
+        {"id": "execute", "kind": "execute_action", "config": {"proposal_from": {"node_id": "decide", "output": "proposal"}}},
+        {"id": "settlement_observe", "kind": "observe", "config": {"projection_ref": "sts2.rest.fair-play.v1"}},
+        {"id": "completed", "kind": "terminal", "config": {"outcome": "completed"}},
+        {"id": "blocked", "kind": "terminal", "config": {"outcome": "needs_operator"}}
+      ],
+      "edges": [
+        {"from": "observe", "to": "decide", "on": "ok", "priority": 0},
+        {"from": "observe", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "decide", "to": "execute", "on": "ok", "priority": 0},
+        {"from": "decide", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "execute", "to": "settlement_observe", "on": "ok", "priority": 0},
+        {"from": "execute", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "settlement_observe", "to": "completed", "on": "ok", "priority": 0},
+        {"from": "settlement_observe", "to": "blocked", "on": "error", "priority": 0}
+      ]
+    }
+  ],
+  "annotations": {
+    "summary": "Strict rest-site workflow chooses one currently exposed legal service and replans only after settlement.",
+    "synthetic": true
+  }
+}

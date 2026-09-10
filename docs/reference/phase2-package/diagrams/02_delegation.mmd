@@ -1,0 +1,13 @@
+flowchart TB
+    D0[D0 Root orchestrator]
+    D1[D1 Luna Max workstream lead]
+    D2[D2 Luna Max work-package coordinator]
+    I[D3 Luna Max implementer]
+    R[D3 Luna Max independent verifier]
+    D0 --> D1 --> D2
+    D2 --> I
+    D2 --> R
+    I -. Candidate SHA and evidence .-> R
+    R -. Verified result or findings .-> D2
+    NOTE[No D3 spawning; 12 live descendants or lower runtime cap]
+    D0 -. Governs .-> NOTE

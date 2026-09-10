@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "status": "requirements_not_wire_routes",
+  "mapping_required_in": "templates/phase1-integration-lock.template.json",
+  "operations": [
+    {
+      "logical_name": "capabilities.read",
+      "class": "read",
+      "need": "Admitted profiles, limits, permissions and contract digests",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "node_registry.read",
+      "class": "read",
+      "need": "Typed node/port/config/error metadata; no remote executable renderer",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "definition.read",
+      "class": "read",
+      "need": "Exact immutable owner artifact and compiler digest",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "definition.validate",
+      "class": "analysis",
+      "need": "Owner diagnostics bound to submitted content and capability context",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "definition.publish",
+      "class": "write",
+      "need": "Idempotent version creation tied to exact validated content and policy",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "draft.read",
+      "class": "read",
+      "need": "Draft bytes, layout, revision and strong ETag",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "draft.save",
+      "class": "write",
+      "need": "Atomic semantic/layout conditional write; no lost update",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "draft.save_status",
+      "class": "read",
+      "need": "Resolve uncertain save ID before retry policy",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "run.start",
+      "class": "control",
+      "need": "Exact published digest, current admission and stable start-command ID",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "run.snapshot",
+      "class": "read",
+      "need": "Authoritative run projection with compatible event watermark",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "run.events",
+      "class": "read",
+      "need": "Authenticated bounded stream; ordered replay, retention and filtering semantics",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "run.command",
+      "class": "control",
+      "need": "Pause/resume/step/cancel with expected revision and stable ID",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "run.command_status",
+      "class": "read",
+      "need": "Lookup accepted/applied/rejected/unknown result by exact command ID",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "run.history",
+      "class": "read",
+      "need": "Bounded authorized paging and typed redaction/unavailable markers",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "run.offline_replay",
+      "class": "analysis",
+      "need": "Phase-1 offline engine with zero game/provider calls",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "plan.read",
+      "class": "read",
+      "need": "Approved/candidate plan revisions and concise typed explanations",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "artifact.read",
+      "class": "read",
+      "need": "Allowlisted artifact ID and typed bounded content, never arbitrary path proxy",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "session.pair",
+      "class": "authentication",
+      "need": "Operator-approved one-use browser pairing within exact origin and scope",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "session.revoke",
+      "class": "authentication",
+      "need": "Revoke browser session without cancelling gameplay",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    },
+    {
+      "logical_name": "catalog.read",
+      "class": "read",
+      "need": "Pinned admitted first-party templates, compatibility and provenance",
+      "actual_route": null,
+      "request_schema_digest": null,
+      "response_schema_digest": null,
+      "admission_status": "unresolved"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "repository": "AI-Ascension/sts2-harness",
+  "source_head": "eb0a10f485f28a3f5bf98d1e01c186014414206f",
+  "toolchain": "rustc/cargo 1.97.1-x86_64-unknown-linux-gnu",
+  "tests": [
+    { "command": "cargo test -p sts2-harness --test workflow_contracts --locked", "result": "passed", "cases": 12 },
+    { "command": "cargo test -p sts2-harness --test workflow_dynamic --locked", "result": "passed", "cases": 4 },
+    { "command": "cargo test -p sts2-harness --test workflow_dynamic_runtime --locked", "result": "passed", "cases": 1 },
+    { "command": "cargo test -p sts2-harness --test workflow_runtime --locked", "result": "passed", "cases": 4 },
+    { "command": "cargo test -p sts2-harness --test workflow_store --locked", "result": "passed", "cases": 7 }
+  ],
+  "total_cases": 28,
+  "limitation": "These are owner contract/runtime/store tests; they do not prove browser attachment, native gameplay, or provider integration."
+}

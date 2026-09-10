@@ -1,0 +1,9 @@
+{
+  "schema_version": "ascension.studio-command-view/v1-seed",
+  "command_id": "cmd.synthetic.1",
+  "run_id": "run.synthetic.1",
+  "expected_run_revision": 5,
+  "view_status": "applied",
+  "applied_run_revision": 4,
+  "message_code": "response_lost"
+}

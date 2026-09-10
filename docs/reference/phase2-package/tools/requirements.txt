@@ -1,0 +1,2 @@
+# Package-only validator dependency. Not a product dependency or Phase-1 toolchain pin.
+jsonschema==4.26.0

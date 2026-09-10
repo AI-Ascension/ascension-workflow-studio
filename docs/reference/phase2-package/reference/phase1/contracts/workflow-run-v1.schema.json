@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ascension:run-snapshot:v1-seed",
+  "title": "Proposed headless run snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "ascension.workflow-run/v1"
+    },
+    "workflow_run_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "definition_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "run_revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "status": {
+      "enum": [
+        "created",
+        "validated",
+        "running",
+        "waiting_for_provider",
+        "waiting_for_game",
+        "pausing",
+        "paused",
+        "cancelling",
+        "reconciling",
+        "completed",
+        "failed",
+        "cancelled",
+        "needs_operator"
+      ]
+    },
+    "game_outcome": {
+      "enum": [
+        "not_terminal",
+        "victory",
+        "defeat",
+        "unknown"
+      ]
+    },
+    "cursor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "graph_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "node_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "node_execution_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        }
+      },
+      "required": [
+        "graph_id",
+        "node_id",
+        "node_execution_id"
+      ]
+    },
+    "pending_operation": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "operation_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "state": {
+              "enum": [
+                "intent",
+                "accepted",
+                "unknown"
+              ]
+            },
+            "instance_id": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "original_generation": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "payload_digest": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          },
+          "required": [
+            "operation_id",
+            "state",
+            "instance_id",
+            "original_generation",
+            "payload_digest"
+          ]
+        }
+      ]
+    },
+    "budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider_calls_consumed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "provider_calls_reserved": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "node_steps_consumed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "replans_consumed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "provider_calls_consumed",
+        "provider_calls_reserved",
+        "node_steps_consumed",
+        "replans_consumed"
+      ]
+    },
+    "cleanup": {
+      "enum": [
+        "not_started",
+        "pending",
+        "complete",
+        "failed",
+        "needs_operator"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "workflow_run_id",
+    "definition_digest",
+    "run_revision",
+    "status",
+    "game_outcome",
+    "cursor",
+    "pending_operation",
+    "budget",
+    "cleanup"
+  ]
+}

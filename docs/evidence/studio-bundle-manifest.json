@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "bundle": "ascension-workflow-studio",
+  "generated_on": "2026-09-10",
+  "files": [
+    {
+      "path": "assets/index-C8hfc2Mm.js",
+      "bytes": 553475,
+      "sha256": "257675dfd421e53f54a90fd3345c22e5fec8349403b1d3022a22470541dd3666"
+    },
+    {
+      "path": "assets/index-DGZHDDHC.css",
+      "bytes": 35106,
+      "sha256": "024b6362513c218968e0278a9a5f766e2a95ce20581700af0fdeda68b758ed0b"
+    },
+    {
+      "path": "index.html",
+      "bytes": 700,
+      "sha256": "e6bd22d38e638811c3467593bb0e9bd5fc126e2aafc86686ce642a64b7507fdf"
+    }
+  ]
+}

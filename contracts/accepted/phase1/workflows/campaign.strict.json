@@ -1,0 +1,84 @@
+{
+  "schema_version": "ascension.workflow/v1",
+  "workflow_id": "sts2.campaign.strict",
+  "version": "0.1.0",
+  "mode": "strict",
+  "game_profile": "sts2-synthetic-v1",
+  "policy_ref": "sts2.fair-play.v1",
+  "capabilities": {
+    "required": [
+      "observe.fair-play.v1",
+      "actions.catalog.v1",
+      "actions.settlement.v1",
+      "authority.generation-fence.v1"
+    ],
+    "optional": [
+      "actions.setup.v1",
+      "actions.map.v1",
+      "actions.combat.v1",
+      "actions.reward.v1",
+      "actions.shop.v1",
+      "actions.event.v1",
+      "actions.rest.v1",
+      "actions.selection.v1"
+    ]
+  },
+  "limits": {
+    "max_steps": 128,
+    "max_subworkflow_depth": 2,
+    "max_provider_calls": 8,
+    "max_parallel_analyses": 1,
+    "max_output_tokens": 4096
+  },
+  "entry_graph": "main",
+  "graphs": [
+    {
+      "id": "main",
+      "entry_node": "observe",
+      "nodes": [
+        {"id": "observe", "kind": "observe", "config": {"projection_ref": "sts2.campaign.fair-play.v1"}},
+        {"id": "route_stage", "kind": "route", "config": {"selector_ref": "sts2.campaign.stage-selector.v1"}},
+        {"id": "iterate_campaign", "kind": "loop", "config": {"body_graph": "campaign.iteration", "max_iterations": 16, "exit_guard_ref": "campaign.stop_after_terminal"}},
+        {"id": "completed", "kind": "terminal", "config": {"outcome": "completed"}},
+        {"id": "blocked", "kind": "terminal", "config": {"outcome": "needs_operator"}}
+      ],
+      "edges": [
+        {"from": "observe", "to": "route_stage", "on": "ok", "priority": 0},
+        {"from": "observe", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "route_stage", "to": "iterate_campaign", "on": "ok", "priority": 0},
+        {"from": "route_stage", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "iterate_campaign", "to": "completed", "on": "ok", "priority": 0},
+        {"from": "iterate_campaign", "to": "blocked", "on": "error", "priority": 0}
+      ],
+      "guards": [
+        {"id": "campaign.stop_after_terminal", "expression": {"kind": "exists", "value": "state.game_outcome"}}
+      ]
+    },
+    {
+      "id": "campaign.iteration",
+      "entry_node": "iteration_observe",
+      "nodes": [
+        {"id": "iteration_observe", "kind": "observe", "config": {"projection_ref": "sts2.campaign.fair-play.v1"}},
+        {"id": "iteration_decide", "kind": "decide", "config": {"decision_profile_ref": "sts2.campaign.decision.v1", "context_ref": "sts2.campaign.context.v1"}},
+        {"id": "iteration_execute", "kind": "execute_action", "config": {"proposal_from": {"node_id": "iteration_decide", "output": "proposal"}}},
+        {"id": "iteration_settle", "kind": "observe", "config": {"projection_ref": "sts2.campaign.fair-play.v1"}},
+        {"id": "iteration_done", "kind": "terminal", "config": {"outcome": "completed"}},
+        {"id": "iteration_blocked", "kind": "terminal", "config": {"outcome": "needs_operator"}}
+      ],
+      "edges": [
+        {"from": "iteration_observe", "to": "iteration_decide", "on": "ok", "priority": 0},
+        {"from": "iteration_observe", "to": "iteration_blocked", "on": "error", "priority": 0},
+        {"from": "iteration_decide", "to": "iteration_execute", "on": "ok", "priority": 0},
+        {"from": "iteration_decide", "to": "iteration_blocked", "on": "error", "priority": 0},
+        {"from": "iteration_execute", "to": "iteration_settle", "on": "ok", "priority": 0},
+        {"from": "iteration_execute", "to": "iteration_blocked", "on": "error", "priority": 0},
+        {"from": "iteration_settle", "to": "iteration_done", "on": "ok", "priority": 0},
+        {"from": "iteration_settle", "to": "iteration_blocked", "on": "error", "priority": 0}
+      ]
+    }
+  ],
+  "annotations": {
+    "summary": "Bounded synthetic campaign route with stage observation, protected actions, settlement observation, and terminal stop guard.",
+    "synthetic": true
+  }
+}

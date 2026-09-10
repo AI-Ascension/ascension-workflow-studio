@@ -1,0 +1,45 @@
+{
+  "schema_version": "ascension.workflow/v1",
+  "workflow_id": "sts2.terminal.strict",
+  "version": "0.1.0",
+  "mode": "strict",
+  "game_profile": "sts2-synthetic-v1",
+  "policy_ref": "sts2.fair-play.v1",
+  "capabilities": {
+    "required": ["observe.fair-play.v1", "terminal.observation.v1"],
+    "optional": []
+  },
+  "limits": {
+    "max_steps": 8,
+    "max_subworkflow_depth": 1,
+    "max_provider_calls": 0,
+    "max_parallel_analyses": 1,
+    "max_output_tokens": 0
+  },
+  "entry_graph": "main",
+  "graphs": [
+    {
+      "id": "main",
+      "entry_node": "observe",
+      "nodes": [
+        {"id": "observe", "kind": "observe", "config": {"projection_ref": "sts2.terminal.fair-play.v1"}},
+        {"id": "route_outcome", "kind": "route", "config": {"selector_ref": "sts2.terminal.outcome-selector.v1"}},
+        {"id": "victory_recorded", "kind": "terminal", "config": {"outcome": "completed"}},
+        {"id": "defeat_recorded", "kind": "terminal", "config": {"outcome": "completed"}},
+        {"id": "blocked", "kind": "terminal", "config": {"outcome": "needs_operator"}}
+      ],
+      "edges": [
+        {"from": "observe", "to": "route_outcome", "on": "ok", "priority": 0},
+        {"from": "observe", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "route_outcome", "to": "victory_recorded", "on": "true", "priority": 0},
+        {"from": "route_outcome", "to": "defeat_recorded", "on": "false", "priority": 0},
+        {"from": "route_outcome", "to": "blocked", "on": "unknown", "priority": 0},
+        {"from": "route_outcome", "to": "blocked", "on": "error", "priority": 0}
+      ]
+    }
+  ],
+  "annotations": {
+    "summary": "Terminal observation records visible victory or defeat separately from workflow completion and makes no provider call.",
+    "synthetic": true
+  }
+}

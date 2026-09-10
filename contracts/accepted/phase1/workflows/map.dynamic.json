@@ -1,0 +1,59 @@
+{
+  "schema_version": "ascension.workflow/v1",
+  "workflow_id": "sts2.map.dynamic",
+  "version": "0.1.0",
+  "mode": "dynamic",
+  "game_profile": "sts2-synthetic-v1",
+  "policy_ref": "sts2.fair-play.v1",
+  "capabilities": {
+    "required": [
+      "observe.fair-play.v1",
+      "actions.catalog.v1",
+      "actions.settlement.v1",
+      "authority.generation-fence.v1",
+      "actions.map.v1",
+      "observe.map.v1"
+    ],
+    "optional": ["analysis.map.v1", "operations.reconcile.v1"]
+  },
+  "limits": {
+    "max_steps": 32,
+    "max_subworkflow_depth": 2,
+    "max_provider_calls": 8,
+    "max_parallel_analyses": 2,
+    "max_output_tokens": 4096
+  },
+  "entry_graph": "main",
+  "graphs": [
+    {
+      "id": "main",
+      "entry_node": "observe",
+      "nodes": [
+        {"id": "observe", "kind": "observe", "config": {"projection_ref": "sts2.map.fair-play.v1"}},
+        {"id": "route_map", "kind": "route", "config": {"selector_ref": "sts2.campaign.stage-selector.v1"}},
+        {"id": "adaptive", "kind": "adaptive_region", "config": {"region_id": "sts2.map.analysis", "planner_profile_ref": "sts2.map.planner.v1", "allowed_operations": ["analyze.map.routes.v1", "analyze.map.resources.v1", "decide.map.synthesize.v1", "select.map.subworkflow.v1"], "max_plan_nodes": 8, "max_plan_edges": 16, "max_replans": 2, "output_type": "DecisionProposal"}},
+        {"id": "execute", "kind": "execute_action", "config": {"proposal_from": {"node_id": "adaptive", "output": "proposal"}}},
+        {"id": "settlement_observe", "kind": "observe", "config": {"projection_ref": "sts2.map.fair-play.v1"}},
+        {"id": "completed", "kind": "terminal", "config": {"outcome": "completed"}},
+        {"id": "blocked", "kind": "terminal", "config": {"outcome": "needs_operator"}}
+      ],
+      "edges": [
+        {"from": "observe", "to": "route_map", "on": "ok", "priority": 0},
+        {"from": "observe", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "route_map", "to": "adaptive", "on": "ok", "priority": 0},
+        {"from": "route_map", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "adaptive", "to": "execute", "on": "ok", "priority": 0},
+        {"from": "adaptive", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "adaptive", "to": "blocked", "on": "unavailable", "priority": 0},
+        {"from": "execute", "to": "settlement_observe", "on": "ok", "priority": 0},
+        {"from": "execute", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "settlement_observe", "to": "completed", "on": "ok", "priority": 0},
+        {"from": "settlement_observe", "to": "blocked", "on": "error", "priority": 0}
+      ]
+    }
+  ],
+  "annotations": {
+    "summary": "Generation-bound visible map analysis proposes one legal route action; adaptive unavailability and failure stop explicitly.",
+    "synthetic": true
+  }
+}

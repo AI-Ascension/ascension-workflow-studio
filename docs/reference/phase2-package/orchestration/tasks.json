@@ -1,0 +1,1415 @@
+{
+  "schema_version": 1,
+  "scope": "phase_2_only",
+  "tasks": [
+    {
+      "id": "WP-00",
+      "title": "Runtime model/depth preflight",
+      "workstream": "FDN",
+      "wave": 0,
+      "depends_on": [],
+      "specs": [
+        "orchestration/02_MODEL_PREFLIGHT.md"
+      ],
+      "requirement_ids": [
+        "P2-001",
+        "P2-002",
+        "P2-003"
+      ],
+      "acceptance_case_ids": [
+        "AT-001",
+        "AT-002",
+        "AT-003"
+      ],
+      "setup": "Sanitized client/config inspection and a read-only native delegation chain",
+      "implementation_steps": [
+        "Verify every descendant requests Luna with max effort and qualify effective-setting evidence.",
+        "Use real D0-D1-D2-D3 parentage and prohibit D3 spawning.",
+        "Keep global descendants within 12 or the lower runtime ceiling and release slots."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-01",
+      "title": "Safe exact-repository bootstrap",
+      "workstream": "FDN",
+      "wave": 0,
+      "depends_on": [
+        "WP-00"
+      ],
+      "specs": [
+        "templates/REPOSITORY_BOOTSTRAP.md"
+      ],
+      "requirement_ids": [
+        "P2-004",
+        "P2-005",
+        "P2-006"
+      ],
+      "acceptance_case_ids": [
+        "AT-004",
+        "AT-005",
+        "AT-006"
+      ],
+      "setup": "Current repository access, owner rules and dirty-state inventory",
+      "implementation_steps": [
+        "Create or safely resume the exact Studio repository under admitted visibility.",
+        "Establish a pinned TypeScript/frontend standards profile without weakening harness rules.",
+        "Use isolated worktrees and scoped branches with tracked write leases."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-02",
+      "title": "Actual Phase-1 contract admission",
+      "workstream": "FDN",
+      "wave": 0,
+      "depends_on": [
+        "WP-01"
+      ],
+      "specs": [
+        "spec/01_SCOPE_AND_PHASE1_ADMISSION.md"
+      ],
+      "requirement_ids": [
+        "P2-007",
+        "P2-008",
+        "P2-009"
+      ],
+      "acceptance_case_ids": [
+        "AT-007",
+        "AT-008",
+        "AT-009"
+      ],
+      "setup": "Implemented Phase-1 service and its actual exported artifacts",
+      "implementation_steps": [
+        "Pin actual producer heads and digests for every consumed runtime contract.",
+        "Resolve logical client operations to actual admitted owner routes.",
+        "Classify minimal missing web/draft projections as additive owner changes."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-03",
+      "title": "Architecture, permissions and threat-model ADRs",
+      "workstream": "FDN",
+      "wave": 0,
+      "depends_on": [
+        "WP-02"
+      ],
+      "specs": [
+        "spec/02_ARCHITECTURE_AND_REPOSITORY_BOUNDARIES.md"
+      ],
+      "requirement_ids": [
+        "P2-010",
+        "P2-011",
+        "P2-012"
+      ],
+      "acceptance_case_ids": [
+        "AT-010",
+        "AT-011",
+        "AT-012"
+      ],
+      "setup": "Pinned source and actual owner boundaries",
+      "implementation_steps": [
+        "Keep execution/compiler/persistence authority in the harness.",
+        "Document bounded authoring, session, live projection and historical state domains.",
+        "Define scoped repository and runtime permissions before external effects."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-04",
+      "title": "Typed client and compatibility discovery",
+      "workstream": "CON",
+      "wave": 1,
+      "depends_on": [
+        "WP-03"
+      ],
+      "specs": [
+        "spec/08_BROWSER_API_AUTH_AND_SERVER_ADAPTER.md"
+      ],
+      "requirement_ids": [
+        "P2-013",
+        "P2-014",
+        "P2-015"
+      ],
+      "acceptance_case_ids": [
+        "AT-013",
+        "AT-014",
+        "AT-015"
+      ],
+      "setup": "Actual operation map and owner success/error artifacts",
+      "implementation_steps": [
+        "Validate API responses at runtime as well as with static TypeScript types.",
+        "Expose per-server/schema/registry compatibility and feature availability.",
+        "Keep client adapters narrow, relative-path and explicitly versioned."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-05",
+      "title": "Semantic document and layout contracts",
+      "workstream": "CON",
+      "wave": 1,
+      "depends_on": [
+        "WP-03"
+      ],
+      "specs": [
+        "spec/03_DOCUMENT_MODEL_AND_CANONICAL_ROUNDTRIP.md"
+      ],
+      "requirement_ids": [
+        "P2-016",
+        "P2-017",
+        "P2-018"
+      ],
+      "acceptance_case_ids": [
+        "AT-016",
+        "AT-017",
+        "AT-018"
+      ],
+      "setup": "Actual Phase-1 definitions and Studio sidecar fixtures",
+      "implementation_steps": [
+        "Keep semantic document, layout, draft, published revision and live run distinct.",
+        "Bind view nodes to qualified graph and semantic node identities.",
+        "Preserve unsupported schema bytes in read-only archival mode."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-06",
+      "title": "Node registry and typed property forms",
+      "workstream": "CON",
+      "wave": 1,
+      "depends_on": [
+        "WP-04",
+        "WP-05"
+      ],
+      "specs": [
+        "spec/05_NODE_REGISTRY_TYPED_FORMS_AND_DIAGNOSTICS.md"
+      ],
+      "requirement_ids": [
+        "P2-019",
+        "P2-020",
+        "P2-021"
+      ],
+      "acceptance_case_ids": [
+        "AT-019",
+        "AT-020",
+        "AT-021"
+      ],
+      "setup": "Admitted node/type/policy registry with unsupported-capability variants",
+      "implementation_steps": [
+        "Generate the palette/forms from admitted registry metadata and bounded schemas.",
+        "Render typed guard/config/budget forms with explicit unknown and unavailable values.",
+        "Keep credential/profile references separate from secret values."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-07",
+      "title": "Canonical import/export and property conformance",
+      "workstream": "CON",
+      "wave": 1,
+      "depends_on": [
+        "WP-05",
+        "WP-02"
+      ],
+      "specs": [
+        "spec/03_DOCUMENT_MODEL_AND_CANONICAL_ROUNDTRIP.md"
+      ],
+      "requirement_ids": [
+        "P2-022",
+        "P2-023",
+        "P2-024"
+      ],
+      "acceptance_case_ids": [
+        "AT-022",
+        "AT-023",
+        "AT-024"
+      ],
+      "setup": "Complete supported-node corpus and actual Phase-1 compiler",
+      "implementation_steps": [
+        "Preserve owner semantics and digest on no-edit round-trips and layout-only changes.",
+        "Preserve ordered branch/array/null/default semantics exactly as the owner defines.",
+        "Make semantic edits observable and undo restore the previous candidate."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-08",
+      "title": "Authoritative validation and diagnostics",
+      "workstream": "CON",
+      "wave": 1,
+      "depends_on": [
+        "WP-04",
+        "WP-06",
+        "WP-07"
+      ],
+      "specs": [
+        "spec/05_NODE_REGISTRY_TYPED_FORMS_AND_DIAGNOSTICS.md"
+      ],
+      "requirement_ids": [
+        "P2-025",
+        "P2-026",
+        "P2-027"
+      ],
+      "acceptance_case_ids": [
+        "AT-025",
+        "AT-026",
+        "AT-027"
+      ],
+      "setup": "Draft edits with delayed compiler responses and registry changes",
+      "implementation_steps": [
+        "Bind diagnostics to exact candidate, registry, policy and capability versions.",
+        "Navigate structured errors to graph/node/edge/property targets accessibly.",
+        "Require canonical backend validation even after successful local lint."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-09",
+      "title": "Application shell and read-only vertical slice",
+      "workstream": "DSG",
+      "wave": 1,
+      "depends_on": [
+        "WP-04",
+        "WP-05"
+      ],
+      "specs": [
+        "spec/04_DESIGNER_CANVAS_AND_EDIT_OPERATIONS.md"
+      ],
+      "requirement_ids": [
+        "P2-028",
+        "P2-029",
+        "P2-030"
+      ],
+      "acceptance_case_ids": [
+        "AT-028",
+        "AT-029",
+        "AT-030"
+      ],
+      "setup": "Built app with actual admitted read endpoints and explicit synthetic mode",
+      "implementation_steps": [
+        "Provide Library, Designer, Runs, Replay/Compare and Compatibility navigation.",
+        "Show server, effective role, fixture/live mode, connection and meaningful empty/error states.",
+        "Render an actual exported workflow and owner run state before write controls."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-10",
+      "title": "Controlled canvas and equivalent outline",
+      "workstream": "DSG",
+      "wave": 2,
+      "depends_on": [
+        "WP-09",
+        "WP-06"
+      ],
+      "specs": [
+        "spec/04_DESIGNER_CANVAS_AND_EDIT_OPERATIONS.md"
+      ],
+      "requirement_ids": [
+        "P2-031",
+        "P2-032",
+        "P2-033"
+      ],
+      "acceptance_case_ids": [
+        "AT-031",
+        "AT-032",
+        "AT-033"
+      ],
+      "setup": "Strict graph with typed data/control/recovery edges",
+      "implementation_steps": [
+        "Support registered-node placement, typed connection/reconnection and semantic deletion review.",
+        "Provide search, fit, pan, zoom, minimap and selected-node details with stable view state.",
+        "Keep all essential editing available through an equivalent list/outline."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-11",
+      "title": "Edit transactions, history and bounded clipboard",
+      "workstream": "DSG",
+      "wave": 2,
+      "depends_on": [
+        "WP-10",
+        "WP-07"
+      ],
+      "specs": [
+        "spec/04_DESIGNER_CANVAS_AND_EDIT_OPERATIONS.md"
+      ],
+      "requirement_ids": [
+        "P2-034",
+        "P2-035",
+        "P2-036"
+      ],
+      "acceptance_case_ids": [
+        "AT-034",
+        "AT-035",
+        "AT-036"
+      ],
+      "setup": "Graphs with internal/external references and focused text fields",
+      "implementation_steps": [
+        "Group compound semantic/layout edits into bounded undo/redo transactions.",
+        "Remap every pasted local ID/reference and preserve pinned external refs.",
+        "Respect text-field shortcut focus and bound clipboard/history resources."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-12",
+      "title": "Strict nesting, guard and protected-composite UX",
+      "workstream": "DSG",
+      "wave": 2,
+      "depends_on": [
+        "WP-10",
+        "WP-06",
+        "WP-08"
+      ],
+      "specs": [
+        "spec/05_NODE_REGISTRY_TYPED_FORMS_AND_DIAGNOSTICS.md"
+      ],
+      "requirement_ids": [
+        "P2-037",
+        "P2-038",
+        "P2-039"
+      ],
+      "acceptance_case_ids": [
+        "AT-037",
+        "AT-038",
+        "AT-039"
+      ],
+      "setup": "Supported loops/subworkflows, unknown guards and protected actions",
+      "implementation_steps": [
+        "Expose explicit bounded loops/subworkflows and graph breadcrumbs.",
+        "Expose ordered true/false/unknown guard branches through typed controls.",
+        "Show protected action internals as immutable explanatory detail."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-13",
+      "title": "Raw mode and safe JSON portability",
+      "workstream": "DSG",
+      "wave": 2,
+      "depends_on": [
+        "WP-11",
+        "WP-08"
+      ],
+      "specs": [
+        "spec/07_VALIDATE_PUBLISH_TEMPLATES_AND_PORTABILITY.md"
+      ],
+      "requirement_ids": [
+        "P2-040",
+        "P2-041",
+        "P2-042"
+      ],
+      "acceptance_case_ids": [
+        "AT-040",
+        "AT-041",
+        "AT-042"
+      ],
+      "setup": "Valid, incomplete, malicious and future-version imported documents",
+      "implementation_steps": [
+        "Preserve invalid raw text separately and apply valid text atomically.",
+        "Support bounded canonical JSON and Studio bundle import/export with previews.",
+        "Reject duplicate keys, unsafe numbers and hostile over-limit inputs before admission."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-14",
+      "title": "Adaptive-region editor and read-only plan graph",
+      "workstream": "DSG",
+      "wave": 3,
+      "depends_on": [
+        "WP-12",
+        "WP-08"
+      ],
+      "specs": [
+        "spec/12_DYNAMIC_REGIONS_PLAN_VISUALIZATION_AND_EDITING.md"
+      ],
+      "requirement_ids": [
+        "P2-043",
+        "P2-044",
+        "P2-045"
+      ],
+      "acceptance_case_ids": [
+        "AT-043",
+        "AT-044",
+        "AT-045"
+      ],
+      "setup": "Actual dynamic registry policy and plan artifact cases",
+      "implementation_steps": [
+        "Edit only admitted operation sets, typed contracts and tighter bounded adaptive policy.",
+        "Separate authored regions from generated accepted/rejected/superseded plan layers.",
+        "Publish adaptive edits only as new future-run definitions."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-15",
+      "title": "Owner-backed durable draft and publication adapters",
+      "workstream": "AUT",
+      "wave": 2,
+      "depends_on": [
+        "WP-03",
+        "WP-05"
+      ],
+      "specs": [
+        "spec/06_DRAFT_PERSISTENCE_AUTOSAVE_AND_CONFLICTS.md"
+      ],
+      "requirement_ids": [
+        "P2-046",
+        "P2-047",
+        "P2-048"
+      ],
+      "acceptance_case_ids": [
+        "AT-046",
+        "AT-047",
+        "AT-048"
+      ],
+      "setup": "Real owner transactional store and conditional-write API",
+      "implementation_steps": [
+        "Persist semantic draft and layout atomically through owner ports.",
+        "Check expected document revision transactionally and deduplicate supported save identities.",
+        "Keep draft/published/run revisions and layout/compiler digests independent."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-16",
+      "title": "Autosave and offline recovery UX",
+      "workstream": "AUT",
+      "wave": 2,
+      "depends_on": [
+        "WP-15",
+        "WP-11"
+      ],
+      "specs": [
+        "spec/06_DRAFT_PERSISTENCE_AUTOSAVE_AND_CONFLICTS.md"
+      ],
+      "requirement_ids": [
+        "P2-049",
+        "P2-050",
+        "P2-051"
+      ],
+      "acceptance_case_ids": [
+        "AT-049",
+        "AT-050",
+        "AT-051"
+      ],
+      "setup": "Delayed/lost save responses, network loss and local quota limits",
+      "implementation_steps": [
+        "Track dirty/saving/saved/conflict/unsynced state by exact edit generation.",
+        "Keep offline changes explicit and reconcile server revisions before resaving.",
+        "Scope optional crash-recovery data and handle quota/session changes safely."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-17",
+      "title": "Three-way conflict and semantic/layout diff",
+      "workstream": "AUT",
+      "wave": 2,
+      "depends_on": [
+        "WP-16",
+        "WP-07"
+      ],
+      "specs": [
+        "spec/06_DRAFT_PERSISTENCE_AUTOSAVE_AND_CONFLICTS.md"
+      ],
+      "requirement_ids": [
+        "P2-052",
+        "P2-053",
+        "P2-054"
+      ],
+      "acceptance_case_ids": [
+        "AT-052",
+        "AT-053",
+        "AT-054"
+      ],
+      "setup": "Two tabs editing guards, branches, deletion and layout independently",
+      "implementation_steps": [
+        "Retain base/local/remote and require review of semantic conflicts.",
+        "Support keep-as-new, review-merge, protected reload/discard and cancel resolution.",
+        "Distinguish semantic from layout differences and revalidate merged candidates."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-18",
+      "title": "Exact validation, publication and launch flow",
+      "workstream": "AUT",
+      "wave": 3,
+      "depends_on": [
+        "WP-08",
+        "WP-15",
+        "WP-20"
+      ],
+      "specs": [
+        "spec/07_VALIDATE_PUBLISH_TEMPLATES_AND_PORTABILITY.md"
+      ],
+      "requirement_ids": [
+        "P2-055",
+        "P2-056",
+        "P2-057"
+      ],
+      "acceptance_case_ids": [
+        "AT-055",
+        "AT-056",
+        "AT-057"
+      ],
+      "setup": "Actual definition registry, permissions and deterministic runtime ports",
+      "implementation_steps": [
+        "Publish an exact validated draft revision without launching a game/provider.",
+        "Resolve uncertain publication/start responses with stable owner identities.",
+        "Launch only the selected immutable digest after current capability/policy admission."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-19",
+      "title": "Catalog templates and subworkflow provenance",
+      "workstream": "AUT",
+      "wave": 3,
+      "depends_on": [
+        "WP-13",
+        "WP-18"
+      ],
+      "specs": [
+        "spec/07_VALIDATE_PUBLISH_TEMPLATES_AND_PORTABILITY.md"
+      ],
+      "requirement_ids": [
+        "P2-058",
+        "P2-059",
+        "P2-060"
+      ],
+      "acceptance_case_ids": [
+        "AT-058",
+        "AT-059",
+        "AT-060"
+      ],
+      "setup": "Pinned catalog artifacts and supported stage templates",
+      "implementation_steps": [
+        "Browse and clone first-party templates with version/digest/provenance.",
+        "Resolve typed pinned subworkflows and surface unavailable references.",
+        "Round-trip useful supported gameplay templates with capability gates."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-20",
+      "title": "Scoped browser pairing/session and static adapter",
+      "workstream": "RUN",
+      "wave": 1,
+      "depends_on": [
+        "WP-03",
+        "WP-04"
+      ],
+      "specs": [
+        "spec/08_BROWSER_API_AUTH_AND_SERVER_ADAPTER.md"
+      ],
+      "requirement_ids": [
+        "P2-061",
+        "P2-062",
+        "P2-063"
+      ],
+      "acceptance_case_ids": [
+        "AT-061",
+        "AT-062",
+        "AT-063"
+      ],
+      "setup": "Opt-in owner browser adapter with isolated same-origin test serving",
+      "implementation_steps": [
+        "Issue one-time scoped pairing and short-lived browser sessions without secret persistence.",
+        "Enforce exact host/origin and preserve non-browser/default rejection behavior.",
+        "Serve only verified static bundle paths without taking scheduler ownership."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-21",
+      "title": "Authenticated event transport and snapshot attachment",
+      "workstream": "RUN",
+      "wave": 1,
+      "depends_on": [
+        "WP-20",
+        "WP-04"
+      ],
+      "specs": [
+        "spec/09_EVENT_PROJECTION_RECONNECT_AND_GAPS.md"
+      ],
+      "requirement_ids": [
+        "P2-064",
+        "P2-065",
+        "P2-066"
+      ],
+      "acceptance_case_ids": [
+        "AT-064",
+        "AT-065",
+        "AT-066"
+      ],
+      "setup": "Owner snapshot watermark, durable cursor and framed event endpoint",
+      "implementation_steps": [
+        "Attach at a consistent snapshot/cursor and bind transport to current authorized run.",
+        "Parse framed streams and exact identifiers with bounded resources.",
+        "Fallback to bounded polling over the same event contract and honor revocation."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-22",
+      "title": "Pure display reducer and resynchronization",
+      "workstream": "RUN",
+      "wave": 1,
+      "depends_on": [
+        "WP-21",
+        "WP-05"
+      ],
+      "specs": [
+        "spec/09_EVENT_PROJECTION_RECONNECT_AND_GAPS.md"
+      ],
+      "requirement_ids": [
+        "P2-067",
+        "P2-068",
+        "P2-069"
+      ],
+      "acceptance_case_ids": [
+        "AT-067",
+        "AT-068",
+        "AT-069"
+      ],
+      "setup": "Owner events/snapshots with duplicates, gaps and authorization projection rules",
+      "implementation_steps": [
+        "Deduplicate and project events without scheduling workflow behavior.",
+        "Detect real gaps/retention loss and rebuild from authoritative snapshots.",
+        "Clear stale projections on identity/schema changes and bound subscriber queues."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-23",
+      "title": "Run inspector, invocation details and safe artifacts",
+      "workstream": "RUN",
+      "wave": 3,
+      "depends_on": [
+        "WP-22",
+        "WP-09"
+      ],
+      "specs": [
+        "spec/10_RUN_INSPECTOR_AND_SAFE_CONTROLS.md"
+      ],
+      "requirement_ids": [
+        "P2-070",
+        "P2-071",
+        "P2-072"
+      ],
+      "acceptance_case_ids": [
+        "AT-070",
+        "AT-071",
+        "AT-072"
+      ],
+      "setup": "Real Phase-1 status, repeated node invocations and permitted artifact projections",
+      "implementation_steps": [
+        "Display workflow/game outcome, uncertainty, budgets and cleanup distinctly.",
+        "Show per-invocation/plan details bound to exact definition and operation identity.",
+        "Render only authorized structured artifacts and safe trace references."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-24",
+      "title": "Safe runtime command controller",
+      "workstream": "RUN",
+      "wave": 3,
+      "depends_on": [
+        "WP-23",
+        "WP-20",
+        "WP-18"
+      ],
+      "specs": [
+        "spec/10_RUN_INSPECTOR_AND_SAFE_CONTROLS.md"
+      ],
+      "requirement_ids": [
+        "P2-073",
+        "P2-074",
+        "P2-075"
+      ],
+      "acceptance_case_ids": [
+        "AT-073",
+        "AT-074",
+        "AT-075"
+      ],
+      "setup": "Actual idempotent command API and revision/uncertainty states",
+      "implementation_steps": [
+        "Use stable intent IDs and expected revisions for supported pause/resume/step/cancel.",
+        "Resolve lost responses and distinguish command admission from application.",
+        "Disable unsupported/stale/historical commands and preserve protected transaction semantics."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-25",
+      "title": "Historical replay and comparative debugging",
+      "workstream": "INS",
+      "wave": 3,
+      "depends_on": [
+        "WP-23",
+        "WP-07"
+      ],
+      "specs": [
+        "spec/11_REPLAY_COMPARE_AND_DEBUGGING.md"
+      ],
+      "requirement_ids": [
+        "P2-076",
+        "P2-077",
+        "P2-078"
+      ],
+      "acceptance_case_ids": [
+        "AT-076",
+        "AT-077",
+        "AT-078"
+      ],
+      "setup": "Retained owner artifacts and actual zero-effect offline replay capability",
+      "implementation_steps": [
+        "Keep historical cursor actions free of live mutations or provider/game calls.",
+        "Present owner offline replay results and explicit gaps/redaction/divergence.",
+        "Compare definition/layout/run differences by stable context without causal overclaims."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-26",
+      "title": "Server authorization and content-security implementation",
+      "workstream": "QLT",
+      "wave": 2,
+      "depends_on": [
+        "WP-20",
+        "WP-13"
+      ],
+      "specs": [
+        "spec/14_SECURITY_PRIVACY_AND_AUTHORIZATION.md"
+      ],
+      "requirement_ids": [
+        "P2-079",
+        "P2-080",
+        "P2-081"
+      ],
+      "acceptance_case_ids": [
+        "AT-079",
+        "AT-080",
+        "AT-081"
+      ],
+      "setup": "Threat model, role matrix and malicious import/response fixtures",
+      "implementation_steps": [
+        "Enforce inspect/author/publish/operate/session permissions server-side per object.",
+        "Apply safe text/import handling, strict decoding and production CSP.",
+        "Exclude secrets/sensitive content from storage, telemetry, logs and exports."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-27",
+      "title": "Optional map and observability capabilities",
+      "workstream": "INS",
+      "wave": 3,
+      "depends_on": [
+        "WP-23",
+        "WP-04"
+      ],
+      "specs": [
+        "spec/16_ADJACENT_INTEGRATIONS_AND_CAPABILITY_GATES.md"
+      ],
+      "requirement_ids": [
+        "P2-082",
+        "P2-083",
+        "P2-084"
+      ],
+      "acceptance_case_ids": [
+        "AT-082",
+        "AT-083",
+        "AT-084"
+      ],
+      "setup": "Approved optional read-only capabilities and deliberately unavailable variants",
+      "implementation_steps": [
+        "Keep gameplay map and workflow graph separate with explicit freshness/support.",
+        "Resolve trace/artifact links only through approved mappings.",
+        "Keep optional integration absence from breaking core Studio functions."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-28",
+      "title": "Accessible interaction and responsive implementation",
+      "workstream": "QLT",
+      "wave": 2,
+      "depends_on": [
+        "WP-10",
+        "WP-12",
+        "WP-16"
+      ],
+      "specs": [
+        "spec/13_ACCESSIBILITY_VISUAL_DESIGN_AND_RESPONSIVENESS.md"
+      ],
+      "requirement_ids": [
+        "P2-085",
+        "P2-086",
+        "P2-087"
+      ],
+      "acceptance_case_ids": [
+        "AT-085",
+        "AT-086",
+        "AT-087"
+      ],
+      "setup": "Core authoring/control journeys across keyboard/pointer and constrained viewports",
+      "implementation_steps": [
+        "Provide keyboard and single-pointer alternatives for every essential drag operation.",
+        "Maintain meaningful labels/focus/status and non-color-only state indicators.",
+        "Support themes/reduced motion/zoom and narrow list/form layouts."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-29",
+      "title": "Performance workers and bounded lifecycle",
+      "workstream": "QLT",
+      "wave": 3,
+      "depends_on": [
+        "WP-22",
+        "WP-11",
+        "WP-13"
+      ],
+      "specs": [
+        "spec/15_PERFORMANCE_BOUNDS_AND_RESOURCE_LIFETIME.md"
+      ],
+      "requirement_ids": [
+        "P2-088",
+        "P2-089",
+        "P2-090"
+      ],
+      "acceptance_case_ids": [
+        "AT-088",
+        "AT-089",
+        "AT-090"
+      ],
+      "setup": "Proposed admitted-size benchmark corpus and repeated lifecycle workload",
+      "implementation_steps": [
+        "Bound graph/event/history/import/worker resources and reject obsolete async results.",
+        "Keep core edits responsive through selective rendering and bounded worker tasks.",
+        "Clean up subscribers/listeners/workers/blob URLs across view/auth lifetimes."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-30",
+      "title": "Cross-browser production UI acceptance",
+      "workstream": "QLT",
+      "wave": 4,
+      "depends_on": [
+        "WP-19",
+        "WP-24",
+        "WP-25",
+        "WP-28",
+        "WP-14"
+      ],
+      "specs": [
+        "spec/17_TESTS_AND_ACCEPTANCE_GATES.md"
+      ],
+      "requirement_ids": [
+        "P2-091",
+        "P2-092",
+        "P2-093"
+      ],
+      "acceptance_case_ids": [
+        "AT-091",
+        "AT-092",
+        "AT-093"
+      ],
+      "setup": "Production bundle on Chromium, Firefox and WebKit where executable",
+      "implementation_steps": [
+        "Execute complete authoring-to-run and history journeys in real browser tests.",
+        "Test empty/loading/forbidden/invalid/conflict/disconnected states on supported engines.",
+        "Exercise production CSP/workers/routing rather than only a development server."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-31",
+      "title": "Actual Phase-1 service integration suite",
+      "workstream": "QLT",
+      "wave": 4,
+      "depends_on": [
+        "WP-30",
+        "WP-15",
+        "WP-20"
+      ],
+      "specs": [
+        "spec/17_TESTS_AND_ACCEPTANCE_GATES.md"
+      ],
+      "requirement_ids": [
+        "P2-094",
+        "P2-095",
+        "P2-096"
+      ],
+      "acceptance_case_ids": [
+        "AT-094",
+        "AT-095",
+        "AT-096"
+      ],
+      "setup": "Exact implemented harness/compiler/store/event/command service",
+      "implementation_steps": [
+        "Prove real canonical strict and dynamic workflow round-trips.",
+        "Prove durable drafts and run continuity through browser/web attachment restart.",
+        "Observe two actual accepted dynamic plans and safe rejection/supersession."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-32",
+      "title": "Concurrency, restart and network fault matrix",
+      "workstream": "QLT",
+      "wave": 4,
+      "depends_on": [
+        "WP-31",
+        "WP-26",
+        "WP-29"
+      ],
+      "specs": [
+        "spec/17_TESTS_AND_ACCEPTANCE_GATES.md"
+      ],
+      "requirement_ids": [
+        "P2-097",
+        "P2-098",
+        "P2-099"
+      ],
+      "acceptance_case_ids": [
+        "AT-097",
+        "AT-098",
+        "AT-099"
+      ],
+      "setup": "Fault injection at owner API/store and browser transport boundaries",
+      "implementation_steps": [
+        "Execute lost-save/publication/command and concurrent-editor cases.",
+        "Exercise event gaps/chunks/slow consumers/revocation and identity transitions.",
+        "Preserve uncertainty and ownership across server/adapter restart."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-33",
+      "title": "Independent adversarial security and privacy review",
+      "workstream": "QLT",
+      "wave": 4,
+      "depends_on": [
+        "WP-26",
+        "WP-31"
+      ],
+      "specs": [
+        "spec/14_SECURITY_PRIVACY_AND_AUTHORIZATION.md"
+      ],
+      "requirement_ids": [
+        "P2-100",
+        "P2-101",
+        "P2-102"
+      ],
+      "acceptance_case_ids": [
+        "AT-100",
+        "AT-101",
+        "AT-102"
+      ],
+      "setup": "Integrated candidate with source review and authorized abuse targets",
+      "implementation_steps": [
+        "Independently verify origin/authz/pairing/CSP/content controls.",
+        "Review dependencies/licenses/build outputs and runtime egress.",
+        "Block readiness on unresolved material security boundary defects."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-34",
+      "title": "Visual and manual accessibility acceptance",
+      "workstream": "QLT",
+      "wave": 4,
+      "depends_on": [
+        "WP-30",
+        "WP-28"
+      ],
+      "specs": [
+        "spec/13_ACCESSIBILITY_VISUAL_DESIGN_AND_RESPONSIVENESS.md"
+      ],
+      "requirement_ids": [
+        "P2-103",
+        "P2-104",
+        "P2-105"
+      ],
+      "acceptance_case_ids": [
+        "AT-103",
+        "AT-104",
+        "AT-105"
+      ],
+      "setup": "Actual sanitized screenshots and assistive journeys on candidate build",
+      "implementation_steps": [
+        "Inspect real UI screenshots across required themes/viewports/states.",
+        "Combine automated scans with manual keyboard/pointer/zoom/screen-reader assessment.",
+        "Fix blocking focus/reflow/drag-parity defects and retest exact build."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-35",
+      "title": "Reproducible static build and acceptance bundle",
+      "workstream": "DLV",
+      "wave": 4,
+      "depends_on": [
+        "WP-30",
+        "WP-26"
+      ],
+      "specs": [
+        "spec/19_DELIVERY_PACKAGING_AND_OPERATIONS.md"
+      ],
+      "requirement_ids": [
+        "P2-106",
+        "P2-107",
+        "P2-108"
+      ],
+      "acceptance_case_ids": [
+        "AT-106",
+        "AT-107",
+        "AT-108"
+      ],
+      "setup": "Frozen dependency/toolchain lock and owner static serving contract",
+      "implementation_steps": [
+        "Produce a checksummed static bundle with license/SBOM and compatibility metadata.",
+        "Test harness acceptance, safe paths/base routing and incompatible bundle handling.",
+        "Document bounded local startup/rollback without implicit deployment effects."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-36",
+      "title": "Developer/operator runbooks and migration notes",
+      "workstream": "DLV",
+      "wave": 4,
+      "depends_on": [
+        "WP-35",
+        "WP-24",
+        "WP-25",
+        "WP-17"
+      ],
+      "specs": [
+        "spec/19_DELIVERY_PACKAGING_AND_OPERATIONS.md"
+      ],
+      "requirement_ids": [
+        "P2-109",
+        "P2-110",
+        "P2-111"
+      ],
+      "acceptance_case_ids": [
+        "AT-109",
+        "AT-110",
+        "AT-111"
+      ],
+      "setup": "Implemented commands/interfaces and verified core journeys",
+      "implementation_steps": [
+        "Document pairing/drafts/conflicts/validate/publish/run/control/replay and support export.",
+        "Record compatibility/additive owner changes and non-destructive upgrade/rollback.",
+        "Publish evidence distinctions and explicit capability/permission limitations."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-37",
+      "title": "CI and cross-repository integration checks",
+      "workstream": "DLV",
+      "wave": 4,
+      "depends_on": [
+        "WP-35",
+        "WP-31",
+        "WP-33",
+        "WP-34"
+      ],
+      "specs": [
+        "spec/17_TESTS_AND_ACCEPTANCE_GATES.md"
+      ],
+      "requirement_ids": [
+        "P2-112",
+        "P2-113",
+        "P2-114"
+      ],
+      "acceptance_case_ids": [
+        "AT-112",
+        "AT-113",
+        "AT-114"
+      ],
+      "setup": "Integrated source heads and owner-specific current CI policies",
+      "implementation_steps": [
+        "Run owner policy/lint/typecheck/test/artifact checks and browser gates in CI.",
+        "Pin shared artifacts and regenerate clients only from reviewed sources.",
+        "Keep CI artifacts sanitized and failures reproducible with exact evidence."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-38",
+      "title": "Independent final integrated acceptance",
+      "workstream": "QLT",
+      "wave": 5,
+      "depends_on": [
+        "WP-32",
+        "WP-33",
+        "WP-34",
+        "WP-36",
+        "WP-37"
+      ],
+      "specs": [
+        "prompts/FINAL_INTEGRATION.md"
+      ],
+      "requirement_ids": [
+        "P2-115",
+        "P2-116",
+        "P2-117"
+      ],
+      "acceptance_case_ids": [
+        "AT-115",
+        "AT-116",
+        "AT-117"
+      ],
+      "setup": "Exact combined candidate heads and full requirement ledger",
+      "implementation_steps": [
+        "Reverify critical invariants and affected suites at the final combined source heads.",
+        "Map every mandatory requirement to actual evidence or explicit blocker.",
+        "Verify actual lineage/model compliance and closure of owned workers/processes."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    },
+    {
+      "id": "WP-39",
+      "title": "Linked draft-PR delivery and final report",
+      "workstream": "DLV",
+      "wave": 5,
+      "depends_on": [
+        "WP-38"
+      ],
+      "specs": [
+        "templates/FINAL_REPORT.md"
+      ],
+      "requirement_ids": [
+        "P2-118",
+        "P2-119",
+        "P2-120"
+      ],
+      "acceptance_case_ids": [
+        "AT-118",
+        "AT-119",
+        "AT-120"
+      ],
+      "setup": "Verified candidate and current operator/Git permissions",
+      "implementation_steps": [
+        "Deliver scoped commits and linked draft PRs assigned to the authenticated operator.",
+        "Report implemented features, evidence levels, pins and remaining blockers honestly.",
+        "Leave a reproducible resume/operations handoff without unauthorized deployment."
+      ],
+      "exit_criteria": "All linked cases executed at their required tier, independently reviewed; any real blocker stays explicit and prevents verified status.",
+      "path_policy": "D2 resolves narrow actual file paths and an exclusive write lease before edits; shared schemas/lockfiles have one integration owner.",
+      "status": "not_started",
+      "coordinator_depth": 2,
+      "implementation_depth": 3,
+      "independent_verifier_required": true
+    }
+  ]
+}

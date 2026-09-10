@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "repository": "AI-Ascension/sts2-harness",
+  "source_head": "eb0a10f485f28a3f5bf98d1e01c186014414206f",
+  "process": "sts2-workflow serve --listen 127.0.0.1:8797 --store <temporary SQLite path> --auth-profile default",
+  "profile_evidence_scope": "synthetic",
+  "definition": {
+    "workflow_id": "sts2.setup.strict",
+    "digest": "6d86b376660c1abec5b2628fb1b3877f97275b8a4c7afe2ca1bab5bf8ab0ca00"
+  },
+  "calls": [
+    { "route": "GET /v1/health", "status": 200, "result": "ok" },
+    { "route": "GET /v1/capabilities", "status": 200, "result": "synthetic capability manifest" },
+    { "route": "POST /v1/workflow-definitions/validate", "status": 200, "result": "expected capability-negative diagnostics" },
+    { "route": "POST /v1/workflow-definitions/validate", "status": 200, "result": "valid with admitted synthetic capabilities" },
+    { "route": "POST /v1/workflow-definitions/inspect", "status": 200, "result": "one graph and six nodes" },
+    { "route": "POST /v1/workflow-runs", "status": 200, "result": "synthetic run admitted at revision 1" },
+    { "route": "GET /v1/workflow-runs/:run_id", "status": 200, "result": "running snapshot with safely_resumable recovery admission" },
+    { "route": "GET /v1/workflow-runs/:run_id/events?after_sequence=0&limit=16", "status": 200, "result": "one contiguous run_started event" },
+    { "route": "POST /v1/workflow-runs/:run_id/replay", "status": 200, "result": "matched true" },
+    { "route": "POST /v1/workflow-runs/:run_id/export", "status": 200, "result": "redacted export" }
+  ],
+  "limitation": "This is a real authenticated synthetic management process. It is not native gameplay/provider execution and it is not a browser-engine journey."
+}

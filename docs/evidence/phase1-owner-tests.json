@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "repository": "AI-Ascension/sts2-harness",
+  "source_head": "eb0a10f485f28a3f5bf98d1e01c186014414206f",
+  "toolchain": "rustc/cargo 1.97.1-x86_64-unknown-linux-gnu",
+  "tests": [
+    {
+      "command": "cargo test -p sts2-harness --test management --locked",
+      "result": "passed",
+      "cases": 6,
+      "scope": "strict JSON decoding, idempotent revision-bound commands, durable file state, redaction, injected read-only ports, authenticated loopback routes"
+    },
+    {
+      "command": "cargo test -p sts2-harness --test management_sqlite --locked",
+      "result": "passed",
+      "cases": 5,
+      "scope": "durable SQLite run/events, pragmas, cross-connection command serialization, tamper rejection, runtime restart recovery"
+    }
+  ],
+  "limitation": "These owner tests exercise the synthetic management/runtime boundary; they do not prove native game/provider execution or browser pairing."
+}

@@ -1,0 +1,11 @@
+flowchart TD
+    AUTH[Authorized session] --> SNAP[Snapshot plus compatible cursor]
+    SNAP --> STREAM[Bounded authenticated stream]
+    STREAM --> CHECK{Identity and ordering valid?}
+    CHECK -->|Contiguous| APPLY[Apply display projection]
+    APPLY --> STREAM
+    CHECK -->|Exact duplicate in retained window| STREAM
+    CHECK -->|Gap, overflow or expired cursor| RESET[Disable unsafe controls and resnapshot]
+    RESET --> SNAP
+    CHECK -->|Conflicting duplicate or foreign binding| FAIL[Reject and surface protocol error]
+    STREAM -->|Session revoked| STOP[Close and clear sensitive view]

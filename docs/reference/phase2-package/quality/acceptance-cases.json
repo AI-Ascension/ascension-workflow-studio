@@ -1,0 +1,2045 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "AT-001",
+      "requirement_ids": [
+        "P2-001"
+      ],
+      "work_package": "WP-00",
+      "required_evidence_tier": "orchestration",
+      "setup": "Sanitized client/config inspection and a read-only native delegation chain",
+      "action": "Launch the supported read-only chain and inspect tool metadata.",
+      "expected": "Verify every descendant requests Luna with max effort and qualify effective-setting evidence.",
+      "negative_assertion": "No prose-only model attestation or silent substitution.",
+      "planned_test_name": "phase2_at_001",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-002",
+      "requirement_ids": [
+        "P2-002"
+      ],
+      "work_package": "WP-00",
+      "required_evidence_tier": "orchestration",
+      "setup": "Sanitized client/config inspection and a read-only native delegation chain",
+      "action": "Validate actual parent IDs/depths and attempt no unauthorized deeper spawn.",
+      "expected": "Use real D0-D1-D2-D3 parentage and prohibit D3 spawning.",
+      "negative_assertion": "No relabeled flat pool or hidden process chain.",
+      "planned_test_name": "phase2_at_002",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-003",
+      "requirement_ids": [
+        "P2-003"
+      ],
+      "work_package": "WP-00",
+      "required_evidence_tier": "orchestration",
+      "setup": "Sanitized client/config inspection and a read-only native delegation chain",
+      "action": "Exercise slot reservation, a full chain, closure and lower-limit scheduling.",
+      "expected": "Keep global descendants within 12 or the lower runtime ceiling and release slots.",
+      "negative_assertion": "No lead starvation of leaf capacity or abandoned threads.",
+      "planned_test_name": "phase2_at_003",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-004",
+      "requirement_ids": [
+        "P2-004"
+      ],
+      "work_package": "WP-01",
+      "required_evidence_tier": "source",
+      "setup": "Current repository access, owner rules and dirty-state inventory",
+      "action": "Resolve the exact name, distinguish denial/absence and inspect an existing dirty worktree.",
+      "expected": "Create or safely resume the exact Studio repository under admitted visibility.",
+      "negative_assertion": "No near-name replacement, public disclosure or reset.",
+      "planned_test_name": "phase2_at_004",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-005",
+      "requirement_ids": [
+        "P2-005"
+      ],
+      "work_package": "WP-01",
+      "required_evidence_tier": "source",
+      "setup": "Current repository access, owner rules and dirty-state inventory",
+      "action": "Run repository policy and frozen dependency/toolchain checks.",
+      "expected": "Establish a pinned TypeScript/frontend standards profile without weakening harness rules.",
+      "negative_assertion": "No unreviewed language-policy bypass or floating production toolchain.",
+      "planned_test_name": "phase2_at_005",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-006",
+      "requirement_ids": [
+        "P2-006"
+      ],
+      "work_package": "WP-01",
+      "required_evidence_tier": "source",
+      "setup": "Current repository access, owner rules and dirty-state inventory",
+      "action": "Assign overlapping-path packets and verify exclusive writer admission.",
+      "expected": "Use isolated worktrees and scoped branches with tracked write leases.",
+      "negative_assertion": "No broad staging or overwriting another worker.",
+      "planned_test_name": "phase2_at_006",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-007",
+      "requirement_ids": [
+        "P2-007"
+      ],
+      "work_package": "WP-02",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Implemented Phase-1 service and its actual exported artifacts",
+      "action": "Build the compatibility lock from owner exports and verify bytes.",
+      "expected": "Pin actual producer heads and digests for every consumed runtime contract.",
+      "negative_assertion": "Do not treat reference seeds as implemented schemas.",
+      "planned_test_name": "phase2_at_007",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-008",
+      "requirement_ids": [
+        "P2-008"
+      ],
+      "work_package": "WP-02",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Implemented Phase-1 service and its actual exported artifacts",
+      "action": "Exercise successful and unsupported operation discovery against the real service.",
+      "expected": "Resolve logical client operations to actual admitted owner routes.",
+      "negative_assertion": "No guessed endpoints or silent mock fallback.",
+      "planned_test_name": "phase2_at_008",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-009",
+      "requirement_ids": [
+        "P2-009"
+      ],
+      "work_package": "WP-02",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Implemented Phase-1 service and its actual exported artifacts",
+      "action": "Review the gap map and preserve existing CLI/profile contract tests.",
+      "expected": "Classify minimal missing web/draft projections as additive owner changes.",
+      "negative_assertion": "No replacement Phase-1 runtime or private scheduler.",
+      "planned_test_name": "phase2_at_009",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-010",
+      "requirement_ids": [
+        "P2-010"
+      ],
+      "work_package": "WP-03",
+      "required_evidence_tier": "source",
+      "setup": "Pinned source and actual owner boundaries",
+      "action": "Inspect dependency graph and trace a browser command through admitted ports.",
+      "expected": "Keep execution/compiler/persistence authority in the harness.",
+      "negative_assertion": "No browser-to-mod or sibling implementation imports.",
+      "planned_test_name": "phase2_at_010",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-011",
+      "requirement_ids": [
+        "P2-011"
+      ],
+      "work_package": "WP-03",
+      "required_evidence_tier": "source",
+      "setup": "Pinned source and actual owner boundaries",
+      "action": "Review ADRs and test data-lifetime transitions across logout/server/run switches.",
+      "expected": "Document bounded authoring, session, live projection and historical state domains.",
+      "negative_assertion": "No mixed editor/runtime object or stale authority reuse.",
+      "planned_test_name": "phase2_at_011",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-012",
+      "requirement_ids": [
+        "P2-012"
+      ],
+      "work_package": "WP-03",
+      "required_evidence_tier": "source",
+      "setup": "Pinned source and actual owner boundaries",
+      "action": "Inspect authorization records and denied deploy/native-game cases.",
+      "expected": "Define scoped repository and runtime permissions before external effects.",
+      "negative_assertion": "No inferred merge, remote hosting or valued-profile permission.",
+      "planned_test_name": "phase2_at_012",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-013",
+      "requirement_ids": [
+        "P2-013"
+      ],
+      "work_package": "WP-04",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Actual operation map and owner success/error artifacts",
+      "action": "Inject malformed, oversized and identity-mismatched response bodies.",
+      "expected": "Validate API responses at runtime as well as with static TypeScript types.",
+      "negative_assertion": "No malformed response coerced to empty success.",
+      "planned_test_name": "phase2_at_013",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-014",
+      "requirement_ids": [
+        "P2-014"
+      ],
+      "work_package": "WP-04",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Actual operation map and owner success/error artifacts",
+      "action": "Connect to admitted and incompatible service versions.",
+      "expected": "Expose per-server/schema/registry compatibility and feature availability.",
+      "negative_assertion": "No cached compatibility reused for another server.",
+      "planned_test_name": "phase2_at_014",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-015",
+      "requirement_ids": [
+        "P2-015"
+      ],
+      "work_package": "WP-04",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Actual operation map and owner success/error artifacts",
+      "action": "Inspect network requests and attempt an arbitrary upstream URL.",
+      "expected": "Keep client adapters narrow, relative-path and explicitly versioned.",
+      "negative_assertion": "No general proxy or authority-expanding client operation.",
+      "planned_test_name": "phase2_at_015",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-016",
+      "requirement_ids": [
+        "P2-016"
+      ],
+      "work_package": "WP-05",
+      "required_evidence_tier": "source",
+      "setup": "Actual Phase-1 definitions and Studio sidecar fixtures",
+      "action": "Mutate each state domain independently and inspect exported payloads.",
+      "expected": "Keep semantic document, layout, draft, published revision and live run distinct.",
+      "negative_assertion": "No cursor/status/policy in a layout sidecar.",
+      "planned_test_name": "phase2_at_016",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-017",
+      "requirement_ids": [
+        "P2-017"
+      ],
+      "work_package": "WP-05",
+      "required_evidence_tier": "source",
+      "setup": "Actual Phase-1 definitions and Studio sidecar fixtures",
+      "action": "Load nested graphs with equal local node IDs and attach separate invocations.",
+      "expected": "Bind view nodes to qualified graph and semantic node identities.",
+      "negative_assertion": "No cross-graph/node-invocation collision.",
+      "planned_test_name": "phase2_at_017",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-018",
+      "requirement_ids": [
+        "P2-018"
+      ],
+      "work_package": "WP-05",
+      "required_evidence_tier": "source",
+      "setup": "Actual Phase-1 definitions and Studio sidecar fixtures",
+      "action": "Import a future-version definition and try visual editing/publishing.",
+      "expected": "Preserve unsupported schema bytes in read-only archival mode.",
+      "negative_assertion": "No silent field stripping or execution of unknown content.",
+      "planned_test_name": "phase2_at_018",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-019",
+      "requirement_ids": [
+        "P2-019"
+      ],
+      "work_package": "WP-06",
+      "required_evidence_tier": "browser",
+      "setup": "Admitted node/type/policy registry with unsupported-capability variants",
+      "action": "Change registry digest and verify palette/forms re-admit their config.",
+      "expected": "Generate the palette/forms from admitted registry metadata and bounded schemas.",
+      "negative_assertion": "No drifting hardcoded authority assumptions.",
+      "planned_test_name": "phase2_at_019",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-020",
+      "requirement_ids": [
+        "P2-020"
+      ],
+      "work_package": "WP-06",
+      "required_evidence_tier": "browser",
+      "setup": "Admitted node/type/policy registry with unsupported-capability variants",
+      "action": "Enter missing, false, zero, out-of-range and mismatched-unit values.",
+      "expected": "Render typed guard/config/budget forms with explicit unknown and unavailable values.",
+      "negative_assertion": "No missing-to-false coercion or unsafe numeric rounding.",
+      "planned_test_name": "phase2_at_020",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-021",
+      "requirement_ids": [
+        "P2-021"
+      ],
+      "work_package": "WP-06",
+      "required_evidence_tier": "browser",
+      "setup": "Admitted node/type/policy registry with unsupported-capability variants",
+      "action": "Edit decision/provider settings and inspect stored/exported documents.",
+      "expected": "Keep credential/profile references separate from secret values.",
+      "negative_assertion": "No provider or gateway token in forms or definitions.",
+      "planned_test_name": "phase2_at_021",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-022",
+      "requirement_ids": [
+        "P2-022"
+      ],
+      "work_package": "WP-07",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Complete supported-node corpus and actual Phase-1 compiler",
+      "action": "Compile before/after imports, layout sequences and exports.",
+      "expected": "Preserve owner semantics and digest on no-edit round-trips and layout-only changes.",
+      "negative_assertion": "No React Flow serialization treated as executable format.",
+      "planned_test_name": "phase2_at_022",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-023",
+      "requirement_ids": [
+        "P2-023"
+      ],
+      "work_package": "WP-07",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Complete supported-node corpus and actual Phase-1 compiler",
+      "action": "Round-trip priority arrays, Unicode, absent/null and safe-boundary numbers.",
+      "expected": "Preserve ordered branch/array/null/default semantics exactly as the owner defines.",
+      "negative_assertion": "No accidental sorting or invented TypeScript canonicalization.",
+      "planned_test_name": "phase2_at_023",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-024",
+      "requirement_ids": [
+        "P2-024"
+      ],
+      "work_package": "WP-07",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Complete supported-node corpus and actual Phase-1 compiler",
+      "action": "Reconnect a guarded edge, compile/diff, undo and recompile.",
+      "expected": "Make semantic edits observable and undo restore the previous candidate.",
+      "negative_assertion": "No layout-only label for a strategy-changing edit.",
+      "planned_test_name": "phase2_at_024",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-025",
+      "requirement_ids": [
+        "P2-025"
+      ],
+      "work_package": "WP-08",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Draft edits with delayed compiler responses and registry changes",
+      "action": "Return old validation after a newer edit and change registry mid-request.",
+      "expected": "Bind diagnostics to exact candidate, registry, policy and capability versions.",
+      "negative_assertion": "No stale valid badge or publish eligibility.",
+      "planned_test_name": "phase2_at_025",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-026",
+      "requirement_ids": [
+        "P2-026"
+      ],
+      "work_package": "WP-08",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Draft edits with delayed compiler responses and registry changes",
+      "action": "Validate type, graph, capability and policy failures and activate each finding.",
+      "expected": "Navigate structured errors to graph/node/edge/property targets accessibly.",
+      "negative_assertion": "No raw server stack/path leakage or unreachable diagnostic target.",
+      "planned_test_name": "phase2_at_026",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-027",
+      "requirement_ids": [
+        "P2-027"
+      ],
+      "work_package": "WP-08",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Draft edits with delayed compiler responses and registry changes",
+      "action": "Bypass the browser linter and submit an invalid definition.",
+      "expected": "Require canonical backend validation even after successful local lint.",
+      "negative_assertion": "No frontend-only security/compiler acceptance.",
+      "planned_test_name": "phase2_at_027",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-028",
+      "requirement_ids": [
+        "P2-028"
+      ],
+      "work_package": "WP-09",
+      "required_evidence_tier": "browser",
+      "setup": "Built app with actual admitted read endpoints and explicit synthetic mode",
+      "action": "Load/refresh/deep-link each route with safe durable IDs.",
+      "expected": "Provide Library, Designer, Runs, Replay/Compare and Compatibility navigation.",
+      "negative_assertion": "No token/payload in URLs or placeholder route.",
+      "planned_test_name": "phase2_at_028",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-029",
+      "requirement_ids": [
+        "P2-029"
+      ],
+      "work_package": "WP-09",
+      "required_evidence_tier": "browser",
+      "setup": "Built app with actual admitted read endpoints and explicit synthetic mode",
+      "action": "Exercise empty, forbidden, disconnected and incompatible responses.",
+      "expected": "Show server, effective role, fixture/live mode, connection and meaningful empty/error states.",
+      "negative_assertion": "No mock data substituted for connection failure.",
+      "planned_test_name": "phase2_at_029",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-030",
+      "requirement_ids": [
+        "P2-030"
+      ],
+      "work_package": "WP-09",
+      "required_evidence_tier": "browser",
+      "setup": "Built app with actual admitted read endpoints and explicit synthetic mode",
+      "action": "Open an admitted workflow/run in the built read-only app.",
+      "expected": "Render an actual exported workflow and owner run state before write controls.",
+      "negative_assertion": "No timer-generated progress or fictional run status.",
+      "planned_test_name": "phase2_at_030",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-031",
+      "requirement_ids": [
+        "P2-031"
+      ],
+      "work_package": "WP-10",
+      "required_evidence_tier": "browser",
+      "setup": "Strict graph with typed data/control/recovery edges",
+      "action": "Add/connect/reconnect/delete nodes and inspect affected bindings.",
+      "expected": "Support registered-node placement, typed connection/reconnection and semantic deletion review.",
+      "negative_assertion": "No auto-neighbor reconnection changing strategy silently.",
+      "planned_test_name": "phase2_at_031",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-032",
+      "requirement_ids": [
+        "P2-032"
+      ],
+      "work_package": "WP-10",
+      "required_evidence_tier": "browser",
+      "setup": "Strict graph with typed data/control/recovery edges",
+      "action": "Search hidden/nested targets and return across routes/graphs.",
+      "expected": "Provide search, fit, pan, zoom, minimap and selected-node details with stable view state.",
+      "negative_assertion": "No focus lost offscreen or view mutation of semantics.",
+      "planned_test_name": "phase2_at_032",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-033",
+      "requirement_ids": [
+        "P2-033"
+      ],
+      "work_package": "WP-10",
+      "required_evidence_tier": "browser",
+      "setup": "Strict graph with typed data/control/recovery edges",
+      "action": "Author the same graph without operating the spatial canvas.",
+      "expected": "Keep all essential editing available through an equivalent list/outline.",
+      "negative_assertion": "No mandatory dragging for a core edit.",
+      "planned_test_name": "phase2_at_033",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-034",
+      "requirement_ids": [
+        "P2-034"
+      ],
+      "work_package": "WP-11",
+      "required_evidence_tier": "browser",
+      "setup": "Graphs with internal/external references and focused text fields",
+      "action": "Perform multi-edit, auto-layout, undo/redo and inspect canonical results.",
+      "expected": "Group compound semantic/layout edits into bounded undo/redo transactions.",
+      "negative_assertion": "No partial history leaving dangling bindings.",
+      "planned_test_name": "phase2_at_034",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-035",
+      "requirement_ids": [
+        "P2-035"
+      ],
+      "work_package": "WP-11",
+      "required_evidence_tier": "browser",
+      "setup": "Graphs with internal/external references and focused text fields",
+      "action": "Paste a nested bounded subgraph twice and validate all references.",
+      "expected": "Remap every pasted local ID/reference and preserve pinned external refs.",
+      "negative_assertion": "No ID collision or implicit edit of shared subworkflow.",
+      "planned_test_name": "phase2_at_035",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-036",
+      "requirement_ids": [
+        "P2-036"
+      ],
+      "work_package": "WP-11",
+      "required_evidence_tier": "browser",
+      "setup": "Graphs with internal/external references and focused text fields",
+      "action": "Type/delete/paste/undo in property and raw editors, then exceed clipboard limits.",
+      "expected": "Respect text-field shortcut focus and bound clipboard/history resources.",
+      "negative_assertion": "No graph deletion while editing text or unbounded memory use.",
+      "planned_test_name": "phase2_at_036",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-037",
+      "requirement_ids": [
+        "P2-037"
+      ],
+      "work_package": "WP-12",
+      "required_evidence_tier": "browser",
+      "setup": "Supported loops/subworkflows, unknown guards and protected actions",
+      "action": "Navigate nested graph references and edit admitted loop limits.",
+      "expected": "Expose explicit bounded loops/subworkflows and graph breadcrumbs.",
+      "negative_assertion": "No visual grouping interpreted as parallel execution.",
+      "planned_test_name": "phase2_at_037",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-038",
+      "requirement_ids": [
+        "P2-038"
+      ],
+      "work_package": "WP-12",
+      "required_evidence_tier": "browser",
+      "setup": "Supported loops/subworkflows, unknown guards and protected actions",
+      "action": "Reorder branches and test missing required observation fields.",
+      "expected": "Expose ordered true/false/unknown guard branches through typed controls.",
+      "negative_assertion": "No unknown treated as safe/no threat.",
+      "planned_test_name": "phase2_at_038",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-039",
+      "requirement_ids": [
+        "P2-039"
+      ],
+      "work_package": "WP-12",
+      "required_evidence_tier": "browser",
+      "setup": "Supported loops/subworkflows, unknown guards and protected actions",
+      "action": "Try UI/raw/import edits to remove settlement or unlock a composite.",
+      "expected": "Show protected action internals as immutable explanatory detail.",
+      "negative_assertion": "No bypassable action lifecycle or force control.",
+      "planned_test_name": "phase2_at_039",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-040",
+      "requirement_ids": [
+        "P2-040"
+      ],
+      "work_package": "WP-13",
+      "required_evidence_tier": "browser",
+      "setup": "Valid, incomplete, malicious and future-version imported documents",
+      "action": "Type malformed JSON, navigate/save draft, repair and apply.",
+      "expected": "Preserve invalid raw text separately and apply valid text atomically.",
+      "negative_assertion": "No silent text loss or half-parsed canvas mutation.",
+      "planned_test_name": "phase2_at_040",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-041",
+      "requirement_ids": [
+        "P2-041"
+      ],
+      "work_package": "WP-13",
+      "required_evidence_tier": "browser",
+      "setup": "Valid, incomplete, malicious and future-version imported documents",
+      "action": "Import/export definition plus layout and inspect semantic changes.",
+      "expected": "Support bounded canonical JSON and Studio bundle import/export with previews.",
+      "negative_assertion": "No arbitrary server path, remote include or executable bundle.",
+      "planned_test_name": "phase2_at_041",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-042",
+      "requirement_ids": [
+        "P2-042"
+      ],
+      "work_package": "WP-13",
+      "required_evidence_tier": "browser",
+      "setup": "Valid, incomplete, malicious and future-version imported documents",
+      "action": "Load duplicate-key, deeply nested and oversize documents.",
+      "expected": "Reject duplicate keys, unsafe numbers and hostile over-limit inputs before admission.",
+      "negative_assertion": "No parser coercion to an apparently valid strategy.",
+      "planned_test_name": "phase2_at_042",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-043",
+      "requirement_ids": [
+        "P2-043"
+      ],
+      "work_package": "WP-14",
+      "required_evidence_tier": "browser",
+      "setup": "Actual dynamic registry policy and plan artifact cases",
+      "action": "Change region topology/parallelism/budgets and submit forbidden widening.",
+      "expected": "Edit only admitted operation sets, typed contracts and tighter bounded adaptive policy.",
+      "negative_assertion": "No arbitrary script/provider/spawn permission.",
+      "planned_test_name": "phase2_at_043",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-044",
+      "requirement_ids": [
+        "P2-044"
+      ],
+      "work_package": "WP-14",
+      "required_evidence_tier": "browser",
+      "setup": "Actual dynamic registry policy and plan artifact cases",
+      "action": "Load plan revisions in one region invocation and switch revisions.",
+      "expected": "Separate authored regions from generated accepted/rejected/superseded plan layers.",
+      "negative_assertion": "No autosave of live plan nodes into the definition.",
+      "planned_test_name": "phase2_at_044",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-045",
+      "requirement_ids": [
+        "P2-045"
+      ],
+      "work_package": "WP-14",
+      "required_evidence_tier": "browser",
+      "setup": "Actual dynamic registry policy and plan artifact cases",
+      "action": "Edit a region while a run uses the old digest and verify the pin.",
+      "expected": "Publish adaptive edits only as new future-run definitions.",
+      "negative_assertion": "No browser live-plan hot swap or old-plan execution.",
+      "planned_test_name": "phase2_at_045",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-046",
+      "requirement_ids": [
+        "P2-046"
+      ],
+      "work_package": "WP-15",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Real owner transactional store and conditional-write API",
+      "action": "Save an incomplete bounded draft, restart the store/service and reload.",
+      "expected": "Persist semantic draft and layout atomically through owner ports.",
+      "negative_assertion": "No localStorage-only persistence or direct database access.",
+      "planned_test_name": "phase2_at_046",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-047",
+      "requirement_ids": [
+        "P2-047"
+      ],
+      "work_package": "WP-15",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Real owner transactional store and conditional-write API",
+      "action": "Race same-base writes and retry one lost-response save.",
+      "expected": "Check expected document revision transactionally and deduplicate supported save identities.",
+      "negative_assertion": "No last-write-wins or duplicate conflicting save success.",
+      "planned_test_name": "phase2_at_047",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-048",
+      "requirement_ids": [
+        "P2-048"
+      ],
+      "work_package": "WP-15",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Real owner transactional store and conditional-write API",
+      "action": "Save a layout-only edit and publish a semantic edit in separate flows.",
+      "expected": "Keep draft/published/run revisions and layout/compiler digests independent.",
+      "negative_assertion": "No layout digest substituted for compiler identity.",
+      "planned_test_name": "phase2_at_048",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-049",
+      "requirement_ids": [
+        "P2-049"
+      ],
+      "work_package": "WP-16",
+      "required_evidence_tier": "browser",
+      "setup": "Delayed/lost save responses, network loss and local quota limits",
+      "action": "Edit during autosave and deliver responses in reverse order.",
+      "expected": "Track dirty/saving/saved/conflict/unsynced state by exact edit generation.",
+      "negative_assertion": "No newer dirty edits falsely marked saved.",
+      "planned_test_name": "phase2_at_049",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-050",
+      "requirement_ids": [
+        "P2-050"
+      ],
+      "work_package": "WP-16",
+      "required_evidence_tier": "browser",
+      "setup": "Delayed/lost save responses, network loss and local quota limits",
+      "action": "Disconnect, edit, change remote document, reconnect.",
+      "expected": "Keep offline changes explicit and reconcile server revisions before resaving.",
+      "negative_assertion": "No automatic overwrite or hidden control-command outbox.",
+      "planned_test_name": "phase2_at_050",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-051",
+      "requirement_ids": [
+        "P2-051"
+      ],
+      "work_package": "WP-16",
+      "required_evidence_tier": "browser",
+      "setup": "Delayed/lost save responses, network loss and local quota limits",
+      "action": "Enable recovery buffer, exhaust quota and switch principal/server.",
+      "expected": "Scope optional crash-recovery data and handle quota/session changes safely.",
+      "negative_assertion": "No token/live output persistence or cross-user data leak.",
+      "planned_test_name": "phase2_at_051",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-052",
+      "requirement_ids": [
+        "P2-052"
+      ],
+      "work_package": "WP-17",
+      "required_evidence_tier": "browser",
+      "setup": "Two tabs editing guards, branches, deletion and layout independently",
+      "action": "Race delete-vs-edit, reordered branches and pinned-ref changes.",
+      "expected": "Retain base/local/remote and require review of semantic conflicts.",
+      "negative_assertion": "No silent strategy merge.",
+      "planned_test_name": "phase2_at_052",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-053",
+      "requirement_ids": [
+        "P2-053"
+      ],
+      "work_package": "WP-17",
+      "required_evidence_tier": "browser",
+      "setup": "Two tabs editing guards, branches, deletion and layout independently",
+      "action": "Exercise each choice and verify local content preservation until success.",
+      "expected": "Support keep-as-new, review-merge, protected reload/discard and cancel resolution.",
+      "negative_assertion": "No discarded unsaved work after failed resolution.",
+      "planned_test_name": "phase2_at_053",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-054",
+      "requirement_ids": [
+        "P2-054"
+      ],
+      "work_package": "WP-17",
+      "required_evidence_tier": "browser",
+      "setup": "Two tabs editing guards, branches, deletion and layout independently",
+      "action": "Merge presentation-only changes then alter a guard and inspect results.",
+      "expected": "Distinguish semantic from layout differences and revalidate merged candidates.",
+      "negative_assertion": "No inherited stale validation for merged content.",
+      "planned_test_name": "phase2_at_054",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-055",
+      "requirement_ids": [
+        "P2-055"
+      ],
+      "work_package": "WP-18",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Actual definition registry, permissions and deterministic runtime ports",
+      "action": "Publish, query registry and inspect zero external-effect counters.",
+      "expected": "Publish an exact validated draft revision without launching a game/provider.",
+      "negative_assertion": "No publish-means-run behavior.",
+      "planned_test_name": "phase2_at_055",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-056",
+      "requirement_ids": [
+        "P2-056"
+      ],
+      "work_package": "WP-18",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Actual definition registry, permissions and deterministic runtime ports",
+      "action": "Drop the publication/start response and query the original result.",
+      "expected": "Resolve uncertain publication/start responses with stable owner identities.",
+      "negative_assertion": "No fresh version/run created as a retry probe.",
+      "planned_test_name": "phase2_at_056",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-057",
+      "requirement_ids": [
+        "P2-057"
+      ],
+      "work_package": "WP-18",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Actual definition registry, permissions and deterministic runtime ports",
+      "action": "Change capability/permission between dialog and submit.",
+      "expected": "Launch only the selected immutable digest after current capability/policy admission.",
+      "negative_assertion": "No stale validation or outdated confirmation bypass.",
+      "planned_test_name": "phase2_at_057",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-058",
+      "requirement_ids": [
+        "P2-058"
+      ],
+      "work_package": "WP-19",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Pinned catalog artifacts and supported stage templates",
+      "action": "Clone a strict and dynamic catalog item and inspect upstream immutability.",
+      "expected": "Browse and clone first-party templates with version/digest/provenance.",
+      "negative_assertion": "No unexplained divergent catalog copies.",
+      "planned_test_name": "phase2_at_058",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-059",
+      "requirement_ids": [
+        "P2-059"
+      ],
+      "work_package": "WP-19",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Pinned catalog artifacts and supported stage templates",
+      "action": "Open a missing/incompatible reference and a valid nested reference.",
+      "expected": "Resolve typed pinned subworkflows and surface unavailable references.",
+      "negative_assertion": "No floating latest ref or hidden consumer changes.",
+      "planned_test_name": "phase2_at_059",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-060",
+      "requirement_ids": [
+        "P2-060"
+      ],
+      "work_package": "WP-19",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Pinned catalog artifacts and supported stage templates",
+      "action": "Open/validate/export campaign/combat/selection/map variants as admitted.",
+      "expected": "Round-trip useful supported gameplay templates with capability gates.",
+      "negative_assertion": "No claim that research-only expert states are live capabilities.",
+      "planned_test_name": "phase2_at_060",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-061",
+      "requirement_ids": [
+        "P2-061"
+      ],
+      "work_package": "WP-20",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Opt-in owner browser adapter with isolated same-origin test serving",
+      "action": "Exchange a code once, replay it, expire/revoke and inspect browser storage/URLs.",
+      "expected": "Issue one-time scoped pairing and short-lived browser sessions without secret persistence.",
+      "negative_assertion": "No long-lived gateway/provider token or reusable pairing code.",
+      "planned_test_name": "phase2_at_061",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-062",
+      "requirement_ids": [
+        "P2-062"
+      ],
+      "work_package": "WP-20",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Opt-in owner browser adapter with isolated same-origin test serving",
+      "action": "Call from approved origin, hostile origin, null origin and rebinding Host.",
+      "expected": "Enforce exact host/origin and preserve non-browser/default rejection behavior.",
+      "negative_assertion": "No wildcard CORS, origin bypass or weakened CLI boundary.",
+      "planned_test_name": "phase2_at_062",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-063",
+      "requirement_ids": [
+        "P2-063"
+      ],
+      "work_package": "WP-20",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Opt-in owner browser adapter with isolated same-origin test serving",
+      "action": "Attempt traversal/hidden files and restart the web view during an accepted run.",
+      "expected": "Serve only verified static bundle paths without taking scheduler ownership.",
+      "negative_assertion": "No runtime database serving or implicit run cancellation.",
+      "planned_test_name": "phase2_at_063",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-064",
+      "requirement_ids": [
+        "P2-064"
+      ],
+      "work_package": "WP-21",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Owner snapshot watermark, durable cursor and framed event endpoint",
+      "action": "Inject events during snapshot/subscribe race and compare final state.",
+      "expected": "Attach at a consistent snapshot/cursor and bind transport to current authorized run.",
+      "negative_assertion": "No lost transition or cross-run cursor reuse.",
+      "planned_test_name": "phase2_at_064",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-065",
+      "requirement_ids": [
+        "P2-065"
+      ],
+      "work_package": "WP-21",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Owner snapshot watermark, durable cursor and framed event endpoint",
+      "action": "Split UTF-8/JSON/SSE records and send malformed/oversize/unsafe numeric payloads.",
+      "expected": "Parse framed streams and exact identifiers with bounded resources.",
+      "negative_assertion": "No partial-frame application or rounded identity.",
+      "planned_test_name": "phase2_at_065",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-066",
+      "requirement_ids": [
+        "P2-066"
+      ],
+      "work_package": "WP-21",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Owner snapshot watermark, durable cursor and framed event endpoint",
+      "action": "Disconnect streaming, use polling, then revoke auth.",
+      "expected": "Fallback to bounded polling over the same event contract and honor revocation.",
+      "negative_assertion": "No token in URL or reconnect loop after denial.",
+      "planned_test_name": "phase2_at_066",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-067",
+      "requirement_ids": [
+        "P2-067"
+      ],
+      "work_package": "WP-22",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Owner events/snapshots with duplicates, gaps and authorization projection rules",
+      "action": "Replay identical records in batches/chunks/duplicates and compare snapshots.",
+      "expected": "Deduplicate and project events without scheduling workflow behavior.",
+      "negative_assertion": "No browser-driven node execution or elapsed-time settlement.",
+      "planned_test_name": "phase2_at_067",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-068",
+      "requirement_ids": [
+        "P2-068"
+      ],
+      "work_package": "WP-22",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Owner events/snapshots with duplicates, gaps and authorization projection rules",
+      "action": "Inject missing ranges and an authorized noncontiguous projection cursor.",
+      "expected": "Detect real gaps/retention loss and rebuild from authoritative snapshots.",
+      "negative_assertion": "No silent drop or false gap from known redaction filtering.",
+      "planned_test_name": "phase2_at_068",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-069",
+      "requirement_ids": [
+        "P2-069"
+      ],
+      "work_package": "WP-22",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Owner events/snapshots with duplicates, gaps and authorization projection rules",
+      "action": "Change server/digest/role and flood a slow client.",
+      "expected": "Clear stale projections on identity/schema changes and bound subscriber queues.",
+      "negative_assertion": "No cross-scope cache, memory growth or dropped critical evidence.",
+      "planned_test_name": "phase2_at_069",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-070",
+      "requirement_ids": [
+        "P2-070"
+      ],
+      "work_package": "WP-23",
+      "required_evidence_tier": "browser",
+      "setup": "Real Phase-1 status, repeated node invocations and permitted artifact projections",
+      "action": "Inspect running, pausing, NeedsOperator and terminal snapshots.",
+      "expected": "Display workflow/game outcome, uncertainty, budgets and cleanup distinctly.",
+      "negative_assertion": "No accepted-equals-settled or cancel-equals-defeat display.",
+      "planned_test_name": "phase2_at_070",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-071",
+      "requirement_ids": [
+        "P2-071"
+      ],
+      "work_package": "WP-23",
+      "required_evidence_tier": "browser",
+      "setup": "Real Phase-1 status, repeated node invocations and permitted artifact projections",
+      "action": "Select repeated loop node invocations and compare their records.",
+      "expected": "Show per-invocation/plan details bound to exact definition and operation identity.",
+      "negative_assertion": "No node-ID-only mixing of different executions.",
+      "planned_test_name": "phase2_at_071",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-072",
+      "requirement_ids": [
+        "P2-072"
+      ],
+      "work_package": "WP-23",
+      "required_evidence_tier": "browser",
+      "setup": "Real Phase-1 status, repeated node invocations and permitted artifact projections",
+      "action": "Open redacted/missing/artifact-link cases under different permissions.",
+      "expected": "Render only authorized structured artifacts and safe trace references.",
+      "negative_assertion": "No private reasoning/raw provider output or arbitrary filesystem link.",
+      "planned_test_name": "phase2_at_072",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-073",
+      "requirement_ids": [
+        "P2-073"
+      ],
+      "work_package": "WP-24",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Actual idempotent command API and revision/uncertainty states",
+      "action": "Double-click, remount under React Strict Mode and duplicate transport requests.",
+      "expected": "Use stable intent IDs and expected revisions for supported pause/resume/step/cancel.",
+      "negative_assertion": "No duplicated owner command or game effect.",
+      "planned_test_name": "phase2_at_073",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-074",
+      "requirement_ids": [
+        "P2-074"
+      ],
+      "work_package": "WP-24",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Actual idempotent command API and revision/uncertainty states",
+      "action": "Drop accepted response, reconnect and query outcome by original ID.",
+      "expected": "Resolve lost responses and distinguish command admission from application.",
+      "negative_assertion": "No new-ID retry or optimistic completed status.",
+      "planned_test_name": "phase2_at_074",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-075",
+      "requirement_ids": [
+        "P2-075"
+      ],
+      "work_package": "WP-24",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Actual idempotent command API and revision/uncertainty states",
+      "action": "Try step mid-pending action, stale confirmation and replay-mode control.",
+      "expected": "Disable unsupported/stale/historical commands and preserve protected transaction semantics.",
+      "negative_assertion": "No force retry/cursor change/skip/unknown-settled operation.",
+      "planned_test_name": "phase2_at_075",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-076",
+      "requirement_ids": [
+        "P2-076"
+      ],
+      "work_package": "WP-25",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Retained owner artifacts and actual zero-effect offline replay capability",
+      "action": "Scrub, filter and step recorded events while counting effect ports.",
+      "expected": "Keep historical cursor actions free of live mutations or provider/game calls.",
+      "negative_assertion": "No Replay button launching a fresh game.",
+      "planned_test_name": "phase2_at_076",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-077",
+      "requirement_ids": [
+        "P2-077"
+      ],
+      "work_package": "WP-25",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Retained owner artifacts and actual zero-effect offline replay capability",
+      "action": "Replay a complete source and a non-replayable redacted source.",
+      "expected": "Present owner offline replay results and explicit gaps/redaction/divergence.",
+      "negative_assertion": "No second browser interpreter or invented missing transitions.",
+      "planned_test_name": "phase2_at_077",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-078",
+      "requirement_ids": [
+        "P2-078"
+      ],
+      "work_package": "WP-25",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Retained owner artifacts and actual zero-effect offline replay capability",
+      "action": "Compare differing seeds/providers/plan paths and unmatched invocations.",
+      "expected": "Compare definition/layout/run differences by stable context without causal overclaims.",
+      "negative_assertion": "No timestamp-only alignment or claimed causal strategy improvement.",
+      "planned_test_name": "phase2_at_078",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-079",
+      "requirement_ids": [
+        "P2-079"
+      ],
+      "work_package": "WP-26",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Threat model, role matrix and malicious import/response fixtures",
+      "action": "Forge API requests/IDs as viewer, author and revoked principal.",
+      "expected": "Enforce inspect/author/publish/operate/session permissions server-side per object.",
+      "negative_assertion": "No UI-only authorization or confused deputy.",
+      "planned_test_name": "phase2_at_079",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-080",
+      "requirement_ids": [
+        "P2-080"
+      ],
+      "work_package": "WP-26",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Threat model, role matrix and malicious import/response fixtures",
+      "action": "Inject label/note/error/URL/SVG/prototype payloads in built app.",
+      "expected": "Apply safe text/import handling, strict decoding and production CSP.",
+      "negative_assertion": "No script execution, arbitrary asset fetch or polluted object.",
+      "planned_test_name": "phase2_at_080",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-081",
+      "requirement_ids": [
+        "P2-081"
+      ],
+      "work_package": "WP-26",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Threat model, role matrix and malicious import/response fixtures",
+      "action": "Scan runtime artifacts and browser state after representative flows.",
+      "expected": "Exclude secrets/sensitive content from storage, telemetry, logs and exports.",
+      "negative_assertion": "No private traces, tokens or proprietary game data in evidence.",
+      "planned_test_name": "phase2_at_081",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-082",
+      "requirement_ids": [
+        "P2-082"
+      ],
+      "work_package": "WP-27",
+      "required_evidence_tier": "browser",
+      "setup": "Approved optional read-only capabilities and deliberately unavailable variants",
+      "action": "Open supported and unavailable map projections.",
+      "expected": "Keep gameplay map and workflow graph separate with explicit freshness/support.",
+      "negative_assertion": "No hidden topology or navigation mutation from a drawing.",
+      "planned_test_name": "phase2_at_082",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-083",
+      "requirement_ids": [
+        "P2-083"
+      ],
+      "work_package": "WP-27",
+      "required_evidence_tier": "browser",
+      "setup": "Approved optional read-only capabilities and deliberately unavailable variants",
+      "action": "Attempt unapproved URL/redirect and approved observability reference.",
+      "expected": "Resolve trace/artifact links only through approved mappings.",
+      "negative_assertion": "No event-supplied general proxy or credential link.",
+      "planned_test_name": "phase2_at_083",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-084",
+      "requirement_ids": [
+        "P2-084"
+      ],
+      "work_package": "WP-27",
+      "required_evidence_tier": "browser",
+      "setup": "Approved optional read-only capabilities and deliberately unavailable variants",
+      "action": "Disable map/observability/context capabilities and run core journeys.",
+      "expected": "Keep optional integration absence from breaking core Studio functions.",
+      "negative_assertion": "No rebuilding adjacent projects or silent stub replacement.",
+      "planned_test_name": "phase2_at_084",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-085",
+      "requirement_ids": [
+        "P2-085"
+      ],
+      "work_package": "WP-28",
+      "required_evidence_tier": "browser",
+      "setup": "Core authoring/control journeys across keyboard/pointer and constrained viewports",
+      "action": "Create/connect/move/edit without dragging and without a pointing device separately.",
+      "expected": "Provide keyboard and single-pointer alternatives for every essential drag operation.",
+      "negative_assertion": "No keyboard-only substitute for all pointer alternatives.",
+      "planned_test_name": "phase2_at_085",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-086",
+      "requirement_ids": [
+        "P2-086"
+      ],
+      "work_package": "WP-28",
+      "required_evidence_tier": "browser",
+      "setup": "Core authoring/control journeys across keyboard/pointer and constrained viewports",
+      "action": "Navigate dialogs/diagnostics/node deletion and inspect assistive semantics.",
+      "expected": "Maintain meaningful labels/focus/status and non-color-only state indicators.",
+      "negative_assertion": "No focus trap/loss or hover-only instruction.",
+      "planned_test_name": "phase2_at_086",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-087",
+      "requirement_ids": [
+        "P2-087"
+      ],
+      "work_package": "WP-28",
+      "required_evidence_tier": "browser",
+      "setup": "Core authoring/control journeys across keyboard/pointer and constrained viewports",
+      "action": "Exercise 390px through desktop viewports and 200/400 percent zoom.",
+      "expected": "Support themes/reduced motion/zoom and narrow list/form layouts.",
+      "negative_assertion": "No clipped essential controls or microscopic forced canvas.",
+      "planned_test_name": "phase2_at_087",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-088",
+      "requirement_ids": [
+        "P2-088"
+      ],
+      "work_package": "WP-29",
+      "required_evidence_tier": "browser",
+      "setup": "Proposed admitted-size benchmark corpus and repeated lifecycle workload",
+      "action": "Flood queues, exceed import limits and return stale worker results.",
+      "expected": "Bound graph/event/history/import/worker resources and reject obsolete async results.",
+      "negative_assertion": "No stale update or unbounded accumulation.",
+      "planned_test_name": "phase2_at_088",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-089",
+      "requirement_ids": [
+        "P2-089"
+      ],
+      "work_package": "WP-29",
+      "required_evidence_tier": "browser",
+      "setup": "Proposed admitted-size benchmark corpus and repeated lifecycle workload",
+      "action": "Measure import/edit/layout/timeline targets in production build.",
+      "expected": "Keep core edits responsive through selective rendering and bounded worker tasks.",
+      "negative_assertion": "No post-hoc threshold change or reduced fixture masking.",
+      "planned_test_name": "phase2_at_089",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-090",
+      "requirement_ids": [
+        "P2-090"
+      ],
+      "work_package": "WP-29",
+      "required_evidence_tier": "browser",
+      "setup": "Proposed admitted-size benchmark corpus and repeated lifecycle workload",
+      "action": "Repeat open/close/logout/reconnect and inspect stabilized resources.",
+      "expected": "Clean up subscribers/listeners/workers/blob URLs across view/auth lifetimes.",
+      "negative_assertion": "No leaked sessions, subscriptions or stale Promise data.",
+      "planned_test_name": "phase2_at_090",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-091",
+      "requirement_ids": [
+        "P2-091"
+      ],
+      "work_package": "WP-30",
+      "required_evidence_tier": "browser",
+      "setup": "Production bundle on Chromium, Firefox and WebKit where executable",
+      "action": "Run the defined journeys against actual owner APIs with deterministic ports.",
+      "expected": "Execute complete authoring-to-run and history journeys in real browser tests.",
+      "negative_assertion": "No component-only or screenshot-only completion.",
+      "planned_test_name": "phase2_at_091",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-092",
+      "requirement_ids": [
+        "P2-092"
+      ],
+      "work_package": "WP-30",
+      "required_evidence_tier": "browser",
+      "setup": "Production bundle on Chromium, Firefox and WebKit where executable",
+      "action": "Run the browser/state matrix and record unavailable environments.",
+      "expected": "Test empty/loading/forbidden/invalid/conflict/disconnected states on supported engines.",
+      "negative_assertion": "No Chromium-only results reported as universal.",
+      "planned_test_name": "phase2_at_092",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-093",
+      "requirement_ids": [
+        "P2-093"
+      ],
+      "work_package": "WP-30",
+      "required_evidence_tier": "browser",
+      "setup": "Production bundle on Chromium, Firefox and WebKit where executable",
+      "action": "Run built assets under final adapter headers and refresh deep routes.",
+      "expected": "Exercise production CSP/workers/routing rather than only a development server.",
+      "negative_assertion": "No dev-only feature passing as shipped behavior.",
+      "planned_test_name": "phase2_at_093",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-094",
+      "requirement_ids": [
+        "P2-094"
+      ],
+      "work_package": "WP-31",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Exact implemented harness/compiler/store/event/command service",
+      "action": "Compile/import/edit/export supported corpus through the real owner.",
+      "expected": "Prove real canonical strict and dynamic workflow round-trips.",
+      "negative_assertion": "No reference schema/mocked compiler presented as integration.",
+      "planned_test_name": "phase2_at_094",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-095",
+      "requirement_ids": [
+        "P2-095"
+      ],
+      "work_package": "WP-31",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Exact implemented harness/compiler/store/event/command service",
+      "action": "Save/restart/reload and close browser during an accepted workflow.",
+      "expected": "Prove durable drafts and run continuity through browser/web attachment restart.",
+      "negative_assertion": "No browser-owned run lifetime or memory-only persistence.",
+      "planned_test_name": "phase2_at_095",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-096",
+      "requirement_ids": [
+        "P2-096"
+      ],
+      "work_package": "WP-31",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Exact implemented harness/compiler/store/event/command service",
+      "action": "Drive deterministic owner inputs and inspect plan artifacts through Studio.",
+      "expected": "Observe two actual accepted dynamic plans and safe rejection/supersession.",
+      "negative_assertion": "No randomly generated UI plan demonstration.",
+      "planned_test_name": "phase2_at_096",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-097",
+      "requirement_ids": [
+        "P2-097"
+      ],
+      "work_package": "WP-32",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Fault injection at owner API/store and browser transport boundaries",
+      "action": "Inject the scoped fault matrix with stable identity/assertion counters.",
+      "expected": "Execute lost-save/publication/command and concurrent-editor cases.",
+      "negative_assertion": "No duplicated mutation/version or silent conflict overwrite.",
+      "planned_test_name": "phase2_at_097",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-098",
+      "requirement_ids": [
+        "P2-098"
+      ],
+      "work_package": "WP-32",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Fault injection at owner API/store and browser transport boundaries",
+      "action": "Run reconnect/overflow/schema-change fault cases.",
+      "expected": "Exercise event gaps/chunks/slow consumers/revocation and identity transitions.",
+      "negative_assertion": "No stale control admission or concealed dropped evidence.",
+      "planned_test_name": "phase2_at_098",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-099",
+      "requirement_ids": [
+        "P2-099"
+      ],
+      "work_package": "WP-32",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Fault injection at owner API/store and browser transport boundaries",
+      "action": "Restart at pending-operation boundaries using deterministic ports.",
+      "expected": "Preserve uncertainty and ownership across server/adapter restart.",
+      "negative_assertion": "No browser recovery workaround or invented no-effect result.",
+      "planned_test_name": "phase2_at_099",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-100",
+      "requirement_ids": [
+        "P2-100"
+      ],
+      "work_package": "WP-33",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Integrated candidate with source review and authorized abuse targets",
+      "action": "Run forged-call, hostile-origin and import abuse cases as separate reviewer.",
+      "expected": "Independently verify origin/authz/pairing/CSP/content controls.",
+      "negative_assertion": "No implementer self-certification.",
+      "planned_test_name": "phase2_at_100",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-101",
+      "requirement_ids": [
+        "P2-101"
+      ],
+      "work_package": "WP-33",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Integrated candidate with source review and authorized abuse targets",
+      "action": "Audit lockfile/SBOM and observe network/artifact contents.",
+      "expected": "Review dependencies/licenses/build outputs and runtime egress.",
+      "negative_assertion": "No hidden paid package, CDN, analytics or secret artifact.",
+      "planned_test_name": "phase2_at_101",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-102",
+      "requirement_ids": [
+        "P2-102"
+      ],
+      "work_package": "WP-33",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Integrated candidate with source review and authorized abuse targets",
+      "action": "Reproduce each issue and tie fix/retest to exact candidate head.",
+      "expected": "Block readiness on unresolved material security boundary defects.",
+      "negative_assertion": "No scan-only assurance or suppressed failed tests.",
+      "planned_test_name": "phase2_at_102",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-103",
+      "requirement_ids": [
+        "P2-103"
+      ],
+      "work_package": "WP-34",
+      "required_evidence_tier": "manual",
+      "setup": "Actual sanitized screenshots and assistive journeys on candidate build",
+      "action": "Capture and review clipping, overlap, text size and state clarity.",
+      "expected": "Inspect real UI screenshots across required themes/viewports/states.",
+      "negative_assertion": "No concept mockup counted as implementation evidence.",
+      "planned_test_name": "phase2_at_103",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-104",
+      "requirement_ids": [
+        "P2-104"
+      ],
+      "work_package": "WP-34",
+      "required_evidence_tier": "manual",
+      "setup": "Actual sanitized screenshots and assistive journeys on candidate build",
+      "action": "Run the accessibility checklist and record unsupported manual coverage.",
+      "expected": "Combine automated scans with manual keyboard/pointer/zoom/screen-reader assessment.",
+      "negative_assertion": "No axe-only WCAG compliance claim.",
+      "planned_test_name": "phase2_at_104",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-105",
+      "requirement_ids": [
+        "P2-105"
+      ],
+      "work_package": "WP-34",
+      "required_evidence_tier": "manual",
+      "setup": "Actual sanitized screenshots and assistive journeys on candidate build",
+      "action": "Re-exercise reported defects and compare accepted evidence.",
+      "expected": "Fix blocking focus/reflow/drag-parity defects and retest exact build.",
+      "negative_assertion": "No unreviewed visual regression baseline acceptance.",
+      "planned_test_name": "phase2_at_105",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-106",
+      "requirement_ids": [
+        "P2-106"
+      ],
+      "work_package": "WP-35",
+      "required_evidence_tier": "delivery",
+      "setup": "Frozen dependency/toolchain lock and owner static serving contract",
+      "action": "Build from clean pinned inputs and inspect output manifest.",
+      "expected": "Produce a checksummed static bundle with license/SBOM and compatibility metadata.",
+      "negative_assertion": "No source secrets/dev fixtures or runtime CDN requirement.",
+      "planned_test_name": "phase2_at_106",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-107",
+      "requirement_ids": [
+        "P2-107"
+      ],
+      "work_package": "WP-35",
+      "required_evidence_tier": "delivery",
+      "setup": "Frozen dependency/toolchain lock and owner static serving contract",
+      "action": "Serve valid/tampered/mismatched bundles under isolated adapter.",
+      "expected": "Test harness acceptance, safe paths/base routing and incompatible bundle handling.",
+      "negative_assertion": "No directory traversal, database serving or silent incompatibility.",
+      "planned_test_name": "phase2_at_107",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-108",
+      "requirement_ids": [
+        "P2-108"
+      ],
+      "work_package": "WP-35",
+      "required_evidence_tier": "delivery",
+      "setup": "Frozen dependency/toolchain lock and owner static serving contract",
+      "action": "Dry-run documented operator commands on disposable local configuration.",
+      "expected": "Document bounded local startup/rollback without implicit deployment effects.",
+      "negative_assertion": "No DNS/firewall/install/CA/native-game side effect.",
+      "planned_test_name": "phase2_at_108",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-109",
+      "requirement_ids": [
+        "P2-109"
+      ],
+      "work_package": "WP-36",
+      "required_evidence_tier": "delivery",
+      "setup": "Implemented commands/interfaces and verified core journeys",
+      "action": "Follow each runbook on clean disposable data.",
+      "expected": "Document pairing/drafts/conflicts/validate/publish/run/control/replay and support export.",
+      "negative_assertion": "No hypothetical command advertised as implemented.",
+      "planned_test_name": "phase2_at_109",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-110",
+      "requirement_ids": [
+        "P2-110"
+      ],
+      "work_package": "WP-36",
+      "required_evidence_tier": "delivery",
+      "setup": "Implemented commands/interfaces and verified core journeys",
+      "action": "Review schema/bundle mismatch and previous-version preservation procedures.",
+      "expected": "Record compatibility/additive owner changes and non-destructive upgrade/rollback.",
+      "negative_assertion": "No downgrade by deleting draft/runtime state.",
+      "planned_test_name": "phase2_at_110",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-111",
+      "requirement_ids": [
+        "P2-111"
+      ],
+      "work_package": "WP-36",
+      "required_evidence_tier": "delivery",
+      "setup": "Implemented commands/interfaces and verified core journeys",
+      "action": "Cross-check documentation claims against source and test records.",
+      "expected": "Publish evidence distinctions and explicit capability/permission limitations.",
+      "negative_assertion": "No unverified native gameplay or deployment claim.",
+      "planned_test_name": "phase2_at_111",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-112",
+      "requirement_ids": [
+        "P2-112"
+      ],
+      "work_package": "WP-37",
+      "required_evidence_tier": "delivery",
+      "setup": "Integrated source heads and owner-specific current CI policies",
+      "action": "Execute the admitted frozen pipeline and inspect genuine statuses.",
+      "expected": "Run owner policy/lint/typecheck/test/artifact checks and browser gates in CI.",
+      "negative_assertion": "No bypassed check or blanket retry masking.",
+      "planned_test_name": "phase2_at_112",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-113",
+      "requirement_ids": [
+        "P2-113"
+      ],
+      "work_package": "WP-37",
+      "required_evidence_tier": "delivery",
+      "setup": "Integrated source heads and owner-specific current CI policies",
+      "action": "Change an artifact digest and verify fail-closed CI/regeneration.",
+      "expected": "Pin shared artifacts and regenerate clients only from reviewed sources.",
+      "negative_assertion": "No copied sibling implementation or stale generated contract.",
+      "planned_test_name": "phase2_at_113",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-114",
+      "requirement_ids": [
+        "P2-114"
+      ],
+      "work_package": "WP-37",
+      "required_evidence_tier": "delivery",
+      "setup": "Integrated source heads and owner-specific current CI policies",
+      "action": "Inspect screenshots/logs/trace exports and reproduce a failing test.",
+      "expected": "Keep CI artifacts sanitized and failures reproducible with exact evidence.",
+      "negative_assertion": "No secret-bearing test artifacts or false green exit code.",
+      "planned_test_name": "phase2_at_114",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-115",
+      "requirement_ids": [
+        "P2-115"
+      ],
+      "work_package": "WP-38",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Exact combined candidate heads and full requirement ledger",
+      "action": "Run final strict/dynamic/draft/command/replay/security vertical slices.",
+      "expected": "Reverify critical invariants and affected suites at the final combined source heads.",
+      "negative_assertion": "No disjoint branch passes treated as integrated proof.",
+      "planned_test_name": "phase2_at_115",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-116",
+      "requirement_ids": [
+        "P2-116"
+      ],
+      "work_package": "WP-38",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Exact combined candidate heads and full requirement ledger",
+      "action": "Audit 120 requirement/case links and stale evidence states.",
+      "expected": "Map every mandatory requirement to actual evidence or explicit blocker.",
+      "negative_assertion": "No omitted failed requirement or default passed template.",
+      "planned_test_name": "phase2_at_116",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-117",
+      "requirement_ids": [
+        "P2-117"
+      ],
+      "work_package": "WP-38",
+      "required_evidence_tier": "phase1_process",
+      "setup": "Exact combined candidate heads and full requirement ledger",
+      "action": "Inspect attestation ledger and resource cleanup independently.",
+      "expected": "Verify actual lineage/model compliance and closure of owned workers/processes.",
+      "negative_assertion": "No fabricated agent tree or abandoned write lease.",
+      "planned_test_name": "phase2_at_117",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-118",
+      "requirement_ids": [
+        "P2-118"
+      ],
+      "work_package": "WP-39",
+      "required_evidence_tier": "delivery",
+      "setup": "Verified candidate and current operator/Git permissions",
+      "action": "Resolve current account, inspect existing issues and create/update permitted delivery records.",
+      "expected": "Deliver scoped commits and linked draft PRs assigned to the authenticated operator.",
+      "negative_assertion": "No guessed assignee, duplicate issue, merge or release.",
+      "planned_test_name": "phase2_at_118",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-119",
+      "requirement_ids": [
+        "P2-119"
+      ],
+      "work_package": "WP-39",
+      "required_evidence_tier": "delivery",
+      "setup": "Verified candidate and current operator/Git permissions",
+      "action": "Complete the final report with exact artifacts/results and readiness distinctions.",
+      "expected": "Report implemented features, evidence levels, pins and remaining blockers honestly.",
+      "negative_assertion": "No mock-only completion or unsupported production/native claim.",
+      "planned_test_name": "phase2_at_119",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    },
+    {
+      "id": "AT-120",
+      "requirement_ids": [
+        "P2-120"
+      ],
+      "work_package": "WP-39",
+      "required_evidence_tier": "delivery",
+      "setup": "Verified candidate and current operator/Git permissions",
+      "action": "Verify package/locks/runbooks and explicit merge/deploy/native status.",
+      "expected": "Leave a reproducible resume/operations handoff without unauthorized deployment.",
+      "negative_assertion": "No implied background work or unrecorded external effect.",
+      "planned_test_name": "phase2_at_120",
+      "status": "not_run",
+      "actual_command": null,
+      "actual_source_heads": {},
+      "actual_evidence_refs": []
+    }
+  ]
+}

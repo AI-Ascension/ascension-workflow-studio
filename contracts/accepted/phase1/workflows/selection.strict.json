@@ -1,0 +1,59 @@
+{
+  "schema_version": "ascension.workflow/v1",
+  "workflow_id": "sts2.selection.strict",
+  "version": "0.1.0",
+  "mode": "strict",
+  "game_profile": "sts2-synthetic-v1",
+  "policy_ref": "sts2.fair-play.v1",
+  "capabilities": {
+    "required": [
+      "observe.fair-play.v1",
+      "actions.catalog.v1",
+      "actions.settlement.v1",
+      "authority.generation-fence.v1",
+      "actions.selection.v1"
+    ],
+    "optional": []
+  },
+  "limits": {
+    "max_steps": 32,
+    "max_subworkflow_depth": 2,
+    "max_provider_calls": 2,
+    "max_parallel_analyses": 1,
+    "max_output_tokens": 4096
+  },
+  "entry_graph": "main",
+  "graphs": [
+    {
+      "id": "main",
+      "entry_node": "observe",
+      "nodes": [
+        {"id": "observe", "kind": "observe", "config": {"projection_ref": "sts2.selection.fair-play.v1"}},
+        {"id": "parent_checkpoint", "kind": "checkpoint", "config": {"label": "selection.parent.cursor"}},
+        {"id": "decide", "kind": "decide", "config": {"decision_profile_ref": "sts2.selection.decision.v1", "context_ref": "sts2.selection.context.v1"}},
+        {"id": "execute", "kind": "execute_action", "config": {"proposal_from": {"node_id": "decide", "output": "proposal"}}},
+        {"id": "settlement_observe", "kind": "observe", "config": {"projection_ref": "sts2.selection.fair-play.v1"}},
+        {"id": "return_checkpoint", "kind": "checkpoint", "config": {"label": "selection.parent.return"}},
+        {"id": "completed", "kind": "terminal", "config": {"outcome": "completed"}},
+        {"id": "blocked", "kind": "terminal", "config": {"outcome": "needs_operator"}}
+      ],
+      "edges": [
+        {"from": "observe", "to": "parent_checkpoint", "on": "ok", "priority": 0},
+        {"from": "observe", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "parent_checkpoint", "to": "decide", "on": "ok", "priority": 0},
+        {"from": "decide", "to": "execute", "on": "ok", "priority": 0},
+        {"from": "decide", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "execute", "to": "settlement_observe", "on": "ok", "priority": 0},
+        {"from": "execute", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "settlement_observe", "to": "return_checkpoint", "on": "ok", "priority": 0},
+        {"from": "settlement_observe", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "return_checkpoint", "to": "completed", "on": "ok", "priority": 0},
+        {"from": "return_checkpoint", "to": "blocked", "on": "error", "priority": 0}
+      ]
+    }
+  ],
+  "annotations": {
+    "summary": "Supported selection state preserves a parent cursor around one validated selection action and returns after fresh settlement.",
+    "synthetic": true
+  }
+}

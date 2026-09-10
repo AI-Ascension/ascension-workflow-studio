@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "status": "unresolved",
+  "assumption": "phase1_implemented",
+  "owner_repositories": [],
+  "artifacts": [],
+  "operation_map": [],
+  "browser_admission_adr": null,
+  "roundtrip_evidence": [],
+  "actual_service_evidence": []
+}
