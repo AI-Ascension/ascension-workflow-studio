@@ -105,7 +105,7 @@
       "status": "blocked",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "No browser/draft owner projection was admitted; additive owner change was not authorized or implemented in this slice."
+      "evidence": "No browser pairing or live owner process evidence is admitted; the additive owner change is merged and its owner-side contract tests pass."
     },
     {
       "id": "AT-010",
@@ -328,7 +328,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Fixture validation and live owner validation are wired; draft owner PR #57 supplies a publication route with digest and validation checks, but the route is still unmerged and has no live process evidence."
+      "evidence": "Fixture validation and live owner validation are wired; merged owner PR #57 supplies a publication route with digest and validation checks, but no live process evidence is claimed."
     },
     {
       "id": "AT-028",
@@ -561,7 +561,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Draft owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the PR is unmerged and has no live process evidence."
+      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; no live process evidence is claimed."
     },
     {
       "id": "AT-047",
@@ -572,7 +572,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Draft owner PR #57 supplies conditional revision/etag writes and client mutation IDs with focused tests; the PR is unmerged and has no live process evidence."
+      "evidence": "Merged owner PR #57 supplies conditional revision/etag writes and client mutation IDs with focused tests; no live process evidence is claimed."
     },
     {
       "id": "AT-048",
@@ -660,7 +660,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Draft owner PR #57 supplies an immutable publication route through the existing definition authority; the PR is unmerged and has no live process evidence."
+      "evidence": "Merged owner PR #57 supplies an immutable publication route through the existing definition authority; no live process evidence is claimed."
     },
     {
       "id": "AT-056",
@@ -671,7 +671,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Draft owner PR #57 supplies a typed publication response with published, already-published, and conflict outcomes; the PR is unmerged and has no live process evidence."
+      "evidence": "Merged owner PR #57 supplies a typed publication response with published, already-published, and conflict outcomes; no live process evidence is claimed."
     },
     {
       "id": "AT-057",
@@ -682,7 +682,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Draft owner PR #57 tests immutable publication and digest preconditions, but launch through a merged live owner remains unverified."
+      "evidence": "Merged owner PR #57 tests immutable publication and digest preconditions, but launch through a live owner process remains unverified."
     },
     {
       "id": "AT-058",
@@ -1300,7 +1300,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Support docs describe the owner subject, draft revision/etag conflict choices, and publication flow; browser pairing and live owner evidence remain unavailable while PR #57 is draft."
+      "evidence": "Support docs describe the owner subject, draft revision/etag conflict choices, and publication flow; browser pairing and live owner process evidence remain unavailable."
     },
     {
       "id": "AT-110",

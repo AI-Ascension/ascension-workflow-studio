@@ -17,7 +17,7 @@ This packet separates product evidence from package integrity and unresolved own
 - A real temporary `sts2-workflow serve` process at the same source head returned the admitted health, capability, validation, inspect, run, status, events, replay, and redacted export responses; see `phase1-live-api.json`.
 - The checked-in catalog, contract schema, canonical vector, conformance fixture, and owner management source digests are pinned in `contracts/accepted/phase1-integration.lock.json`.
 - The copied Phase 2 package passes its integrity verifier and its 34 checker unit tests.
-- The additive owner authoring candidate is in draft PR [#57](https://github.com/AI-Ascension/sts2-harness/pull/57). Its focused owner checks passed for revision-bounded draft writes, idempotency, conflicts, immutable publication, secret-like rejection, SQLite reopen, HTTP route mapping, and missing-draft 404 behavior. The owner PR is not merged, and no live browser-to-owner process run is claimed.
+- The additive owner authoring contract merged through [PR #57](https://github.com/AI-Ascension/sts2-harness/pull/57) as [`172b41022e0de9d66ab5ee94b06ac4b99238cad2`](https://github.com/AI-Ascension/sts2-harness/commit/172b41022e0de9d66ab5ee94b06ac4b99238cad2). Its focused owner checks passed for revision-bounded draft writes, idempotency, conflicts, immutable publication, secret-like rejection, SQLite reopen, HTTP route mapping, and missing-draft 404 behavior. No live browser-to-owner process run is claimed.
 
 ## Product changes covered by this packet
 
@@ -25,14 +25,14 @@ The Studio draft now includes a non-canvas semantic list editor alongside the Re
 
 ## Capability and evidence limits
 
-The live adapter is real code against the merged owner routes, while draft persistence, conditional save, and publication are wired to the additive owner candidate in draft PR #57. This worktree does not claim a live process run, and those routes remain outside the admitted merged Phase 1 surface until that PR is reviewed. Browser pairing, session revocation, plan inspection, and artifact retrieval are absent or unavailable. Fixture mode is explicit and deterministic; its evidence cannot satisfy live process acceptance.
+The live adapter is real code against the merged owner routes, including draft persistence, conditional save, capability validation, and publication. This worktree does not claim a live process run. Browser pairing, session revocation, plan inspection, and artifact retrieval are absent or unavailable. Fixture mode is explicit and deterministic; its evidence cannot satisfy live process acceptance.
 
 The runtime did not expose callable D0→D1→D2→D3 Luna Max child sessions. No subprocess chain or false attestation was substituted. The exact blocked and partial requirement entries are in `requirement-ledger.json`.
 
 The Chromium browser smoke covered the desktop fixture journeys. The full Firefox/WebKit launch matrix, 390px through desktop responsive matrix, 200/400 percent zoom, manual screen-reader review, production host CSP headers, live owner attachment, and browser permission/revocation states remain unverified. The production bundle contains a single minified JavaScript chunk of 553,475 bytes because React Flow is included in the initial route; Vite reports a chunk-size warning, and route-level code splitting remains a follow-up.
 
-Phase 2 is still a draft PR. No merge, release, deployment, live game session, or native hierarchy claim is made by this packet.
+Phase 2 is merged. No release, deployment, live game session, or native hierarchy claim is made by this packet.
 
 ## Next verification gates
 
-Attach a served static bundle to a real authenticated harness process, exercise strict and dynamic owner round-trips, complete the cross-browser/accessibility/security matrix, and review the remaining owner adapter gaps before any Phase 2 merge or release decision.
+Attach a served static bundle to a real authenticated harness process, exercise strict and dynamic owner round-trips, complete the cross-browser/accessibility/security matrix, and review the remaining owner adapter gaps before a release decision.
