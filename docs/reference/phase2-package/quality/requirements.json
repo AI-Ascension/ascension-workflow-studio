@@ -1,0 +1,1445 @@
+{
+  "schema_version": 1,
+  "requirements": [
+    {
+      "id": "P2-001",
+      "mandatory": true,
+      "title": "Verify every descendant requests Luna with max effort and qualify effective-setting evidence",
+      "shall": "Verify every descendant requests Luna with max effort and qualify effective-setting evidence.",
+      "work_package": "WP-00",
+      "spec": "orchestration/02_MODEL_PREFLIGHT.md",
+      "acceptance_cases": [
+        "AT-001"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-002",
+      "mandatory": true,
+      "title": "Use real D0-D1-D2-D3 parentage and prohibit D3 spawning",
+      "shall": "Use real D0-D1-D2-D3 parentage and prohibit D3 spawning.",
+      "work_package": "WP-00",
+      "spec": "orchestration/02_MODEL_PREFLIGHT.md",
+      "acceptance_cases": [
+        "AT-002"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-003",
+      "mandatory": true,
+      "title": "Keep global descendants within 12 or the lower runtime ceiling and release slots",
+      "shall": "Keep global descendants within 12 or the lower runtime ceiling and release slots.",
+      "work_package": "WP-00",
+      "spec": "orchestration/02_MODEL_PREFLIGHT.md",
+      "acceptance_cases": [
+        "AT-003"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-004",
+      "mandatory": true,
+      "title": "Create or safely resume the exact Studio repository under admitted visibility",
+      "shall": "Create or safely resume the exact Studio repository under admitted visibility.",
+      "work_package": "WP-01",
+      "spec": "templates/REPOSITORY_BOOTSTRAP.md",
+      "acceptance_cases": [
+        "AT-004"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-005",
+      "mandatory": true,
+      "title": "Establish a pinned TypeScript/frontend standards profile without weakening harness rules",
+      "shall": "Establish a pinned TypeScript/frontend standards profile without weakening harness rules.",
+      "work_package": "WP-01",
+      "spec": "templates/REPOSITORY_BOOTSTRAP.md",
+      "acceptance_cases": [
+        "AT-005"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-006",
+      "mandatory": true,
+      "title": "Use isolated worktrees and scoped branches with tracked write leases",
+      "shall": "Use isolated worktrees and scoped branches with tracked write leases.",
+      "work_package": "WP-01",
+      "spec": "templates/REPOSITORY_BOOTSTRAP.md",
+      "acceptance_cases": [
+        "AT-006"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-007",
+      "mandatory": true,
+      "title": "Pin actual producer heads and digests for every consumed runtime contract",
+      "shall": "Pin actual producer heads and digests for every consumed runtime contract.",
+      "work_package": "WP-02",
+      "spec": "spec/01_SCOPE_AND_PHASE1_ADMISSION.md",
+      "acceptance_cases": [
+        "AT-007"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-008",
+      "mandatory": true,
+      "title": "Resolve logical client operations to actual admitted owner routes",
+      "shall": "Resolve logical client operations to actual admitted owner routes.",
+      "work_package": "WP-02",
+      "spec": "spec/01_SCOPE_AND_PHASE1_ADMISSION.md",
+      "acceptance_cases": [
+        "AT-008"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-009",
+      "mandatory": true,
+      "title": "Classify minimal missing web/draft projections as additive owner changes",
+      "shall": "Classify minimal missing web/draft projections as additive owner changes.",
+      "work_package": "WP-02",
+      "spec": "spec/01_SCOPE_AND_PHASE1_ADMISSION.md",
+      "acceptance_cases": [
+        "AT-009"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-010",
+      "mandatory": true,
+      "title": "Keep execution/compiler/persistence authority in the harness",
+      "shall": "Keep execution/compiler/persistence authority in the harness.",
+      "work_package": "WP-03",
+      "spec": "spec/02_ARCHITECTURE_AND_REPOSITORY_BOUNDARIES.md",
+      "acceptance_cases": [
+        "AT-010"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-011",
+      "mandatory": true,
+      "title": "Document bounded authoring, session, live projection and historical state domains",
+      "shall": "Document bounded authoring, session, live projection and historical state domains.",
+      "work_package": "WP-03",
+      "spec": "spec/02_ARCHITECTURE_AND_REPOSITORY_BOUNDARIES.md",
+      "acceptance_cases": [
+        "AT-011"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-012",
+      "mandatory": true,
+      "title": "Define scoped repository and runtime permissions before external effects",
+      "shall": "Define scoped repository and runtime permissions before external effects.",
+      "work_package": "WP-03",
+      "spec": "spec/02_ARCHITECTURE_AND_REPOSITORY_BOUNDARIES.md",
+      "acceptance_cases": [
+        "AT-012"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-013",
+      "mandatory": true,
+      "title": "Validate API responses at runtime as well as with static TypeScript types",
+      "shall": "Validate API responses at runtime as well as with static TypeScript types.",
+      "work_package": "WP-04",
+      "spec": "spec/08_BROWSER_API_AUTH_AND_SERVER_ADAPTER.md",
+      "acceptance_cases": [
+        "AT-013"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-014",
+      "mandatory": true,
+      "title": "Expose per-server/schema/registry compatibility and feature availability",
+      "shall": "Expose per-server/schema/registry compatibility and feature availability.",
+      "work_package": "WP-04",
+      "spec": "spec/08_BROWSER_API_AUTH_AND_SERVER_ADAPTER.md",
+      "acceptance_cases": [
+        "AT-014"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-015",
+      "mandatory": true,
+      "title": "Keep client adapters narrow, relative-path and explicitly versioned",
+      "shall": "Keep client adapters narrow, relative-path and explicitly versioned.",
+      "work_package": "WP-04",
+      "spec": "spec/08_BROWSER_API_AUTH_AND_SERVER_ADAPTER.md",
+      "acceptance_cases": [
+        "AT-015"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-016",
+      "mandatory": true,
+      "title": "Keep semantic document, layout, draft, published revision and live run distinct",
+      "shall": "Keep semantic document, layout, draft, published revision and live run distinct.",
+      "work_package": "WP-05",
+      "spec": "spec/03_DOCUMENT_MODEL_AND_CANONICAL_ROUNDTRIP.md",
+      "acceptance_cases": [
+        "AT-016"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-017",
+      "mandatory": true,
+      "title": "Bind view nodes to qualified graph and semantic node identities",
+      "shall": "Bind view nodes to qualified graph and semantic node identities.",
+      "work_package": "WP-05",
+      "spec": "spec/03_DOCUMENT_MODEL_AND_CANONICAL_ROUNDTRIP.md",
+      "acceptance_cases": [
+        "AT-017"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-018",
+      "mandatory": true,
+      "title": "Preserve unsupported schema bytes in read-only archival mode",
+      "shall": "Preserve unsupported schema bytes in read-only archival mode.",
+      "work_package": "WP-05",
+      "spec": "spec/03_DOCUMENT_MODEL_AND_CANONICAL_ROUNDTRIP.md",
+      "acceptance_cases": [
+        "AT-018"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-019",
+      "mandatory": true,
+      "title": "Generate the palette/forms from admitted registry metadata and bounded schemas",
+      "shall": "Generate the palette/forms from admitted registry metadata and bounded schemas.",
+      "work_package": "WP-06",
+      "spec": "spec/05_NODE_REGISTRY_TYPED_FORMS_AND_DIAGNOSTICS.md",
+      "acceptance_cases": [
+        "AT-019"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-020",
+      "mandatory": true,
+      "title": "Render typed guard/config/budget forms with explicit unknown and unavailable values",
+      "shall": "Render typed guard/config/budget forms with explicit unknown and unavailable values.",
+      "work_package": "WP-06",
+      "spec": "spec/05_NODE_REGISTRY_TYPED_FORMS_AND_DIAGNOSTICS.md",
+      "acceptance_cases": [
+        "AT-020"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-021",
+      "mandatory": true,
+      "title": "Keep credential/profile references separate from secret values",
+      "shall": "Keep credential/profile references separate from secret values.",
+      "work_package": "WP-06",
+      "spec": "spec/05_NODE_REGISTRY_TYPED_FORMS_AND_DIAGNOSTICS.md",
+      "acceptance_cases": [
+        "AT-021"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-022",
+      "mandatory": true,
+      "title": "Preserve owner semantics and digest on no-edit round-trips and layout-only changes",
+      "shall": "Preserve owner semantics and digest on no-edit round-trips and layout-only changes.",
+      "work_package": "WP-07",
+      "spec": "spec/03_DOCUMENT_MODEL_AND_CANONICAL_ROUNDTRIP.md",
+      "acceptance_cases": [
+        "AT-022"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-023",
+      "mandatory": true,
+      "title": "Preserve ordered branch/array/null/default semantics exactly as the owner defines",
+      "shall": "Preserve ordered branch/array/null/default semantics exactly as the owner defines.",
+      "work_package": "WP-07",
+      "spec": "spec/03_DOCUMENT_MODEL_AND_CANONICAL_ROUNDTRIP.md",
+      "acceptance_cases": [
+        "AT-023"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-024",
+      "mandatory": true,
+      "title": "Make semantic edits observable and undo restore the previous candidate",
+      "shall": "Make semantic edits observable and undo restore the previous candidate.",
+      "work_package": "WP-07",
+      "spec": "spec/03_DOCUMENT_MODEL_AND_CANONICAL_ROUNDTRIP.md",
+      "acceptance_cases": [
+        "AT-024"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-025",
+      "mandatory": true,
+      "title": "Bind diagnostics to exact candidate, registry, policy and capability versions",
+      "shall": "Bind diagnostics to exact candidate, registry, policy and capability versions.",
+      "work_package": "WP-08",
+      "spec": "spec/05_NODE_REGISTRY_TYPED_FORMS_AND_DIAGNOSTICS.md",
+      "acceptance_cases": [
+        "AT-025"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-026",
+      "mandatory": true,
+      "title": "Navigate structured errors to graph/node/edge/property targets accessibly",
+      "shall": "Navigate structured errors to graph/node/edge/property targets accessibly.",
+      "work_package": "WP-08",
+      "spec": "spec/05_NODE_REGISTRY_TYPED_FORMS_AND_DIAGNOSTICS.md",
+      "acceptance_cases": [
+        "AT-026"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-027",
+      "mandatory": true,
+      "title": "Require canonical backend validation even after successful local lint",
+      "shall": "Require canonical backend validation even after successful local lint.",
+      "work_package": "WP-08",
+      "spec": "spec/05_NODE_REGISTRY_TYPED_FORMS_AND_DIAGNOSTICS.md",
+      "acceptance_cases": [
+        "AT-027"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-028",
+      "mandatory": true,
+      "title": "Provide Library, Designer, Runs, Replay/Compare and Compatibility navigation",
+      "shall": "Provide Library, Designer, Runs, Replay/Compare and Compatibility navigation.",
+      "work_package": "WP-09",
+      "spec": "spec/04_DESIGNER_CANVAS_AND_EDIT_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-028"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-029",
+      "mandatory": true,
+      "title": "Show server, effective role, fixture/live mode, connection and meaningful empty/error states",
+      "shall": "Show server, effective role, fixture/live mode, connection and meaningful empty/error states.",
+      "work_package": "WP-09",
+      "spec": "spec/04_DESIGNER_CANVAS_AND_EDIT_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-029"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-030",
+      "mandatory": true,
+      "title": "Render an actual exported workflow and owner run state before write controls",
+      "shall": "Render an actual exported workflow and owner run state before write controls.",
+      "work_package": "WP-09",
+      "spec": "spec/04_DESIGNER_CANVAS_AND_EDIT_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-030"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-031",
+      "mandatory": true,
+      "title": "Support registered-node placement, typed connection/reconnection and semantic deletion review",
+      "shall": "Support registered-node placement, typed connection/reconnection and semantic deletion review.",
+      "work_package": "WP-10",
+      "spec": "spec/04_DESIGNER_CANVAS_AND_EDIT_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-031"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-032",
+      "mandatory": true,
+      "title": "Provide search, fit, pan, zoom, minimap and selected-node details with stable view state",
+      "shall": "Provide search, fit, pan, zoom, minimap and selected-node details with stable view state.",
+      "work_package": "WP-10",
+      "spec": "spec/04_DESIGNER_CANVAS_AND_EDIT_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-032"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-033",
+      "mandatory": true,
+      "title": "Keep all essential editing available through an equivalent list/outline",
+      "shall": "Keep all essential editing available through an equivalent list/outline.",
+      "work_package": "WP-10",
+      "spec": "spec/04_DESIGNER_CANVAS_AND_EDIT_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-033"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-034",
+      "mandatory": true,
+      "title": "Group compound semantic/layout edits into bounded undo/redo transactions",
+      "shall": "Group compound semantic/layout edits into bounded undo/redo transactions.",
+      "work_package": "WP-11",
+      "spec": "spec/04_DESIGNER_CANVAS_AND_EDIT_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-034"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-035",
+      "mandatory": true,
+      "title": "Remap every pasted local ID/reference and preserve pinned external refs",
+      "shall": "Remap every pasted local ID/reference and preserve pinned external refs.",
+      "work_package": "WP-11",
+      "spec": "spec/04_DESIGNER_CANVAS_AND_EDIT_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-035"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-036",
+      "mandatory": true,
+      "title": "Respect text-field shortcut focus and bound clipboard/history resources",
+      "shall": "Respect text-field shortcut focus and bound clipboard/history resources.",
+      "work_package": "WP-11",
+      "spec": "spec/04_DESIGNER_CANVAS_AND_EDIT_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-036"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-037",
+      "mandatory": true,
+      "title": "Expose explicit bounded loops/subworkflows and graph breadcrumbs",
+      "shall": "Expose explicit bounded loops/subworkflows and graph breadcrumbs.",
+      "work_package": "WP-12",
+      "spec": "spec/05_NODE_REGISTRY_TYPED_FORMS_AND_DIAGNOSTICS.md",
+      "acceptance_cases": [
+        "AT-037"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-038",
+      "mandatory": true,
+      "title": "Expose ordered true/false/unknown guard branches through typed controls",
+      "shall": "Expose ordered true/false/unknown guard branches through typed controls.",
+      "work_package": "WP-12",
+      "spec": "spec/05_NODE_REGISTRY_TYPED_FORMS_AND_DIAGNOSTICS.md",
+      "acceptance_cases": [
+        "AT-038"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-039",
+      "mandatory": true,
+      "title": "Show protected action internals as immutable explanatory detail",
+      "shall": "Show protected action internals as immutable explanatory detail.",
+      "work_package": "WP-12",
+      "spec": "spec/05_NODE_REGISTRY_TYPED_FORMS_AND_DIAGNOSTICS.md",
+      "acceptance_cases": [
+        "AT-039"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-040",
+      "mandatory": true,
+      "title": "Preserve invalid raw text separately and apply valid text atomically",
+      "shall": "Preserve invalid raw text separately and apply valid text atomically.",
+      "work_package": "WP-13",
+      "spec": "spec/07_VALIDATE_PUBLISH_TEMPLATES_AND_PORTABILITY.md",
+      "acceptance_cases": [
+        "AT-040"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-041",
+      "mandatory": true,
+      "title": "Support bounded canonical JSON and Studio bundle import/export with previews",
+      "shall": "Support bounded canonical JSON and Studio bundle import/export with previews.",
+      "work_package": "WP-13",
+      "spec": "spec/07_VALIDATE_PUBLISH_TEMPLATES_AND_PORTABILITY.md",
+      "acceptance_cases": [
+        "AT-041"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-042",
+      "mandatory": true,
+      "title": "Reject duplicate keys, unsafe numbers and hostile over-limit inputs before admission",
+      "shall": "Reject duplicate keys, unsafe numbers and hostile over-limit inputs before admission.",
+      "work_package": "WP-13",
+      "spec": "spec/07_VALIDATE_PUBLISH_TEMPLATES_AND_PORTABILITY.md",
+      "acceptance_cases": [
+        "AT-042"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-043",
+      "mandatory": true,
+      "title": "Edit only admitted operation sets, typed contracts and tighter bounded adaptive policy",
+      "shall": "Edit only admitted operation sets, typed contracts and tighter bounded adaptive policy.",
+      "work_package": "WP-14",
+      "spec": "spec/12_DYNAMIC_REGIONS_PLAN_VISUALIZATION_AND_EDITING.md",
+      "acceptance_cases": [
+        "AT-043"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-044",
+      "mandatory": true,
+      "title": "Separate authored regions from generated accepted/rejected/superseded plan layers",
+      "shall": "Separate authored regions from generated accepted/rejected/superseded plan layers.",
+      "work_package": "WP-14",
+      "spec": "spec/12_DYNAMIC_REGIONS_PLAN_VISUALIZATION_AND_EDITING.md",
+      "acceptance_cases": [
+        "AT-044"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-045",
+      "mandatory": true,
+      "title": "Publish adaptive edits only as new future-run definitions",
+      "shall": "Publish adaptive edits only as new future-run definitions.",
+      "work_package": "WP-14",
+      "spec": "spec/12_DYNAMIC_REGIONS_PLAN_VISUALIZATION_AND_EDITING.md",
+      "acceptance_cases": [
+        "AT-045"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-046",
+      "mandatory": true,
+      "title": "Persist semantic draft and layout atomically through owner ports",
+      "shall": "Persist semantic draft and layout atomically through owner ports.",
+      "work_package": "WP-15",
+      "spec": "spec/06_DRAFT_PERSISTENCE_AUTOSAVE_AND_CONFLICTS.md",
+      "acceptance_cases": [
+        "AT-046"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-047",
+      "mandatory": true,
+      "title": "Check expected document revision transactionally and deduplicate supported save identities",
+      "shall": "Check expected document revision transactionally and deduplicate supported save identities.",
+      "work_package": "WP-15",
+      "spec": "spec/06_DRAFT_PERSISTENCE_AUTOSAVE_AND_CONFLICTS.md",
+      "acceptance_cases": [
+        "AT-047"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-048",
+      "mandatory": true,
+      "title": "Keep draft/published/run revisions and layout/compiler digests independent",
+      "shall": "Keep draft/published/run revisions and layout/compiler digests independent.",
+      "work_package": "WP-15",
+      "spec": "spec/06_DRAFT_PERSISTENCE_AUTOSAVE_AND_CONFLICTS.md",
+      "acceptance_cases": [
+        "AT-048"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-049",
+      "mandatory": true,
+      "title": "Track dirty/saving/saved/conflict/unsynced state by exact edit generation",
+      "shall": "Track dirty/saving/saved/conflict/unsynced state by exact edit generation.",
+      "work_package": "WP-16",
+      "spec": "spec/06_DRAFT_PERSISTENCE_AUTOSAVE_AND_CONFLICTS.md",
+      "acceptance_cases": [
+        "AT-049"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-050",
+      "mandatory": true,
+      "title": "Keep offline changes explicit and reconcile server revisions before resaving",
+      "shall": "Keep offline changes explicit and reconcile server revisions before resaving.",
+      "work_package": "WP-16",
+      "spec": "spec/06_DRAFT_PERSISTENCE_AUTOSAVE_AND_CONFLICTS.md",
+      "acceptance_cases": [
+        "AT-050"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-051",
+      "mandatory": true,
+      "title": "Scope optional crash-recovery data and handle quota/session changes safely",
+      "shall": "Scope optional crash-recovery data and handle quota/session changes safely.",
+      "work_package": "WP-16",
+      "spec": "spec/06_DRAFT_PERSISTENCE_AUTOSAVE_AND_CONFLICTS.md",
+      "acceptance_cases": [
+        "AT-051"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-052",
+      "mandatory": true,
+      "title": "Retain base/local/remote and require review of semantic conflicts",
+      "shall": "Retain base/local/remote and require review of semantic conflicts.",
+      "work_package": "WP-17",
+      "spec": "spec/06_DRAFT_PERSISTENCE_AUTOSAVE_AND_CONFLICTS.md",
+      "acceptance_cases": [
+        "AT-052"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-053",
+      "mandatory": true,
+      "title": "Support keep-as-new, review-merge, protected reload/discard and cancel resolution",
+      "shall": "Support keep-as-new, review-merge, protected reload/discard and cancel resolution.",
+      "work_package": "WP-17",
+      "spec": "spec/06_DRAFT_PERSISTENCE_AUTOSAVE_AND_CONFLICTS.md",
+      "acceptance_cases": [
+        "AT-053"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-054",
+      "mandatory": true,
+      "title": "Distinguish semantic from layout differences and revalidate merged candidates",
+      "shall": "Distinguish semantic from layout differences and revalidate merged candidates.",
+      "work_package": "WP-17",
+      "spec": "spec/06_DRAFT_PERSISTENCE_AUTOSAVE_AND_CONFLICTS.md",
+      "acceptance_cases": [
+        "AT-054"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-055",
+      "mandatory": true,
+      "title": "Publish an exact validated draft revision without launching a game/provider",
+      "shall": "Publish an exact validated draft revision without launching a game/provider.",
+      "work_package": "WP-18",
+      "spec": "spec/07_VALIDATE_PUBLISH_TEMPLATES_AND_PORTABILITY.md",
+      "acceptance_cases": [
+        "AT-055"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-056",
+      "mandatory": true,
+      "title": "Resolve uncertain publication/start responses with stable owner identities",
+      "shall": "Resolve uncertain publication/start responses with stable owner identities.",
+      "work_package": "WP-18",
+      "spec": "spec/07_VALIDATE_PUBLISH_TEMPLATES_AND_PORTABILITY.md",
+      "acceptance_cases": [
+        "AT-056"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-057",
+      "mandatory": true,
+      "title": "Launch only the selected immutable digest after current capability/policy admission",
+      "shall": "Launch only the selected immutable digest after current capability/policy admission.",
+      "work_package": "WP-18",
+      "spec": "spec/07_VALIDATE_PUBLISH_TEMPLATES_AND_PORTABILITY.md",
+      "acceptance_cases": [
+        "AT-057"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-058",
+      "mandatory": true,
+      "title": "Browse and clone first-party templates with version/digest/provenance",
+      "shall": "Browse and clone first-party templates with version/digest/provenance.",
+      "work_package": "WP-19",
+      "spec": "spec/07_VALIDATE_PUBLISH_TEMPLATES_AND_PORTABILITY.md",
+      "acceptance_cases": [
+        "AT-058"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-059",
+      "mandatory": true,
+      "title": "Resolve typed pinned subworkflows and surface unavailable references",
+      "shall": "Resolve typed pinned subworkflows and surface unavailable references.",
+      "work_package": "WP-19",
+      "spec": "spec/07_VALIDATE_PUBLISH_TEMPLATES_AND_PORTABILITY.md",
+      "acceptance_cases": [
+        "AT-059"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-060",
+      "mandatory": true,
+      "title": "Round-trip useful supported gameplay templates with capability gates",
+      "shall": "Round-trip useful supported gameplay templates with capability gates.",
+      "work_package": "WP-19",
+      "spec": "spec/07_VALIDATE_PUBLISH_TEMPLATES_AND_PORTABILITY.md",
+      "acceptance_cases": [
+        "AT-060"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-061",
+      "mandatory": true,
+      "title": "Issue one-time scoped pairing and short-lived browser sessions without secret persistence",
+      "shall": "Issue one-time scoped pairing and short-lived browser sessions without secret persistence.",
+      "work_package": "WP-20",
+      "spec": "spec/08_BROWSER_API_AUTH_AND_SERVER_ADAPTER.md",
+      "acceptance_cases": [
+        "AT-061"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-062",
+      "mandatory": true,
+      "title": "Enforce exact host/origin and preserve non-browser/default rejection behavior",
+      "shall": "Enforce exact host/origin and preserve non-browser/default rejection behavior.",
+      "work_package": "WP-20",
+      "spec": "spec/08_BROWSER_API_AUTH_AND_SERVER_ADAPTER.md",
+      "acceptance_cases": [
+        "AT-062"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-063",
+      "mandatory": true,
+      "title": "Serve only verified static bundle paths without taking scheduler ownership",
+      "shall": "Serve only verified static bundle paths without taking scheduler ownership.",
+      "work_package": "WP-20",
+      "spec": "spec/08_BROWSER_API_AUTH_AND_SERVER_ADAPTER.md",
+      "acceptance_cases": [
+        "AT-063"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-064",
+      "mandatory": true,
+      "title": "Attach at a consistent snapshot/cursor and bind transport to current authorized run",
+      "shall": "Attach at a consistent snapshot/cursor and bind transport to current authorized run.",
+      "work_package": "WP-21",
+      "spec": "spec/09_EVENT_PROJECTION_RECONNECT_AND_GAPS.md",
+      "acceptance_cases": [
+        "AT-064"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-065",
+      "mandatory": true,
+      "title": "Parse framed streams and exact identifiers with bounded resources",
+      "shall": "Parse framed streams and exact identifiers with bounded resources.",
+      "work_package": "WP-21",
+      "spec": "spec/09_EVENT_PROJECTION_RECONNECT_AND_GAPS.md",
+      "acceptance_cases": [
+        "AT-065"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-066",
+      "mandatory": true,
+      "title": "Fallback to bounded polling over the same event contract and honor revocation",
+      "shall": "Fallback to bounded polling over the same event contract and honor revocation.",
+      "work_package": "WP-21",
+      "spec": "spec/09_EVENT_PROJECTION_RECONNECT_AND_GAPS.md",
+      "acceptance_cases": [
+        "AT-066"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-067",
+      "mandatory": true,
+      "title": "Deduplicate and project events without scheduling workflow behavior",
+      "shall": "Deduplicate and project events without scheduling workflow behavior.",
+      "work_package": "WP-22",
+      "spec": "spec/09_EVENT_PROJECTION_RECONNECT_AND_GAPS.md",
+      "acceptance_cases": [
+        "AT-067"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-068",
+      "mandatory": true,
+      "title": "Detect real gaps/retention loss and rebuild from authoritative snapshots",
+      "shall": "Detect real gaps/retention loss and rebuild from authoritative snapshots.",
+      "work_package": "WP-22",
+      "spec": "spec/09_EVENT_PROJECTION_RECONNECT_AND_GAPS.md",
+      "acceptance_cases": [
+        "AT-068"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-069",
+      "mandatory": true,
+      "title": "Clear stale projections on identity/schema changes and bound subscriber queues",
+      "shall": "Clear stale projections on identity/schema changes and bound subscriber queues.",
+      "work_package": "WP-22",
+      "spec": "spec/09_EVENT_PROJECTION_RECONNECT_AND_GAPS.md",
+      "acceptance_cases": [
+        "AT-069"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-070",
+      "mandatory": true,
+      "title": "Display workflow/game outcome, uncertainty, budgets and cleanup distinctly",
+      "shall": "Display workflow/game outcome, uncertainty, budgets and cleanup distinctly.",
+      "work_package": "WP-23",
+      "spec": "spec/10_RUN_INSPECTOR_AND_SAFE_CONTROLS.md",
+      "acceptance_cases": [
+        "AT-070"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-071",
+      "mandatory": true,
+      "title": "Show per-invocation/plan details bound to exact definition and operation identity",
+      "shall": "Show per-invocation/plan details bound to exact definition and operation identity.",
+      "work_package": "WP-23",
+      "spec": "spec/10_RUN_INSPECTOR_AND_SAFE_CONTROLS.md",
+      "acceptance_cases": [
+        "AT-071"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-072",
+      "mandatory": true,
+      "title": "Render only authorized structured artifacts and safe trace references",
+      "shall": "Render only authorized structured artifacts and safe trace references.",
+      "work_package": "WP-23",
+      "spec": "spec/10_RUN_INSPECTOR_AND_SAFE_CONTROLS.md",
+      "acceptance_cases": [
+        "AT-072"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-073",
+      "mandatory": true,
+      "title": "Use stable intent IDs and expected revisions for supported pause/resume/step/cancel",
+      "shall": "Use stable intent IDs and expected revisions for supported pause/resume/step/cancel.",
+      "work_package": "WP-24",
+      "spec": "spec/10_RUN_INSPECTOR_AND_SAFE_CONTROLS.md",
+      "acceptance_cases": [
+        "AT-073"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-074",
+      "mandatory": true,
+      "title": "Resolve lost responses and distinguish command admission from application",
+      "shall": "Resolve lost responses and distinguish command admission from application.",
+      "work_package": "WP-24",
+      "spec": "spec/10_RUN_INSPECTOR_AND_SAFE_CONTROLS.md",
+      "acceptance_cases": [
+        "AT-074"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-075",
+      "mandatory": true,
+      "title": "Disable unsupported/stale/historical commands and preserve protected transaction semantics",
+      "shall": "Disable unsupported/stale/historical commands and preserve protected transaction semantics.",
+      "work_package": "WP-24",
+      "spec": "spec/10_RUN_INSPECTOR_AND_SAFE_CONTROLS.md",
+      "acceptance_cases": [
+        "AT-075"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-076",
+      "mandatory": true,
+      "title": "Keep historical cursor actions free of live mutations or provider/game calls",
+      "shall": "Keep historical cursor actions free of live mutations or provider/game calls.",
+      "work_package": "WP-25",
+      "spec": "spec/11_REPLAY_COMPARE_AND_DEBUGGING.md",
+      "acceptance_cases": [
+        "AT-076"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-077",
+      "mandatory": true,
+      "title": "Present owner offline replay results and explicit gaps/redaction/divergence",
+      "shall": "Present owner offline replay results and explicit gaps/redaction/divergence.",
+      "work_package": "WP-25",
+      "spec": "spec/11_REPLAY_COMPARE_AND_DEBUGGING.md",
+      "acceptance_cases": [
+        "AT-077"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-078",
+      "mandatory": true,
+      "title": "Compare definition/layout/run differences by stable context without causal overclaims",
+      "shall": "Compare definition/layout/run differences by stable context without causal overclaims.",
+      "work_package": "WP-25",
+      "spec": "spec/11_REPLAY_COMPARE_AND_DEBUGGING.md",
+      "acceptance_cases": [
+        "AT-078"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-079",
+      "mandatory": true,
+      "title": "Enforce inspect/author/publish/operate/session permissions server-side per object",
+      "shall": "Enforce inspect/author/publish/operate/session permissions server-side per object.",
+      "work_package": "WP-26",
+      "spec": "spec/14_SECURITY_PRIVACY_AND_AUTHORIZATION.md",
+      "acceptance_cases": [
+        "AT-079"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-080",
+      "mandatory": true,
+      "title": "Apply safe text/import handling, strict decoding and production CSP",
+      "shall": "Apply safe text/import handling, strict decoding and production CSP.",
+      "work_package": "WP-26",
+      "spec": "spec/14_SECURITY_PRIVACY_AND_AUTHORIZATION.md",
+      "acceptance_cases": [
+        "AT-080"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-081",
+      "mandatory": true,
+      "title": "Exclude secrets/sensitive content from storage, telemetry, logs and exports",
+      "shall": "Exclude secrets/sensitive content from storage, telemetry, logs and exports.",
+      "work_package": "WP-26",
+      "spec": "spec/14_SECURITY_PRIVACY_AND_AUTHORIZATION.md",
+      "acceptance_cases": [
+        "AT-081"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-082",
+      "mandatory": true,
+      "title": "Keep gameplay map and workflow graph separate with explicit freshness/support",
+      "shall": "Keep gameplay map and workflow graph separate with explicit freshness/support.",
+      "work_package": "WP-27",
+      "spec": "spec/16_ADJACENT_INTEGRATIONS_AND_CAPABILITY_GATES.md",
+      "acceptance_cases": [
+        "AT-082"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-083",
+      "mandatory": true,
+      "title": "Resolve trace/artifact links only through approved mappings",
+      "shall": "Resolve trace/artifact links only through approved mappings.",
+      "work_package": "WP-27",
+      "spec": "spec/16_ADJACENT_INTEGRATIONS_AND_CAPABILITY_GATES.md",
+      "acceptance_cases": [
+        "AT-083"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-084",
+      "mandatory": true,
+      "title": "Keep optional integration absence from breaking core Studio functions",
+      "shall": "Keep optional integration absence from breaking core Studio functions.",
+      "work_package": "WP-27",
+      "spec": "spec/16_ADJACENT_INTEGRATIONS_AND_CAPABILITY_GATES.md",
+      "acceptance_cases": [
+        "AT-084"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-085",
+      "mandatory": true,
+      "title": "Provide keyboard and single-pointer alternatives for every essential drag operation",
+      "shall": "Provide keyboard and single-pointer alternatives for every essential drag operation.",
+      "work_package": "WP-28",
+      "spec": "spec/13_ACCESSIBILITY_VISUAL_DESIGN_AND_RESPONSIVENESS.md",
+      "acceptance_cases": [
+        "AT-085"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-086",
+      "mandatory": true,
+      "title": "Maintain meaningful labels/focus/status and non-color-only state indicators",
+      "shall": "Maintain meaningful labels/focus/status and non-color-only state indicators.",
+      "work_package": "WP-28",
+      "spec": "spec/13_ACCESSIBILITY_VISUAL_DESIGN_AND_RESPONSIVENESS.md",
+      "acceptance_cases": [
+        "AT-086"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-087",
+      "mandatory": true,
+      "title": "Support themes/reduced motion/zoom and narrow list/form layouts",
+      "shall": "Support themes/reduced motion/zoom and narrow list/form layouts.",
+      "work_package": "WP-28",
+      "spec": "spec/13_ACCESSIBILITY_VISUAL_DESIGN_AND_RESPONSIVENESS.md",
+      "acceptance_cases": [
+        "AT-087"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-088",
+      "mandatory": true,
+      "title": "Bound graph/event/history/import/worker resources and reject obsolete async results",
+      "shall": "Bound graph/event/history/import/worker resources and reject obsolete async results.",
+      "work_package": "WP-29",
+      "spec": "spec/15_PERFORMANCE_BOUNDS_AND_RESOURCE_LIFETIME.md",
+      "acceptance_cases": [
+        "AT-088"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-089",
+      "mandatory": true,
+      "title": "Keep core edits responsive through selective rendering and bounded worker tasks",
+      "shall": "Keep core edits responsive through selective rendering and bounded worker tasks.",
+      "work_package": "WP-29",
+      "spec": "spec/15_PERFORMANCE_BOUNDS_AND_RESOURCE_LIFETIME.md",
+      "acceptance_cases": [
+        "AT-089"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-090",
+      "mandatory": true,
+      "title": "Clean up subscribers/listeners/workers/blob URLs across view/auth lifetimes",
+      "shall": "Clean up subscribers/listeners/workers/blob URLs across view/auth lifetimes.",
+      "work_package": "WP-29",
+      "spec": "spec/15_PERFORMANCE_BOUNDS_AND_RESOURCE_LIFETIME.md",
+      "acceptance_cases": [
+        "AT-090"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-091",
+      "mandatory": true,
+      "title": "Execute complete authoring-to-run and history journeys in real browser tests",
+      "shall": "Execute complete authoring-to-run and history journeys in real browser tests.",
+      "work_package": "WP-30",
+      "spec": "spec/17_TESTS_AND_ACCEPTANCE_GATES.md",
+      "acceptance_cases": [
+        "AT-091"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-092",
+      "mandatory": true,
+      "title": "Test empty/loading/forbidden/invalid/conflict/disconnected states on supported engines",
+      "shall": "Test empty/loading/forbidden/invalid/conflict/disconnected states on supported engines.",
+      "work_package": "WP-30",
+      "spec": "spec/17_TESTS_AND_ACCEPTANCE_GATES.md",
+      "acceptance_cases": [
+        "AT-092"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-093",
+      "mandatory": true,
+      "title": "Exercise production CSP/workers/routing rather than only a development server",
+      "shall": "Exercise production CSP/workers/routing rather than only a development server.",
+      "work_package": "WP-30",
+      "spec": "spec/17_TESTS_AND_ACCEPTANCE_GATES.md",
+      "acceptance_cases": [
+        "AT-093"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-094",
+      "mandatory": true,
+      "title": "Prove real canonical strict and dynamic workflow round-trips",
+      "shall": "Prove real canonical strict and dynamic workflow round-trips.",
+      "work_package": "WP-31",
+      "spec": "spec/17_TESTS_AND_ACCEPTANCE_GATES.md",
+      "acceptance_cases": [
+        "AT-094"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-095",
+      "mandatory": true,
+      "title": "Prove durable drafts and run continuity through browser/web attachment restart",
+      "shall": "Prove durable drafts and run continuity through browser/web attachment restart.",
+      "work_package": "WP-31",
+      "spec": "spec/17_TESTS_AND_ACCEPTANCE_GATES.md",
+      "acceptance_cases": [
+        "AT-095"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-096",
+      "mandatory": true,
+      "title": "Observe two actual accepted dynamic plans and safe rejection/supersession",
+      "shall": "Observe two actual accepted dynamic plans and safe rejection/supersession.",
+      "work_package": "WP-31",
+      "spec": "spec/17_TESTS_AND_ACCEPTANCE_GATES.md",
+      "acceptance_cases": [
+        "AT-096"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-097",
+      "mandatory": true,
+      "title": "Execute lost-save/publication/command and concurrent-editor cases",
+      "shall": "Execute lost-save/publication/command and concurrent-editor cases.",
+      "work_package": "WP-32",
+      "spec": "spec/17_TESTS_AND_ACCEPTANCE_GATES.md",
+      "acceptance_cases": [
+        "AT-097"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-098",
+      "mandatory": true,
+      "title": "Exercise event gaps/chunks/slow consumers/revocation and identity transitions",
+      "shall": "Exercise event gaps/chunks/slow consumers/revocation and identity transitions.",
+      "work_package": "WP-32",
+      "spec": "spec/17_TESTS_AND_ACCEPTANCE_GATES.md",
+      "acceptance_cases": [
+        "AT-098"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-099",
+      "mandatory": true,
+      "title": "Preserve uncertainty and ownership across server/adapter restart",
+      "shall": "Preserve uncertainty and ownership across server/adapter restart.",
+      "work_package": "WP-32",
+      "spec": "spec/17_TESTS_AND_ACCEPTANCE_GATES.md",
+      "acceptance_cases": [
+        "AT-099"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-100",
+      "mandatory": true,
+      "title": "Independently verify origin/authz/pairing/CSP/content controls",
+      "shall": "Independently verify origin/authz/pairing/CSP/content controls.",
+      "work_package": "WP-33",
+      "spec": "spec/14_SECURITY_PRIVACY_AND_AUTHORIZATION.md",
+      "acceptance_cases": [
+        "AT-100"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-101",
+      "mandatory": true,
+      "title": "Review dependencies/licenses/build outputs and runtime egress",
+      "shall": "Review dependencies/licenses/build outputs and runtime egress.",
+      "work_package": "WP-33",
+      "spec": "spec/14_SECURITY_PRIVACY_AND_AUTHORIZATION.md",
+      "acceptance_cases": [
+        "AT-101"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-102",
+      "mandatory": true,
+      "title": "Block readiness on unresolved material security boundary defects",
+      "shall": "Block readiness on unresolved material security boundary defects.",
+      "work_package": "WP-33",
+      "spec": "spec/14_SECURITY_PRIVACY_AND_AUTHORIZATION.md",
+      "acceptance_cases": [
+        "AT-102"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-103",
+      "mandatory": true,
+      "title": "Inspect real UI screenshots across required themes/viewports/states",
+      "shall": "Inspect real UI screenshots across required themes/viewports/states.",
+      "work_package": "WP-34",
+      "spec": "spec/13_ACCESSIBILITY_VISUAL_DESIGN_AND_RESPONSIVENESS.md",
+      "acceptance_cases": [
+        "AT-103"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-104",
+      "mandatory": true,
+      "title": "Combine automated scans with manual keyboard/pointer/zoom/screen-reader assessment",
+      "shall": "Combine automated scans with manual keyboard/pointer/zoom/screen-reader assessment.",
+      "work_package": "WP-34",
+      "spec": "spec/13_ACCESSIBILITY_VISUAL_DESIGN_AND_RESPONSIVENESS.md",
+      "acceptance_cases": [
+        "AT-104"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-105",
+      "mandatory": true,
+      "title": "Fix blocking focus/reflow/drag-parity defects and retest exact build",
+      "shall": "Fix blocking focus/reflow/drag-parity defects and retest exact build.",
+      "work_package": "WP-34",
+      "spec": "spec/13_ACCESSIBILITY_VISUAL_DESIGN_AND_RESPONSIVENESS.md",
+      "acceptance_cases": [
+        "AT-105"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-106",
+      "mandatory": true,
+      "title": "Produce a checksummed static bundle with license/SBOM and compatibility metadata",
+      "shall": "Produce a checksummed static bundle with license/SBOM and compatibility metadata.",
+      "work_package": "WP-35",
+      "spec": "spec/19_DELIVERY_PACKAGING_AND_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-106"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-107",
+      "mandatory": true,
+      "title": "Test harness acceptance, safe paths/base routing and incompatible bundle handling",
+      "shall": "Test harness acceptance, safe paths/base routing and incompatible bundle handling.",
+      "work_package": "WP-35",
+      "spec": "spec/19_DELIVERY_PACKAGING_AND_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-107"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-108",
+      "mandatory": true,
+      "title": "Document bounded local startup/rollback without implicit deployment effects",
+      "shall": "Document bounded local startup/rollback without implicit deployment effects.",
+      "work_package": "WP-35",
+      "spec": "spec/19_DELIVERY_PACKAGING_AND_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-108"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-109",
+      "mandatory": true,
+      "title": "Document pairing/drafts/conflicts/validate/publish/run/control/replay and support export",
+      "shall": "Document pairing/drafts/conflicts/validate/publish/run/control/replay and support export.",
+      "work_package": "WP-36",
+      "spec": "spec/19_DELIVERY_PACKAGING_AND_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-109"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-110",
+      "mandatory": true,
+      "title": "Record compatibility/additive owner changes and non-destructive upgrade/rollback",
+      "shall": "Record compatibility/additive owner changes and non-destructive upgrade/rollback.",
+      "work_package": "WP-36",
+      "spec": "spec/19_DELIVERY_PACKAGING_AND_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-110"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-111",
+      "mandatory": true,
+      "title": "Publish evidence distinctions and explicit capability/permission limitations",
+      "shall": "Publish evidence distinctions and explicit capability/permission limitations.",
+      "work_package": "WP-36",
+      "spec": "spec/19_DELIVERY_PACKAGING_AND_OPERATIONS.md",
+      "acceptance_cases": [
+        "AT-111"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-112",
+      "mandatory": true,
+      "title": "Run owner policy/lint/typecheck/test/artifact checks and browser gates in CI",
+      "shall": "Run owner policy/lint/typecheck/test/artifact checks and browser gates in CI.",
+      "work_package": "WP-37",
+      "spec": "spec/17_TESTS_AND_ACCEPTANCE_GATES.md",
+      "acceptance_cases": [
+        "AT-112"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-113",
+      "mandatory": true,
+      "title": "Pin shared artifacts and regenerate clients only from reviewed sources",
+      "shall": "Pin shared artifacts and regenerate clients only from reviewed sources.",
+      "work_package": "WP-37",
+      "spec": "spec/17_TESTS_AND_ACCEPTANCE_GATES.md",
+      "acceptance_cases": [
+        "AT-113"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-114",
+      "mandatory": true,
+      "title": "Keep CI artifacts sanitized and failures reproducible with exact evidence",
+      "shall": "Keep CI artifacts sanitized and failures reproducible with exact evidence.",
+      "work_package": "WP-37",
+      "spec": "spec/17_TESTS_AND_ACCEPTANCE_GATES.md",
+      "acceptance_cases": [
+        "AT-114"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-115",
+      "mandatory": true,
+      "title": "Reverify critical invariants and affected suites at the final combined source heads",
+      "shall": "Reverify critical invariants and affected suites at the final combined source heads.",
+      "work_package": "WP-38",
+      "spec": "prompts/FINAL_INTEGRATION.md",
+      "acceptance_cases": [
+        "AT-115"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-116",
+      "mandatory": true,
+      "title": "Map every mandatory requirement to actual evidence or explicit blocker",
+      "shall": "Map every mandatory requirement to actual evidence or explicit blocker.",
+      "work_package": "WP-38",
+      "spec": "prompts/FINAL_INTEGRATION.md",
+      "acceptance_cases": [
+        "AT-116"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-117",
+      "mandatory": true,
+      "title": "Verify actual lineage/model compliance and closure of owned workers/processes",
+      "shall": "Verify actual lineage/model compliance and closure of owned workers/processes.",
+      "work_package": "WP-38",
+      "spec": "prompts/FINAL_INTEGRATION.md",
+      "acceptance_cases": [
+        "AT-117"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-118",
+      "mandatory": true,
+      "title": "Deliver scoped commits and linked draft PRs assigned to the authenticated operator",
+      "shall": "Deliver scoped commits and linked draft PRs assigned to the authenticated operator.",
+      "work_package": "WP-39",
+      "spec": "templates/FINAL_REPORT.md",
+      "acceptance_cases": [
+        "AT-118"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-119",
+      "mandatory": true,
+      "title": "Report implemented features, evidence levels, pins and remaining blockers honestly",
+      "shall": "Report implemented features, evidence levels, pins and remaining blockers honestly.",
+      "work_package": "WP-39",
+      "spec": "templates/FINAL_REPORT.md",
+      "acceptance_cases": [
+        "AT-119"
+      ],
+      "status": "not_started"
+    },
+    {
+      "id": "P2-120",
+      "mandatory": true,
+      "title": "Leave a reproducible resume/operations handoff without unauthorized deployment",
+      "shall": "Leave a reproducible resume/operations handoff without unauthorized deployment.",
+      "work_package": "WP-39",
+      "spec": "templates/FINAL_REPORT.md",
+      "acceptance_cases": [
+        "AT-120"
+      ],
+      "status": "not_started"
+    }
+  ]
+}

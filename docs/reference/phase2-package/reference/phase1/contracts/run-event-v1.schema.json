@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ascension:event:v1-seed",
+  "title": "Proposed bounded workflow event envelope",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "ascension.workflow-event/v1"
+    },
+    "workflow_run_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "run_revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 9007199254740991
+    },
+    "event_type": {
+      "enum": [
+        "run_started",
+        "node_entered",
+        "node_completed",
+        "plan_accepted",
+        "plan_rejected",
+        "operation_intent",
+        "operation_unknown",
+        "operation_settled",
+        "command_requested",
+        "command_applied",
+        "run_terminal"
+      ]
+    },
+    "definition_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "node_execution_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "operation_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "classification": {
+          "enum": [
+            "accepted",
+            "unknown",
+            "settled",
+            "rejected",
+            "cancelled"
+          ]
+        },
+        "reason_code": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        }
+      },
+      "required": [
+        "reason_code"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "workflow_run_id",
+    "sequence",
+    "run_revision",
+    "event_type",
+    "definition_digest",
+    "node_execution_id",
+    "payload"
+  ]
+}

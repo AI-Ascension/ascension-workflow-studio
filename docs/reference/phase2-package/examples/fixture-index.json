@@ -1,0 +1,186 @@
+{
+  "schema_version": 1,
+  "evidence_scope": "package_seed_validation_only",
+  "fixtures": [
+    {
+      "path": "examples/fixtures/layout-valid.json",
+      "kind": "layout",
+      "schema": "contracts/studio-layout-v1.schema.json",
+      "expected": "accept",
+      "definition": "reference/phase1/examples/workflows/strict-fixture.json"
+    },
+    {
+      "path": "examples/fixtures/layout-moved-valid.json",
+      "kind": "layout",
+      "schema": "contracts/studio-layout-v1.schema.json",
+      "expected": "accept",
+      "definition": "reference/phase1/examples/workflows/strict-fixture.json"
+    },
+    {
+      "path": "examples/fixtures/layout-authority-injection.invalid.json",
+      "kind": "layout",
+      "schema": "contracts/studio-layout-v1.schema.json",
+      "expected": "schema_reject",
+      "definition": "reference/phase1/examples/workflows/strict-fixture.json"
+    },
+    {
+      "path": "examples/fixtures/layout-dangling-node.invalid.json",
+      "kind": "layout",
+      "schema": "contracts/studio-layout-v1.schema.json",
+      "expected": "semantic_reject",
+      "definition": "reference/phase1/examples/workflows/strict-fixture.json"
+    },
+    {
+      "path": "examples/fixtures/layout-wrong-binding.invalid.json",
+      "kind": "layout",
+      "schema": "contracts/studio-layout-v1.schema.json",
+      "expected": "semantic_reject",
+      "definition": "reference/phase1/examples/workflows/strict-fixture.json"
+    },
+    {
+      "path": "examples/fixtures/layout-duplicate-node.invalid.json",
+      "kind": "layout",
+      "schema": "contracts/studio-layout-v1.schema.json",
+      "expected": "semantic_reject",
+      "definition": "reference/phase1/examples/workflows/strict-fixture.json"
+    },
+    {
+      "path": "examples/fixtures/command-unknown-valid.json",
+      "kind": "command",
+      "schema": "contracts/command-view-v1.schema.json",
+      "expected": "accept"
+    },
+    {
+      "path": "examples/fixtures/command-applied-valid.json",
+      "kind": "command",
+      "schema": "contracts/command-view-v1.schema.json",
+      "expected": "accept"
+    },
+    {
+      "path": "examples/fixtures/command-unknown-claims-applied.invalid.json",
+      "kind": "command",
+      "schema": "contracts/command-view-v1.schema.json",
+      "expected": "schema_reject"
+    },
+    {
+      "path": "examples/fixtures/command-regressed-revision.invalid.json",
+      "kind": "command",
+      "schema": "contracts/command-view-v1.schema.json",
+      "expected": "semantic_reject"
+    },
+    {
+      "path": "examples/fixtures/stream-contiguous.json",
+      "kind": "projection",
+      "schema": "contracts/display-projection-fixture.schema.json",
+      "expected": "accept",
+      "projection_outcome": "current"
+    },
+    {
+      "path": "examples/fixtures/stream-duplicate.json",
+      "kind": "projection",
+      "schema": "contracts/display-projection-fixture.schema.json",
+      "expected": "accept",
+      "projection_outcome": "current"
+    },
+    {
+      "path": "examples/fixtures/stream-gap.json",
+      "kind": "projection",
+      "schema": "contracts/display-projection-fixture.schema.json",
+      "expected": "accept",
+      "projection_outcome": "needs_resnapshot"
+    },
+    {
+      "path": "examples/fixtures/stream-wrong-run.json",
+      "kind": "projection",
+      "schema": "contracts/display-projection-fixture.schema.json",
+      "expected": "accept",
+      "projection_outcome": "binding_rejected"
+    },
+    {
+      "path": "examples/fixtures/stream-conflicting-duplicate.json",
+      "kind": "projection",
+      "schema": "contracts/display-projection-fixture.schema.json",
+      "expected": "accept",
+      "projection_outcome": "conflicting_duplicate"
+    },
+    {
+      "path": "examples/fixtures/stream-duplicate-id-new-sequence.json",
+      "kind": "projection",
+      "schema": "contracts/display-projection-fixture.schema.json",
+      "expected": "accept",
+      "projection_outcome": "conflicting_duplicate"
+    },
+    {
+      "path": "examples/fixtures/stream-old-outside-window.json",
+      "kind": "projection",
+      "schema": "contracts/display-projection-fixture.schema.json",
+      "expected": "accept",
+      "projection_outcome": "needs_resnapshot"
+    },
+    {
+      "path": "examples/fixtures/stream-wrong-digest.json",
+      "kind": "projection",
+      "schema": "contracts/display-projection-fixture.schema.json",
+      "expected": "accept",
+      "projection_outcome": "binding_rejected"
+    },
+    {
+      "path": "examples/fixtures/stream-unsafe-sequence.invalid.json",
+      "kind": "projection",
+      "schema": "contracts/display-projection-fixture.schema.json",
+      "expected": "schema_reject"
+    },
+    {
+      "path": "examples/fixtures/duplicate-keys.invalid.json.txt",
+      "kind": "strict_parse",
+      "schema": null,
+      "expected": "parse_reject"
+    },
+    {
+      "path": "examples/fixtures/nonfinite.invalid.json.txt",
+      "kind": "strict_parse",
+      "schema": null,
+      "expected": "parse_reject"
+    },
+    {
+      "path": "examples/fixtures/attestation-not-run-valid.json",
+      "kind": "attestation",
+      "schema": "orchestration/agent-attestation.schema.json",
+      "expected": "accept"
+    },
+    {
+      "path": "examples/fixtures/attestation-false-verification.invalid.json",
+      "kind": "attestation",
+      "schema": "orchestration/agent-attestation.schema.json",
+      "expected": "schema_reject"
+    },
+    {
+      "path": "examples/fixtures/attestation-leaf-spawn.invalid.json",
+      "kind": "attestation",
+      "schema": "orchestration/agent-attestation.schema.json",
+      "expected": "schema_reject"
+    }
+  ],
+  "layout_only_pair": [
+    "examples/fixtures/layout-valid.json",
+    "examples/fixtures/layout-moved-valid.json"
+  ],
+  "reference_validations": [
+    {
+      "path": "reference/phase1/examples/workflows/strict-fixture.json",
+      "schema": "reference/phase1/contracts/workflow-v1.schema.json"
+    },
+    {
+      "path": "reference/phase1/examples/workflows/dynamic-fixture.json",
+      "schema": "reference/phase1/contracts/workflow-v1.schema.json"
+    },
+    {
+      "path": "reference/phase1/examples/plans/valid-plan.json",
+      "schema": "reference/phase1/contracts/plan-v1.schema.json"
+    },
+    {
+      "path": "reference/phase1/examples/plans/valid-simple-plan.json",
+      "schema": "reference/phase1/contracts/plan-v1.schema.json"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+flowchart LR
+    IMPORT[Import pinned definition] --> EDIT[Semantic draft and inert layout]
+    EDIT --> SAVE[Conditional atomic save]
+    SAVE -->|Conflict| MERGE[Base-local-remote review]
+    MERGE --> EDIT
+    SAVE --> VALIDATE[Owner validation bound to content]
+    VALIDATE -->|Diagnostics| EDIT
+    VALIDATE -->|Valid| PUBLISH[Publish immutable revision]
+    PUBLISH --> START[Explicit start with current admission]
+    PUBLISH --> FORK[Fork next draft]
+    FORK --> EDIT

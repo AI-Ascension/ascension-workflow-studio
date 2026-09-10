@@ -4,6 +4,9 @@ coverage/
 playwright-report/
 test-results/
 .vite/
+.cache/
+__pycache__/
+*.pyc
 .env
 .env.*
 !.env.example

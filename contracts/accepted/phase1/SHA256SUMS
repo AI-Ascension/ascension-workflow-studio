@@ -1,0 +1,4 @@
+f8f79e115cd3bd736125ad17e33676bfe110f8a1b2673577cbbe93f1d5cc937d  contracts/accepted/phase1/workflow-v1.schema.json
+930e2c889725bfaf59ba792ed2de55c5a35b3c04f60ca8ab63f8c47efbb51a86  contracts/accepted/phase1/artifact/manifest.json
+dd0c29102af1728d4977a7c36b94e4c37fb9bc8ba7cbd36de3905ab8bae96c27  contracts/accepted/phase1/artifact/canonical-vectors.json
+608f731b59cedbf4ff7006b142a9b130205f3d5486ab47451c7afd5db00ccb00  contracts/accepted/phase1/conformance/valid-strict.json

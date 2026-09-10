@@ -1,0 +1,1212 @@
+{
+  "schema_version": 1,
+  "source": "docs/reference/phase2-package/quality/requirements.json",
+  "status_summary": {
+    "implemented": 33,
+    "partial": 23,
+    "blocked": 44,
+    "not_started": 20
+  },
+  "requirements": [
+    {
+      "id": "P2-001",
+      "mandatory": true,
+      "work_package": "WP-00",
+      "status": "blocked",
+      "evidence": "Required Luna Max child runtime was not callable in this environment.",
+      "acceptance_cases": [
+        "AT-001"
+      ]
+    },
+    {
+      "id": "P2-002",
+      "mandatory": true,
+      "work_package": "WP-00",
+      "status": "blocked",
+      "evidence": "No callable native D0-D1-D2-D3 child-session API was available.",
+      "acceptance_cases": [
+        "AT-002"
+      ]
+    },
+    {
+      "id": "P2-003",
+      "mandatory": true,
+      "work_package": "WP-00",
+      "status": "blocked",
+      "evidence": "No descendant runtime was launched, so slot evidence cannot be produced.",
+      "acceptance_cases": [
+        "AT-003"
+      ]
+    },
+    {
+      "id": "P2-004",
+      "mandatory": true,
+      "work_package": "WP-01",
+      "status": "implemented",
+      "evidence": "repository bootstrap and branch are present",
+      "acceptance_cases": [
+        "AT-004"
+      ]
+    },
+    {
+      "id": "P2-005",
+      "mandatory": true,
+      "work_package": "WP-01",
+      "status": "implemented",
+      "evidence": "standards-profile.toml and strict compiler scripts",
+      "acceptance_cases": [
+        "AT-005"
+      ]
+    },
+    {
+      "id": "P2-006",
+      "mandatory": true,
+      "work_package": "WP-01",
+      "status": "implemented",
+      "evidence": "isolated implementation worktree and scoped branch",
+      "acceptance_cases": [
+        "AT-006"
+      ]
+    },
+    {
+      "id": "P2-007",
+      "mandatory": true,
+      "work_package": "WP-02",
+      "status": "implemented",
+      "evidence": "contracts/accepted/phase1-integration.lock.json",
+      "acceptance_cases": [
+        "AT-007"
+      ]
+    },
+    {
+      "id": "P2-008",
+      "mandatory": true,
+      "work_package": "WP-02",
+      "status": "implemented",
+      "evidence": "contracts/accepted/phase1-integration.lock.json",
+      "acceptance_cases": [
+        "AT-008"
+      ]
+    },
+    {
+      "id": "P2-009",
+      "mandatory": true,
+      "work_package": "WP-02",
+      "status": "blocked",
+      "evidence": "No browser/draft owner projection was admitted; additive owner change was not authorized or implemented in this slice.",
+      "acceptance_cases": [
+        "AT-009"
+      ]
+    },
+    {
+      "id": "P2-010",
+      "mandatory": true,
+      "work_package": "WP-03",
+      "status": "implemented",
+      "evidence": "docs/architecture/phase1-integration.md",
+      "acceptance_cases": [
+        "AT-010"
+      ]
+    },
+    {
+      "id": "P2-011",
+      "mandatory": true,
+      "work_package": "WP-03",
+      "status": "implemented",
+      "evidence": "docs/architecture/README.md",
+      "acceptance_cases": [
+        "AT-011"
+      ]
+    },
+    {
+      "id": "P2-012",
+      "mandatory": true,
+      "work_package": "WP-03",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-012"
+      ]
+    },
+    {
+      "id": "P2-013",
+      "mandatory": true,
+      "work_package": "WP-04",
+      "status": "implemented",
+      "evidence": "packages/contracts/src/index.ts and packages/client/src/index.ts",
+      "acceptance_cases": [
+        "AT-013"
+      ]
+    },
+    {
+      "id": "P2-014",
+      "mandatory": true,
+      "work_package": "WP-04",
+      "status": "implemented",
+      "evidence": "apps/studio/src/features/compatibility/CompatibilityView.tsx",
+      "acceptance_cases": [
+        "AT-014"
+      ]
+    },
+    {
+      "id": "P2-015",
+      "mandatory": true,
+      "work_package": "WP-04",
+      "status": "implemented",
+      "evidence": "packages/client/src/index.ts",
+      "acceptance_cases": [
+        "AT-015"
+      ]
+    },
+    {
+      "id": "P2-016",
+      "mandatory": true,
+      "work_package": "WP-05",
+      "status": "implemented",
+      "evidence": "packages/document/src/index.ts",
+      "acceptance_cases": [
+        "AT-016"
+      ]
+    },
+    {
+      "id": "P2-017",
+      "mandatory": true,
+      "work_package": "WP-05",
+      "status": "implemented",
+      "evidence": "packages/document/src/index.ts",
+      "acceptance_cases": [
+        "AT-017"
+      ]
+    },
+    {
+      "id": "P2-018",
+      "mandatory": true,
+      "work_package": "WP-05",
+      "status": "partial",
+      "evidence": "Reference artifacts are preserved and decoded strictly, but no future-schema archival UI exists.",
+      "acceptance_cases": [
+        "AT-018"
+      ]
+    },
+    {
+      "id": "P2-019",
+      "mandatory": true,
+      "work_package": "WP-06",
+      "status": "partial",
+      "evidence": "Palette is bounded to checked-in catalog metadata; a live registry route is gated.",
+      "acceptance_cases": [
+        "AT-019"
+      ]
+    },
+    {
+      "id": "P2-020",
+      "mandatory": true,
+      "work_package": "WP-06",
+      "status": "partial",
+      "evidence": "Node kind/config editing is typed and bounded; complete guard/budget forms remain.",
+      "acceptance_cases": [
+        "AT-020"
+      ]
+    },
+    {
+      "id": "P2-021",
+      "mandatory": true,
+      "work_package": "WP-06",
+      "status": "implemented",
+      "evidence": "docs/decisions/ADR-P2-008-drafts-and-secrets.md",
+      "acceptance_cases": [
+        "AT-021"
+      ]
+    },
+    {
+      "id": "P2-022",
+      "mandatory": true,
+      "work_package": "WP-07",
+      "status": "implemented",
+      "evidence": "packages/document/src/index.test.ts",
+      "acceptance_cases": [
+        "AT-022"
+      ]
+    },
+    {
+      "id": "P2-023",
+      "mandatory": true,
+      "work_package": "WP-07",
+      "status": "partial",
+      "evidence": "JSON arrays/order/nulls are preserved through canonicalization; complete owner round-trip evidence remains.",
+      "acceptance_cases": [
+        "AT-023"
+      ]
+    },
+    {
+      "id": "P2-024",
+      "mandatory": true,
+      "work_package": "WP-07",
+      "status": "implemented",
+      "evidence": "packages/document/src/index.test.ts and DesignerView.tsx",
+      "acceptance_cases": [
+        "AT-024"
+      ]
+    },
+    {
+      "id": "P2-025",
+      "mandatory": true,
+      "work_package": "WP-08",
+      "status": "partial",
+      "evidence": "Diagnostics are bound to the active candidate digest; policy/registry versions are not exported by Phase 1.",
+      "acceptance_cases": [
+        "AT-025"
+      ]
+    },
+    {
+      "id": "P2-026",
+      "mandatory": true,
+      "work_package": "WP-08",
+      "status": "partial",
+      "evidence": "Diagnostics show structured paths; graph target focus navigation remains.",
+      "acceptance_cases": [
+        "AT-026"
+      ]
+    },
+    {
+      "id": "P2-027",
+      "mandatory": true,
+      "work_package": "WP-08",
+      "status": "partial",
+      "evidence": "Fixture validation and live owner validation are wired; publish admission is unavailable.",
+      "acceptance_cases": [
+        "AT-027"
+      ]
+    },
+    {
+      "id": "P2-028",
+      "mandatory": true,
+      "work_package": "WP-09",
+      "status": "implemented",
+      "evidence": "apps/studio/src/app/App.tsx",
+      "acceptance_cases": [
+        "AT-028"
+      ]
+    },
+    {
+      "id": "P2-029",
+      "mandatory": true,
+      "work_package": "WP-09",
+      "status": "implemented",
+      "evidence": "apps/studio/src/app/App.tsx",
+      "acceptance_cases": [
+        "AT-029"
+      ]
+    },
+    {
+      "id": "P2-030",
+      "mandatory": true,
+      "work_package": "WP-09",
+      "status": "partial",
+      "evidence": "The UI renders checked-in workflow definitions and fixture owner projections; live process browser evidence remains.",
+      "acceptance_cases": [
+        "AT-030"
+      ]
+    },
+    {
+      "id": "P2-031",
+      "mandatory": true,
+      "work_package": "WP-10",
+      "status": "partial",
+      "evidence": "Placement, connection and deletion are implemented; reconnection review is incomplete.",
+      "acceptance_cases": [
+        "AT-031"
+      ]
+    },
+    {
+      "id": "P2-032",
+      "mandatory": true,
+      "work_package": "WP-10",
+      "status": "implemented",
+      "evidence": "apps/studio/src/features/designer/DesignerView.tsx",
+      "acceptance_cases": [
+        "AT-032"
+      ]
+    },
+    {
+      "id": "P2-033",
+      "mandatory": true,
+      "work_package": "WP-10",
+      "status": "implemented",
+      "evidence": "apps/studio/src/features/designer/DesignerView.tsx",
+      "acceptance_cases": [
+        "AT-033"
+      ]
+    },
+    {
+      "id": "P2-034",
+      "mandatory": true,
+      "work_package": "WP-11",
+      "status": "partial",
+      "evidence": "Undo/redo exists; compound semantic/layout transaction grouping remains.",
+      "acceptance_cases": [
+        "AT-034"
+      ]
+    },
+    {
+      "id": "P2-035",
+      "mandatory": true,
+      "work_package": "WP-11",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-035"
+      ]
+    },
+    {
+      "id": "P2-036",
+      "mandatory": true,
+      "work_package": "WP-11",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-036"
+      ]
+    },
+    {
+      "id": "P2-037",
+      "mandatory": true,
+      "work_package": "WP-12",
+      "status": "partial",
+      "evidence": "Graph sections and bounded loop nodes render; breadcrumbs/subworkflow views remain.",
+      "acceptance_cases": [
+        "AT-037"
+      ]
+    },
+    {
+      "id": "P2-038",
+      "mandatory": true,
+      "work_package": "WP-12",
+      "status": "partial",
+      "evidence": "Branch labels are rendered; typed guard editing remains.",
+      "acceptance_cases": [
+        "AT-038"
+      ]
+    },
+    {
+      "id": "P2-039",
+      "mandatory": true,
+      "work_package": "WP-12",
+      "status": "implemented",
+      "evidence": "docs/decisions/ADR-P2-006-adaptive-protection.md",
+      "acceptance_cases": [
+        "AT-039"
+      ]
+    },
+    {
+      "id": "P2-040",
+      "mandatory": true,
+      "work_package": "WP-13",
+      "status": "partial",
+      "evidence": "Config edits validate atomically on blur; raw invalid text preservation is incomplete.",
+      "acceptance_cases": [
+        "AT-040"
+      ]
+    },
+    {
+      "id": "P2-041",
+      "mandatory": true,
+      "work_package": "WP-13",
+      "status": "partial",
+      "evidence": "Redacted owner export exists; Studio bundle import/export remains.",
+      "acceptance_cases": [
+        "AT-041"
+      ]
+    },
+    {
+      "id": "P2-042",
+      "mandatory": true,
+      "work_package": "WP-13",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-042"
+      ]
+    },
+    {
+      "id": "P2-043",
+      "mandatory": true,
+      "work_package": "WP-14",
+      "status": "partial",
+      "evidence": "Protected command set and adaptive region gate exist; full policy editor remains.",
+      "acceptance_cases": [
+        "AT-043"
+      ]
+    },
+    {
+      "id": "P2-044",
+      "mandatory": true,
+      "work_package": "WP-14",
+      "status": "partial",
+      "evidence": "Adaptive authored region is protected; plan-layer projection is not exported.",
+      "acceptance_cases": [
+        "AT-044"
+      ]
+    },
+    {
+      "id": "P2-045",
+      "mandatory": true,
+      "work_package": "WP-14",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-045"
+      ]
+    },
+    {
+      "id": "P2-046",
+      "mandatory": true,
+      "work_package": "WP-15",
+      "status": "blocked",
+      "evidence": "Phase 1 has no draft persistence route.",
+      "acceptance_cases": [
+        "AT-046"
+      ]
+    },
+    {
+      "id": "P2-047",
+      "mandatory": true,
+      "work_package": "WP-15",
+      "status": "blocked",
+      "evidence": "Phase 1 has no conditional draft write route.",
+      "acceptance_cases": [
+        "AT-047"
+      ]
+    },
+    {
+      "id": "P2-048",
+      "mandatory": true,
+      "work_package": "WP-15",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-048"
+      ]
+    },
+    {
+      "id": "P2-049",
+      "mandatory": true,
+      "work_package": "WP-16",
+      "status": "implemented",
+      "evidence": "apps/studio/src/features/designer/DesignerView.tsx",
+      "acceptance_cases": [
+        "AT-049"
+      ]
+    },
+    {
+      "id": "P2-050",
+      "mandatory": true,
+      "work_package": "WP-16",
+      "status": "partial",
+      "evidence": "Capability-gated live saves are explicit; durable offline reconciliation is not admitted.",
+      "acceptance_cases": [
+        "AT-050"
+      ]
+    },
+    {
+      "id": "P2-051",
+      "mandatory": true,
+      "work_package": "WP-16",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-051"
+      ]
+    },
+    {
+      "id": "P2-052",
+      "mandatory": true,
+      "work_package": "WP-17",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-052"
+      ]
+    },
+    {
+      "id": "P2-053",
+      "mandatory": true,
+      "work_package": "WP-17",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-053"
+      ]
+    },
+    {
+      "id": "P2-054",
+      "mandatory": true,
+      "work_package": "WP-17",
+      "status": "partial",
+      "evidence": "Layout is excluded from semantic identity; conflict merge tooling remains.",
+      "acceptance_cases": [
+        "AT-054"
+      ]
+    },
+    {
+      "id": "P2-055",
+      "mandatory": true,
+      "work_package": "WP-18",
+      "status": "blocked",
+      "evidence": "Phase 1 has no publish route.",
+      "acceptance_cases": [
+        "AT-055"
+      ]
+    },
+    {
+      "id": "P2-056",
+      "mandatory": true,
+      "work_package": "WP-18",
+      "status": "blocked",
+      "evidence": "Phase 1 has no publication response contract.",
+      "acceptance_cases": [
+        "AT-056"
+      ]
+    },
+    {
+      "id": "P2-057",
+      "mandatory": true,
+      "work_package": "WP-18",
+      "status": "blocked",
+      "evidence": "Immutable published digest launch cannot be proven without publish admission.",
+      "acceptance_cases": [
+        "AT-057"
+      ]
+    },
+    {
+      "id": "P2-058",
+      "mandatory": true,
+      "work_package": "WP-19",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-058"
+      ]
+    },
+    {
+      "id": "P2-059",
+      "mandatory": true,
+      "work_package": "WP-19",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-059"
+      ]
+    },
+    {
+      "id": "P2-060",
+      "mandatory": true,
+      "work_package": "WP-19",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-060"
+      ]
+    },
+    {
+      "id": "P2-061",
+      "mandatory": true,
+      "work_package": "WP-20",
+      "status": "blocked",
+      "evidence": "Phase 1 has no browser pairing route.",
+      "acceptance_cases": [
+        "AT-061"
+      ]
+    },
+    {
+      "id": "P2-062",
+      "mandatory": true,
+      "work_package": "WP-20",
+      "status": "blocked",
+      "evidence": "Phase 1 has no browser session contract.",
+      "acceptance_cases": [
+        "AT-062"
+      ]
+    },
+    {
+      "id": "P2-063",
+      "mandatory": true,
+      "work_package": "WP-20",
+      "status": "blocked",
+      "evidence": "Static bundle builds locally; owner-host acceptance is unverified.",
+      "acceptance_cases": [
+        "AT-063"
+      ]
+    },
+    {
+      "id": "P2-064",
+      "mandatory": true,
+      "work_package": "WP-21",
+      "status": "blocked",
+      "evidence": "No browser attachment stream contract was admitted.",
+      "acceptance_cases": [
+        "AT-064"
+      ]
+    },
+    {
+      "id": "P2-065",
+      "mandatory": true,
+      "work_package": "WP-21",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-065"
+      ]
+    },
+    {
+      "id": "P2-066",
+      "mandatory": true,
+      "work_package": "WP-21",
+      "status": "blocked",
+      "evidence": "Polling is available through the client interface, but revocation is not admitted.",
+      "acceptance_cases": [
+        "AT-066"
+      ]
+    },
+    {
+      "id": "P2-067",
+      "mandatory": true,
+      "work_package": "WP-22",
+      "status": "implemented",
+      "evidence": "packages/client/src/index.ts and packages/client/src/index.test.ts",
+      "acceptance_cases": [
+        "AT-067"
+      ]
+    },
+    {
+      "id": "P2-068",
+      "mandatory": true,
+      "work_package": "WP-22",
+      "status": "implemented",
+      "evidence": "packages/client/src/index.ts and packages/client/src/index.test.ts",
+      "acceptance_cases": [
+        "AT-068"
+      ]
+    },
+    {
+      "id": "P2-069",
+      "mandatory": true,
+      "work_package": "WP-22",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-069"
+      ]
+    },
+    {
+      "id": "P2-070",
+      "mandatory": true,
+      "work_package": "WP-23",
+      "status": "implemented",
+      "evidence": "apps/studio/src/features/runs/RunsView.tsx",
+      "acceptance_cases": [
+        "AT-070"
+      ]
+    },
+    {
+      "id": "P2-071",
+      "mandatory": true,
+      "work_package": "WP-23",
+      "status": "blocked",
+      "evidence": "Plan detail route is not exported.",
+      "acceptance_cases": [
+        "AT-071"
+      ]
+    },
+    {
+      "id": "P2-072",
+      "mandatory": true,
+      "work_package": "WP-23",
+      "status": "blocked",
+      "evidence": "Artifact route is present but intentionally unavailable.",
+      "acceptance_cases": [
+        "AT-072"
+      ]
+    },
+    {
+      "id": "P2-073",
+      "mandatory": true,
+      "work_package": "WP-24",
+      "status": "implemented",
+      "evidence": "packages/client/src/index.ts and RunsView.tsx",
+      "acceptance_cases": [
+        "AT-073"
+      ]
+    },
+    {
+      "id": "P2-074",
+      "mandatory": true,
+      "work_package": "WP-24",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-074"
+      ]
+    },
+    {
+      "id": "P2-075",
+      "mandatory": true,
+      "work_package": "WP-24",
+      "status": "partial",
+      "evidence": "Unsupported controls are disabled by status; historical identity policy needs owner metadata.",
+      "acceptance_cases": [
+        "AT-075"
+      ]
+    },
+    {
+      "id": "P2-076",
+      "mandatory": true,
+      "work_package": "WP-25",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-076"
+      ]
+    },
+    {
+      "id": "P2-077",
+      "mandatory": true,
+      "work_package": "WP-25",
+      "status": "implemented",
+      "evidence": "apps/studio/src/features/replay/ReplayView.tsx",
+      "acceptance_cases": [
+        "AT-077"
+      ]
+    },
+    {
+      "id": "P2-078",
+      "mandatory": true,
+      "work_package": "WP-25",
+      "status": "partial",
+      "evidence": "Replay and self-compare are present; multi-run comparison remains.",
+      "acceptance_cases": [
+        "AT-078"
+      ]
+    },
+    {
+      "id": "P2-079",
+      "mandatory": true,
+      "work_package": "WP-26",
+      "status": "blocked",
+      "evidence": "Owner-side authz exists; browser object/session permission evidence is unavailable.",
+      "acceptance_cases": [
+        "AT-079"
+      ]
+    },
+    {
+      "id": "P2-080",
+      "mandatory": true,
+      "work_package": "WP-26",
+      "status": "blocked",
+      "evidence": "CSP/static host headers are outside this repository and not yet verified.",
+      "acceptance_cases": [
+        "AT-080"
+      ]
+    },
+    {
+      "id": "P2-081",
+      "mandatory": true,
+      "work_package": "WP-26",
+      "status": "implemented",
+      "evidence": "docs/decisions/ADR-P2-008-drafts-and-secrets.md",
+      "acceptance_cases": [
+        "AT-081"
+      ]
+    },
+    {
+      "id": "P2-082",
+      "mandatory": true,
+      "work_package": "WP-27",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-082"
+      ]
+    },
+    {
+      "id": "P2-083",
+      "mandatory": true,
+      "work_package": "WP-27",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-083"
+      ]
+    },
+    {
+      "id": "P2-084",
+      "mandatory": true,
+      "work_package": "WP-27",
+      "status": "partial",
+      "evidence": "Missing optional integrations are gated without breaking fixture core flows.",
+      "acceptance_cases": [
+        "AT-084"
+      ]
+    },
+    {
+      "id": "P2-085",
+      "mandatory": true,
+      "work_package": "WP-28",
+      "status": "implemented",
+      "evidence": "apps/studio/src/features/designer/DesignerView.tsx",
+      "acceptance_cases": [
+        "AT-085"
+      ]
+    },
+    {
+      "id": "P2-086",
+      "mandatory": true,
+      "work_package": "WP-28",
+      "status": "implemented",
+      "evidence": "apps/studio/src/styles.css and App.tsx",
+      "acceptance_cases": [
+        "AT-086"
+      ]
+    },
+    {
+      "id": "P2-087",
+      "mandatory": true,
+      "work_package": "WP-28",
+      "status": "partial",
+      "evidence": "Responsive narrow layout is present; theme/reduced-motion variants remain.",
+      "acceptance_cases": [
+        "AT-087"
+      ]
+    },
+    {
+      "id": "P2-088",
+      "mandatory": true,
+      "work_package": "WP-29",
+      "status": "partial",
+      "evidence": "Route and event page bounds are honored; worker/history quotas remain.",
+      "acceptance_cases": [
+        "AT-088"
+      ]
+    },
+    {
+      "id": "P2-089",
+      "mandatory": true,
+      "work_package": "WP-29",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-089"
+      ]
+    },
+    {
+      "id": "P2-090",
+      "mandatory": true,
+      "work_package": "WP-29",
+      "status": "implemented",
+      "evidence": "ReplayView.tsx and DesignerView.tsx cleanup paths",
+      "acceptance_cases": [
+        "AT-090"
+      ]
+    },
+    {
+      "id": "P2-091",
+      "mandatory": true,
+      "work_package": "WP-30",
+      "status": "blocked",
+      "evidence": "Real browser journey engines and attached owner process are not yet available.",
+      "acceptance_cases": [
+        "AT-091"
+      ]
+    },
+    {
+      "id": "P2-092",
+      "mandatory": true,
+      "work_package": "WP-30",
+      "status": "blocked",
+      "evidence": "Real forbidden/conflict/disconnected browser states need owner attachment.",
+      "acceptance_cases": [
+        "AT-092"
+      ]
+    },
+    {
+      "id": "P2-093",
+      "mandatory": true,
+      "work_package": "WP-30",
+      "status": "blocked",
+      "evidence": "Production static host CSP/routing acceptance is unverified.",
+      "acceptance_cases": [
+        "AT-093"
+      ]
+    },
+    {
+      "id": "P2-094",
+      "mandatory": true,
+      "work_package": "WP-31",
+      "status": "blocked",
+      "evidence": "Real strict/dynamic owner round-trip process evidence is not yet attached.",
+      "acceptance_cases": [
+        "AT-094"
+      ]
+    },
+    {
+      "id": "P2-095",
+      "mandatory": true,
+      "work_package": "WP-31",
+      "status": "blocked",
+      "evidence": "Durable browser/web attachment restart evidence is unavailable.",
+      "acceptance_cases": [
+        "AT-095"
+      ]
+    },
+    {
+      "id": "P2-096",
+      "mandatory": true,
+      "work_package": "WP-31",
+      "status": "blocked",
+      "evidence": "No actual accepted dynamic plan stream is exported.",
+      "acceptance_cases": [
+        "AT-096"
+      ]
+    },
+    {
+      "id": "P2-097",
+      "mandatory": true,
+      "work_package": "WP-32",
+      "status": "blocked",
+      "evidence": "Lost-save/publication/concurrent-editor owner contracts are unavailable.",
+      "acceptance_cases": [
+        "AT-097"
+      ]
+    },
+    {
+      "id": "P2-098",
+      "mandatory": true,
+      "work_package": "WP-32",
+      "status": "blocked",
+      "evidence": "Browser stream/revocation process evidence is unavailable.",
+      "acceptance_cases": [
+        "AT-098"
+      ]
+    },
+    {
+      "id": "P2-099",
+      "mandatory": true,
+      "work_package": "WP-32",
+      "status": "blocked",
+      "evidence": "Native server/adapter restart ownership evidence is unavailable.",
+      "acceptance_cases": [
+        "AT-099"
+      ]
+    },
+    {
+      "id": "P2-100",
+      "mandatory": true,
+      "work_package": "WP-33",
+      "status": "blocked",
+      "evidence": "Independent host auth/CSP review is pending.",
+      "acceptance_cases": [
+        "AT-100"
+      ]
+    },
+    {
+      "id": "P2-101",
+      "mandatory": true,
+      "work_package": "WP-33",
+      "status": "not_started",
+      "evidence": "No evidence recorded yet.",
+      "acceptance_cases": [
+        "AT-101"
+      ]
+    },
+    {
+      "id": "P2-102",
+      "mandatory": true,
+      "work_package": "WP-33",
+      "status": "blocked",
+      "evidence": "Readiness remains blocked until material security boundaries are verified.",
+      "acceptance_cases": [
+        "AT-102"
+      ]
+    },
+    {
+      "id": "P2-103",
+      "mandatory": true,
+      "work_package": "WP-34",
+      "status": "blocked",
+      "evidence": "Required screenshot matrix has not been run against a served build.",
+      "acceptance_cases": [
+        "AT-103"
+      ]
+    },
+    {
+      "id": "P2-104",
+      "mandatory": true,
+      "work_package": "WP-34",
+      "status": "blocked",
+      "evidence": "Manual screen-reader/pointer assessment is pending.",
+      "acceptance_cases": [
+        "AT-104"
+      ]
+    },
+    {
+      "id": "P2-105",
+      "mandatory": true,
+      "work_package": "WP-34",
+      "status": "blocked",
+      "evidence": "Exact screenshot review is pending.",
+      "acceptance_cases": [
+        "AT-105"
+      ]
+    },
+    {
+      "id": "P2-106",
+      "mandatory": true,
+      "work_package": "WP-35",
+      "status": "blocked",
+      "evidence": "Checksums exist locally after build; SBOM/license bundle is not yet generated.",
+      "acceptance_cases": [
+        "AT-106"
+      ]
+    },
+    {
+      "id": "P2-107",
+      "mandatory": true,
+      "work_package": "WP-35",
+      "status": "blocked",
+      "evidence": "Harness static hosting acceptance is pending.",
+      "acceptance_cases": [
+        "AT-107"
+      ]
+    },
+    {
+      "id": "P2-108",
+      "mandatory": true,
+      "work_package": "WP-35",
+      "status": "implemented",
+      "evidence": "docs/operations/RUNBOOK.md and DEVELOPMENT.md",
+      "acceptance_cases": [
+        "AT-108"
+      ]
+    },
+    {
+      "id": "P2-109",
+      "mandatory": true,
+      "work_package": "WP-36",
+      "status": "blocked",
+      "evidence": "Support docs are partial pending owner pairing/draft/publish contracts.",
+      "acceptance_cases": [
+        "AT-109"
+      ]
+    },
+    {
+      "id": "P2-110",
+      "mandatory": true,
+      "work_package": "WP-36",
+      "status": "blocked",
+      "evidence": "Additive owner changes and rollback compatibility are not admitted.",
+      "acceptance_cases": [
+        "AT-110"
+      ]
+    },
+    {
+      "id": "P2-111",
+      "mandatory": true,
+      "work_package": "WP-36",
+      "status": "implemented",
+      "evidence": "docs/architecture/phase1-integration.md and this ledger",
+      "acceptance_cases": [
+        "AT-111"
+      ]
+    },
+    {
+      "id": "P2-112",
+      "mandatory": true,
+      "work_package": "WP-37",
+      "status": "blocked",
+      "evidence": "CI workflow is not configured in this initial delivery.",
+      "acceptance_cases": [
+        "AT-112"
+      ]
+    },
+    {
+      "id": "P2-113",
+      "mandatory": true,
+      "work_package": "WP-37",
+      "status": "blocked",
+      "evidence": "Generated client regeneration is not configured.",
+      "acceptance_cases": [
+        "AT-113"
+      ]
+    },
+    {
+      "id": "P2-114",
+      "mandatory": true,
+      "work_package": "WP-37",
+      "status": "blocked",
+      "evidence": "CI evidence is not configured.",
+      "acceptance_cases": [
+        "AT-114"
+      ]
+    },
+    {
+      "id": "P2-115",
+      "mandatory": true,
+      "work_package": "WP-38",
+      "status": "blocked",
+      "evidence": "Final combined source-head verification remains.",
+      "acceptance_cases": [
+        "AT-115"
+      ]
+    },
+    {
+      "id": "P2-116",
+      "mandatory": true,
+      "work_package": "WP-38",
+      "status": "blocked",
+      "evidence": "The ledger exists, but unresolved mandatory entries remain.",
+      "acceptance_cases": [
+        "AT-116"
+      ]
+    },
+    {
+      "id": "P2-117",
+      "mandatory": true,
+      "work_package": "WP-38",
+      "status": "blocked",
+      "evidence": "Native lineage/model and worker closure evidence is unavailable.",
+      "acceptance_cases": [
+        "AT-117"
+      ]
+    },
+    {
+      "id": "P2-118",
+      "mandatory": true,
+      "work_package": "WP-39",
+      "status": "blocked",
+      "evidence": "Draft PR delivery is pending after final verification.",
+      "acceptance_cases": [
+        "AT-118"
+      ]
+    },
+    {
+      "id": "P2-119",
+      "mandatory": true,
+      "work_package": "WP-39",
+      "status": "blocked",
+      "evidence": "Final report is pending completion of the remaining gates.",
+      "acceptance_cases": [
+        "AT-119"
+      ]
+    },
+    {
+      "id": "P2-120",
+      "mandatory": true,
+      "work_package": "WP-39",
+      "status": "implemented",
+      "evidence": "docs/operations/RUNBOOK.md and this ledger",
+      "acceptance_cases": [
+        "AT-120"
+      ]
+    }
+  ]
+}

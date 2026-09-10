@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "status": "not_recorded",
+  "actor": null,
+  "allowed_repositories": [],
+  "repository_creation": null,
+  "new_repository_visibility": null,
+  "source_edits": null,
+  "branches_commits_pushes_draft_prs": null,
+  "loopback_synthetic_tests": null,
+  "native_game_tests": false,
+  "provider_calls": false,
+  "deploy": false,
+  "merge": false,
+  "remote_listeners": false,
+  "evidence_refs": []
+}

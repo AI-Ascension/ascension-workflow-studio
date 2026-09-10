@@ -1,0 +1,725 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "FLT-001",
+      "work_package": "WP-20",
+      "title": "Expired pairing code",
+      "stimulus": "Exchange after its configured expiry.",
+      "required_observation": "No session issued; safe typed denial; code not logged.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-061",
+        "AT-062",
+        "AT-063"
+      ]
+    },
+    {
+      "id": "FLT-002",
+      "work_package": "WP-20",
+      "title": "Pairing replay race",
+      "stimulus": "Submit the same one-time code concurrently.",
+      "required_observation": "At most one session exchange succeeds; no duplicate grant.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-061",
+        "AT-062",
+        "AT-063"
+      ]
+    },
+    {
+      "id": "FLT-003",
+      "work_package": "WP-20",
+      "title": "Pairing scope escalation",
+      "stimulus": "Request publisher/operator scope beyond the issuing actor.",
+      "required_observation": "Server denies expansion; UI cannot self-grant.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-061",
+        "AT-062",
+        "AT-063"
+      ]
+    },
+    {
+      "id": "FLT-004",
+      "work_package": "WP-20",
+      "title": "Hostile Origin",
+      "stimulus": "Send browser writes from a different origin.",
+      "required_observation": "Reject before authoring/runtime effect; no wildcard CORS.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-061",
+        "AT-062",
+        "AT-063"
+      ]
+    },
+    {
+      "id": "FLT-005",
+      "work_package": "WP-20",
+      "title": "DNS rebinding Host",
+      "stimulus": "Reach loopback with a hostile Host header.",
+      "required_observation": "Reject unconfigured host; no sensitive read or session grant.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-061",
+        "AT-062",
+        "AT-063"
+      ]
+    },
+    {
+      "id": "FLT-006",
+      "work_package": "WP-20",
+      "title": "Null/missing browser origin",
+      "stimulus": "Submit browser-session writes without approved origin context.",
+      "required_observation": "Follow explicit fail-closed browser policy without weakening CLI auth.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-061",
+        "AT-062",
+        "AT-063"
+      ]
+    },
+    {
+      "id": "FLT-007",
+      "work_package": "WP-26",
+      "title": "Forged viewer control",
+      "stimulus": "Send an operate command directly as a viewer.",
+      "required_observation": "Server denies independently of disabled buttons.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-079",
+        "AT-080",
+        "AT-081"
+      ]
+    },
+    {
+      "id": "FLT-008",
+      "work_package": "WP-26",
+      "title": "Cross-resource access",
+      "stimulus": "Replace run/draft/artifact ID with an unauthorized resource.",
+      "required_observation": "No read, mutation or identifying sensitive detail returned.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-079",
+        "AT-080",
+        "AT-081"
+      ]
+    },
+    {
+      "id": "FLT-009",
+      "work_package": "WP-20",
+      "title": "Revoked active stream",
+      "stimulus": "Revoke session while subscribed.",
+      "required_observation": "Stop data/new requests promptly; accepted workflow continues.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-061",
+        "AT-062",
+        "AT-063"
+      ]
+    },
+    {
+      "id": "FLT-010",
+      "work_package": "WP-16",
+      "title": "Expired session during autosave",
+      "stimulus": "Expire before a dirty save is admitted.",
+      "required_observation": "Preserve local edits; no saved badge or silent reauthorization.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-049",
+        "AT-050",
+        "AT-051"
+      ]
+    },
+    {
+      "id": "FLT-011",
+      "work_package": "WP-26",
+      "title": "Malicious label/notes",
+      "stimulus": "Import HTML/SVG/script-like labels, notes and errors.",
+      "required_observation": "Render inert text; no execution or remote asset load.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-079",
+        "AT-080",
+        "AT-081"
+      ]
+    },
+    {
+      "id": "FLT-012",
+      "work_package": "WP-13",
+      "title": "Duplicate JSON keys",
+      "stimulus": "Import a document containing two same-name semantic keys.",
+      "required_observation": "Reject before lossy ordinary JSON decoding admits it.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-040",
+        "AT-041",
+        "AT-042"
+      ]
+    },
+    {
+      "id": "FLT-013",
+      "work_package": "WP-13",
+      "title": "Oversized/deep import",
+      "stimulus": "Exceed admitted bytes/depth/nodes/label limits.",
+      "required_observation": "Bounded rejection without frozen browser or memory explosion.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-040",
+        "AT-041",
+        "AT-042"
+      ]
+    },
+    {
+      "id": "FLT-014",
+      "work_package": "WP-26",
+      "title": "Prototype pollution",
+      "stimulus": "Supply __proto__/constructor/prototype merge-shaped keys.",
+      "required_observation": "No object-prototype change or execution-policy mutation.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-079",
+        "AT-080",
+        "AT-081"
+      ]
+    },
+    {
+      "id": "FLT-015",
+      "work_package": "WP-13",
+      "title": "Future schema version",
+      "stimulus": "Open a definition with an unsupported schema.",
+      "required_observation": "Read-only original-byte archival; no strip-and-publish.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-040",
+        "AT-041",
+        "AT-042"
+      ]
+    },
+    {
+      "id": "FLT-016",
+      "work_package": "WP-07",
+      "title": "Array-order normalization",
+      "stimulus": "Change visual layout with ordered branch arrays.",
+      "required_observation": "Owner semantics and digest stay unchanged.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-022",
+        "AT-023",
+        "AT-024"
+      ]
+    },
+    {
+      "id": "FLT-017",
+      "work_package": "WP-05",
+      "title": "Layout authority injection",
+      "stimulus": "Place guard, policy, cursor or live status into sidecar.",
+      "required_observation": "Reject forbidden sidecar fields; never read for execution.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-016",
+        "AT-017",
+        "AT-018"
+      ]
+    },
+    {
+      "id": "FLT-018",
+      "work_package": "WP-05",
+      "title": "Dangling layout binding",
+      "stimulus": "Reference a nonexistent graph/node or wrong artifact SHA.",
+      "required_observation": "Repair/reject layout explicitly without altering definition.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-016",
+        "AT-017",
+        "AT-018"
+      ]
+    },
+    {
+      "id": "FLT-019",
+      "work_package": "WP-11",
+      "title": "Clipboard ID collision",
+      "stimulus": "Paste same nested selection twice with internal/external refs.",
+      "required_observation": "Fresh local IDs, valid remapped refs and unchanged pinned externals.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-034",
+        "AT-035",
+        "AT-036"
+      ]
+    },
+    {
+      "id": "FLT-020",
+      "work_package": "WP-15",
+      "title": "Lost draft save response",
+      "stimulus": "Commit save then drop response.",
+      "required_observation": "Original save can resolve; no silent overwrite/new conflicting save.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-046",
+        "AT-047",
+        "AT-048"
+      ]
+    },
+    {
+      "id": "FLT-021",
+      "work_package": "WP-16",
+      "title": "Stale autosave reply",
+      "stimulus": "Deliver old response after later edit/save.",
+      "required_observation": "Latest local dirty revision remains correct.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-049",
+        "AT-050",
+        "AT-051"
+      ]
+    },
+    {
+      "id": "FLT-022",
+      "work_package": "WP-17",
+      "title": "Parallel editor conflict",
+      "stimulus": "Two tabs save different guards from the same base.",
+      "required_observation": "One conditional write conflicts; no last-write-wins.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-052",
+        "AT-053",
+        "AT-054"
+      ]
+    },
+    {
+      "id": "FLT-023",
+      "work_package": "WP-17",
+      "title": "Delete-versus-edit conflict",
+      "stimulus": "Remote deletes a node while local edits a binding to it.",
+      "required_observation": "Explicit semantic conflict with preserved local/base/remote.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-052",
+        "AT-053",
+        "AT-054"
+      ]
+    },
+    {
+      "id": "FLT-024",
+      "work_package": "WP-15",
+      "title": "Store write failure",
+      "stimulus": "Inject full disk or transactional failure on draft save.",
+      "required_observation": "No partially saved document/layout or false success.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-046",
+        "AT-047",
+        "AT-048"
+      ]
+    },
+    {
+      "id": "FLT-025",
+      "work_package": "WP-16",
+      "title": "Recovery buffer quota",
+      "stimulus": "Exhaust opt-in local recovery storage.",
+      "required_observation": "Show unsynced/limited recovery without losing current in-memory draft.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-049",
+        "AT-050",
+        "AT-051"
+      ]
+    },
+    {
+      "id": "FLT-026",
+      "work_package": "WP-18",
+      "title": "Validation stale on publish",
+      "stimulus": "Edit or change policy/registry after validation.",
+      "required_observation": "Backend rechecks exact candidate; stale approval not reused.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-055",
+        "AT-056",
+        "AT-057"
+      ]
+    },
+    {
+      "id": "FLT-027",
+      "work_package": "WP-18",
+      "title": "Lost publication/start response",
+      "stimulus": "Accept request and drop result.",
+      "required_observation": "Resolve stable identity; no duplicate published version/run.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-055",
+        "AT-056",
+        "AT-057"
+      ]
+    },
+    {
+      "id": "FLT-028",
+      "work_package": "WP-18",
+      "title": "Capability revoked before launch",
+      "stimulus": "Remove required capability or permission after dialog opens.",
+      "required_observation": "Fail current admission; no old confirmation bypass.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-055",
+        "AT-056",
+        "AT-057"
+      ]
+    },
+    {
+      "id": "FLT-029",
+      "work_package": "WP-24",
+      "title": "Double click and Strict Mode",
+      "stimulus": "Duplicate handler effects/remount plus network delivery.",
+      "required_observation": "One deliberate command identity; no duplicate gameplay effect.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-073",
+        "AT-074",
+        "AT-075"
+      ]
+    },
+    {
+      "id": "FLT-030",
+      "work_package": "WP-24",
+      "title": "Same command ID different payload",
+      "stimulus": "Replay command ID with changed kind/params.",
+      "required_observation": "Typed conflict; original outcome unchanged.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-073",
+        "AT-074",
+        "AT-075"
+      ]
+    },
+    {
+      "id": "FLT-031",
+      "work_package": "WP-24",
+      "title": "Lost accepted command result",
+      "stimulus": "Timeout after command admission.",
+      "required_observation": "Show uncertainty/checking and lookup original; no new-ID resend.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-073",
+        "AT-074",
+        "AT-075"
+      ]
+    },
+    {
+      "id": "FLT-032",
+      "work_package": "WP-24",
+      "title": "Revision changes during confirm",
+      "stimulus": "Another operator changes run before confirmation.",
+      "required_observation": "Reject/refresh; do not auto-upgrade revision and execute old intent.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-073",
+        "AT-074",
+        "AT-075"
+      ]
+    },
+    {
+      "id": "FLT-033",
+      "work_package": "WP-24",
+      "title": "Step while operation unknown",
+      "stimulus": "Attempt single-step during unresolved mutation.",
+      "required_observation": "No new mutation; owner recovery semantics preserved.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-073",
+        "AT-074",
+        "AT-075"
+      ]
+    },
+    {
+      "id": "FLT-034",
+      "work_package": "WP-24",
+      "title": "Control from history",
+      "stimulus": "Attempt live commands while inspecting old recorded cursor.",
+      "required_observation": "Historical UI and server/command controller prohibit invalid control.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-073",
+        "AT-074",
+        "AT-075"
+      ]
+    },
+    {
+      "id": "FLT-035",
+      "work_package": "WP-21",
+      "title": "Chunk-split event frames",
+      "stimulus": "Split UTF-8, CRLF, SSE data/id and JSON across arbitrary chunks.",
+      "required_observation": "Only complete bounded matching events applied.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-064",
+        "AT-065",
+        "AT-066"
+      ]
+    },
+    {
+      "id": "FLT-036",
+      "work_package": "WP-22",
+      "title": "Duplicate/conflicting event",
+      "stimulus": "Repeat same ID/sequence, then conflicting payload.",
+      "required_observation": "Exact duplicate ignored; conflict quarantines/resnapshots.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-067",
+        "AT-068",
+        "AT-069"
+      ]
+    },
+    {
+      "id": "FLT-037",
+      "work_package": "WP-22",
+      "title": "Event retention gap",
+      "stimulus": "Ask after an expired cursor or miss a required range.",
+      "required_observation": "Explicit stale/resnapshot; no fabricated progress.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-067",
+        "AT-068",
+        "AT-069"
+      ]
+    },
+    {
+      "id": "FLT-038",
+      "work_package": "WP-22",
+      "title": "Authorized filtered cursor",
+      "stimulus": "Use admitted noncontiguous permission-projected event cursor.",
+      "required_observation": "Honor owner projection semantics, not false gap assumptions.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-067",
+        "AT-068",
+        "AT-069"
+      ]
+    },
+    {
+      "id": "FLT-039",
+      "work_package": "WP-21",
+      "title": "Snapshot-subscribe race",
+      "stimulus": "Commit events between snapshot and stream start.",
+      "required_observation": "Watermark protocol yields complete consistent projection.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-064",
+        "AT-065",
+        "AT-066"
+      ]
+    },
+    {
+      "id": "FLT-040",
+      "work_package": "WP-22",
+      "title": "Slow client overflow",
+      "stimulus": "Flood one slow subscriber while owner keeps running.",
+      "required_observation": "Bound buffers, resnapshot client; do not block gameplay.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-067",
+        "AT-068",
+        "AT-069"
+      ]
+    },
+    {
+      "id": "FLT-041",
+      "work_package": "WP-22",
+      "title": "Wrong run/digest event",
+      "stimulus": "Inject valid-shaped event for another run or definition.",
+      "required_observation": "Reject/quarantine; no overlay contamination.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-067",
+        "AT-068",
+        "AT-069"
+      ]
+    },
+    {
+      "id": "FLT-042",
+      "work_package": "WP-22",
+      "title": "Server/authority change",
+      "stimulus": "Reconnect to changed server identity or epoch.",
+      "required_observation": "Clear stale scope, re-admit compatibility and authority.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-067",
+        "AT-068",
+        "AT-069"
+      ]
+    },
+    {
+      "id": "FLT-043",
+      "work_package": "WP-29",
+      "title": "Obsolete worker result",
+      "stimulus": "Return layout/lint job after a newer document edit.",
+      "required_observation": "Discard stale result; no overwrite or stale valid badge.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-088",
+        "AT-089",
+        "AT-090"
+      ]
+    },
+    {
+      "id": "FLT-044",
+      "work_package": "WP-26",
+      "title": "Artifact redirect/traversal",
+      "stimulus": "Request arbitrary path or hostile trace redirect.",
+      "required_observation": "Owner allowlist denies; no file/token disclosure.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-079",
+        "AT-080",
+        "AT-081"
+      ]
+    },
+    {
+      "id": "FLT-045",
+      "work_package": "WP-31",
+      "title": "Browser/web adapter exit",
+      "stimulus": "Close tab and restart static adapter during an accepted run.",
+      "required_observation": "Run stays Phase-1 owned; reattach without replacement start.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-094",
+        "AT-095",
+        "AT-096"
+      ]
+    },
+    {
+      "id": "FLT-046",
+      "work_package": "WP-25",
+      "title": "Redacted replay material",
+      "stimulus": "Replay with missing approved decisions or retention.",
+      "required_observation": "Unavailable/divergence is explicit; zero live effects.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-076",
+        "AT-077",
+        "AT-078"
+      ]
+    },
+    {
+      "id": "FLT-047",
+      "work_package": "WP-14",
+      "title": "Plan supersession and mutation proposal",
+      "stimulus": "Receive superseded analysis plus forbidden mutation plan.",
+      "required_observation": "Read-only plan states; backend rejection preserved, no live edit.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-043",
+        "AT-044",
+        "AT-045"
+      ]
+    },
+    {
+      "id": "FLT-048",
+      "work_package": "WP-35",
+      "title": "Bundle tamper or schema mismatch",
+      "stimulus": "Alter static manifest hash or use incompatible API/registry.",
+      "required_observation": "Admission fails visibly; no unsafe fallback or arbitrary files served.",
+      "mandatory": true,
+      "status": "not_run",
+      "scope": "authorized isolated synthetic/real-owner-boundary test; no external attack targets",
+      "related_acceptance_cases": [
+        "AT-106",
+        "AT-107",
+        "AT-108"
+      ]
+    }
+  ]
+}

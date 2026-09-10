@@ -1,0 +1,53 @@
+{
+  "schema_version": "ascension.workflow/v1",
+  "workflow_id": "sts2.recovery.strict",
+  "version": "0.1.0",
+  "mode": "strict",
+  "game_profile": "sts2-synthetic-v1",
+  "policy_ref": "sts2.fair-play.v1",
+  "capabilities": {
+    "required": [
+      "observe.fair-play.v1",
+      "actions.catalog.v1",
+      "authority.generation-fence.v1",
+      "operations.reconcile.v1"
+    ],
+    "optional": ["actions.settlement.v1"]
+  },
+  "limits": {
+    "max_steps": 12,
+    "max_subworkflow_depth": 1,
+    "max_provider_calls": 0,
+    "max_parallel_analyses": 1,
+    "max_output_tokens": 0
+  },
+  "entry_graph": "main",
+  "graphs": [
+    {
+      "id": "main",
+      "entry_node": "initial_observe",
+      "nodes": [
+        {"id": "initial_observe", "kind": "observe", "config": {"projection_ref": "sts2.recovery.fair-play.v1"}},
+        {"id": "await_stability", "kind": "await_stability", "config": {"deadline_ms": 5000}},
+        {"id": "reobserve", "kind": "observe", "config": {"projection_ref": "sts2.recovery.fair-play.v1"}},
+        {"id": "completed", "kind": "terminal", "config": {"outcome": "completed"}},
+        {"id": "blocked", "kind": "terminal", "config": {"outcome": "needs_operator"}}
+      ],
+      "edges": [
+        {"from": "initial_observe", "to": "await_stability", "on": "ok", "priority": 0},
+        {"from": "initial_observe", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "initial_observe", "to": "blocked", "on": "unavailable", "priority": 0},
+        {"from": "await_stability", "to": "reobserve", "on": "ok", "priority": 0},
+        {"from": "await_stability", "to": "blocked", "on": "timeout", "priority": 0},
+        {"from": "await_stability", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "reobserve", "to": "completed", "on": "ok", "priority": 0},
+        {"from": "reobserve", "to": "blocked", "on": "error", "priority": 0},
+        {"from": "reobserve", "to": "blocked", "on": "unavailable", "priority": 0}
+      ]
+    }
+  ],
+  "annotations": {
+    "summary": "Bounded read-only recovery reobserves and waits for stability; unknown authority stops at needs_operator.",
+    "synthetic": true
+  }
+}

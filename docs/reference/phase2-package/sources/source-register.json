@@ -1,0 +1,91 @@
+{
+  "schema_version": 1,
+  "prepared_on": "2026-09-09",
+  "phase1_status": "assumed_implemented_by_user_not_independently_attested_here",
+  "phase1_zip_sha256": "e447bc09d82498413dc949adb7d059901c63ca4eab26d629414dd9d65d619566",
+  "sources": [
+    {
+      "id": "S01",
+      "title": "React Flow accessibility",
+      "url": "https://reactflow.dev/learn/advanced-use/accessibility",
+      "accessed": "2026-09-09",
+      "kind": "primary_documentation"
+    },
+    {
+      "id": "S02",
+      "title": "React Flow save and restore",
+      "url": "https://reactflow.dev/examples/interaction/save-and-restore",
+      "accessed": "2026-09-09",
+      "kind": "primary_documentation"
+    },
+    {
+      "id": "S03",
+      "title": "W3C dragging movements",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html",
+      "accessed": "2026-09-09",
+      "kind": "primary_documentation"
+    },
+    {
+      "id": "S04",
+      "title": "Playwright accessibility testing",
+      "url": "https://playwright.dev/docs/accessibility-testing",
+      "accessed": "2026-09-09",
+      "kind": "primary_documentation"
+    },
+    {
+      "id": "S05",
+      "title": "W3C target size minimum",
+      "url": "https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html",
+      "accessed": "2026-09-09",
+      "kind": "primary_documentation"
+    },
+    {
+      "id": "S06",
+      "title": "WHATWG SSE",
+      "url": "https://html.spec.whatwg.org/multipage/server-sent-events.html",
+      "accessed": "2026-09-09",
+      "kind": "primary_documentation"
+    },
+    {
+      "id": "S07",
+      "title": "OWASP CSRF prevention",
+      "url": "https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html",
+      "accessed": "2026-09-09",
+      "kind": "primary_documentation"
+    },
+    {
+      "id": "S08",
+      "title": "RFC 9110 HTTP semantics",
+      "url": "https://www.rfc-editor.org/rfc/rfc9110.html#section-13.1.1",
+      "accessed": "2026-09-09",
+      "kind": "primary_documentation"
+    },
+    {
+      "id": "S09",
+      "title": "OpenAI GPT-5.6 Luna",
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.6-luna",
+      "accessed": "2026-09-09",
+      "kind": "primary_documentation"
+    },
+    {
+      "id": "S10",
+      "title": "OpenAI Codex configuration reference",
+      "url": "https://developers.openai.com/codex/config-reference/",
+      "accessed": "2026-09-09",
+      "kind": "primary_documentation"
+    },
+    {
+      "id": "S11",
+      "title": "OpenAI Codex subagents",
+      "url": "https://developers.openai.com/codex/subagents/",
+      "accessed": "2026-09-09",
+      "kind": "primary_documentation"
+    }
+  ],
+  "github_observation": {
+    "id": "G01",
+    "query": "org:AI-Ascension ascension-workflow",
+    "matches_returned": 0,
+    "limitation": "Search outcome only; not proof of absence; exact repositories/artifacts must be resolved at execution."
+  }
+}

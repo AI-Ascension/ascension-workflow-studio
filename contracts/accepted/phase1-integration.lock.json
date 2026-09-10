@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "status": "admitted_with_capability_gates",
+  "assumption": "phase1_implemented",
+  "target_repository": "AI-Ascension/ascension-workflow-studio",
+  "runtime_authority": "AI-Ascension/sts2-harness",
+  "source_heads": [
+    { "repository": "AI-Ascension/sts2-harness", "merge_commit": "eb0a10f485f28a3f5bf98d1e01c186014414206f", "merged_pr": 52 },
+    { "repository": "AI-Ascension/sts2-gateway", "merge_commit": "9f1531b2292e6de7bbe821bf9e1569fa63ecffcf", "merged_pr": 36 },
+    { "repository": "AI-Ascension/sts2-mcp-server", "merge_commit": "a6b9215db1ddeeddabe4c111ed3b49476fb86e54", "merged_pr": 37 },
+    { "repository": "AI-Ascension/ascension-workflow", "merge_commit": "45341c7bdfa8d51eb6b52aec1ccc5b9f1a73a688", "merged_pr": 2 }
+  ],
+  "consumed_artifacts": [
+    { "path": "contracts/accepted/phase1/workflow-v1.schema.json", "sha256": "f8f79e115cd3bd736125ad17e33676bfe110f8a1b2673577cbbe93f1d5cc937d" },
+    { "path": "contracts/accepted/phase1/artifact/manifest.json", "sha256": "930e2c889725bfaf59ba792ed2de55c5a35b3c04f60ca8ab63f8c47efbb51a86" },
+    { "path": "contracts/accepted/phase1/artifact/canonical-vectors.json", "sha256": "dd0c29102af1728d4977a7c36b94e4c37fb9bc8ba7cbd36de3905ab8bae96c27" },
+    { "path": "contracts/accepted/phase1/conformance/valid-strict.json", "sha256": "608f731b59cedbf4ff7006b142a9b130205f3d5486ab47451c7afd5db00ccb00" }
+  ],
+  "owner_source_digests": [
+    { "repository": "AI-Ascension/sts2-harness", "path": "crates/harness/src/management/http_routes.rs", "sha256": "8be1c446de20553c5281ded4894feceab1e19407bb2f3a836c45e62119b86313" },
+    { "repository": "AI-Ascension/sts2-harness", "path": "crates/harness/src/management/contract_commands.rs", "sha256": "ed22062cacbf4ac683c071660c04b6f09fbeccd5648ce1e1e1c45ce9f0cfeef9" },
+    { "repository": "AI-Ascension/sts2-harness", "path": "crates/harness/src/management/contract_types.rs", "sha256": "35acd831a6209e67e5dc86b48f2b3b288ddde48d01648b91bfe45ba3258cb76b" },
+    { "repository": "AI-Ascension/sts2-harness", "path": "crates/harness/src/management/contract_json.rs", "sha256": "56e79160a255e2c442659b245e4470c8f2c0a1a84282753e9eac6a052110fed9" }
+  ],
+  "operations": [
+    { "logical_name": "capabilities.read", "route": "GET /v1/capabilities", "status": "admitted", "notes": "Authenticated; response is owner capability JSON." },
+    { "logical_name": "node_registry.read", "route": null, "status": "gated", "notes": "No registry route; Studio palette is bounded to admitted catalog metadata." },
+    { "logical_name": "definition.read", "route": null, "status": "static_catalog_only", "notes": "Checked-in catalog is pinned; no owner definition-list route." },
+    { "logical_name": "definition.validate", "route": "POST /v1/workflow-definitions/validate", "status": "admitted" },
+    { "logical_name": "definition.inspect", "route": "POST /v1/workflow-definitions/inspect", "status": "admitted" },
+    { "logical_name": "definition.diff", "route": "POST /v1/workflow-definitions/diff", "status": "admitted" },
+    { "logical_name": "definition.publish", "route": null, "status": "gated", "notes": "No publish route is exported." },
+    { "logical_name": "draft.read", "route": null, "status": "gated", "notes": "Studio keeps fixture drafts in the active adapter; live persistence requires an owner projection." },
+    { "logical_name": "draft.save", "route": null, "status": "gated", "notes": "Live autosave returns a typed capability gate." },
+    { "logical_name": "draft.save_status", "route": null, "status": "gated" },
+    { "logical_name": "run.start", "route": "POST /v1/workflow-runs", "status": "admitted" },
+    { "logical_name": "run.snapshot", "route": "GET /v1/workflow-runs/:run_id", "status": "admitted" },
+    { "logical_name": "run.events", "route": "GET /v1/workflow-runs/:run_id/events", "status": "admitted", "notes": "Bounded paged event contract; no browser stream route." },
+    { "logical_name": "run.command", "route": "POST /v1/workflow-runs/:run_id/commands", "status": "admitted", "notes": "Expected revision and stable command ID required." },
+    { "logical_name": "run.command_status", "route": null, "status": "gated", "notes": "No standalone lookup route; response is returned by command admission." },
+    { "logical_name": "run.history", "route": "POST /v1/workflow-runs/:run_id/export", "status": "admitted", "notes": "Redacted export only." },
+    { "logical_name": "run.offline_replay", "route": "POST /v1/workflow-runs/:run_id/replay", "status": "admitted" },
+    { "logical_name": "plan.read", "route": null, "status": "gated" },
+    { "logical_name": "artifact.read", "route": "GET /v1/workflow-runs/:run_id/artifacts/:artifact_id", "status": "route_unavailable", "notes": "Owner route deliberately returns artifact_port_unavailable until injection." },
+    { "logical_name": "session.pair", "route": null, "status": "gated", "notes": "Studio uses an in-memory bearer token; pairing is not exported." },
+    { "logical_name": "session.revoke", "route": null, "status": "gated" },
+    { "logical_name": "catalog.read", "route": null, "status": "pinned_static_artifact" }
+  ],
+  "browser_adapter": {
+    "status": "not_admitted",
+    "route_base": "/v1",
+    "cors": "same_origin_only",
+    "token_storage": "memory_only",
+    "notes": "No additive harness browser adapter was introduced in this slice; client capability gates remain explicit."
+  },
+  "native_hierarchy": {
+    "status": "blocked_in_runtime",
+    "required": "D0 -> D1 -> D2 -> D3 Luna Max child sessions",
+    "evidence": "The available session exposed no callable child-session API; no fake subprocess or attestation was created."
+  }
+}

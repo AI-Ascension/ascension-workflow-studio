@@ -1,0 +1,600 @@
+import {
+  CapabilityResponseSchema,
+  CommandResponseSchema,
+  DefinitionRecordSchema,
+  DiffResponseSchema,
+  DraftRecordSchema,
+  ErrorResponseSchema,
+  EventPageSchema,
+  ExportResponseSchema,
+  HealthResponseSchema,
+  InspectResponseSchema,
+  ReplayResponseSchema,
+  RunEventSchema,
+  RunSnapshotSchema,
+  RunSubmissionResponseSchema,
+  StatusResponseSchema,
+  ValidateResponseSchema,
+  WorkflowDefinitionSchema,
+  decodeWith,
+  type CapabilityResponse,
+  type CommandKind,
+  type CommandResponse,
+  type DefinitionRecord,
+  type DraftRecord,
+  type EventPage,
+  type ExportResponse,
+  type InspectResponse,
+  type JsonValue,
+  type ReplayResponse,
+  type RunEvent,
+  type RunSnapshot,
+  type RunSubmissionResponse,
+  type StatusResponse,
+  type ValidateResponse,
+  type WorkflowDefinition,
+} from "@studio/contracts";
+import { canonicalJson, cloneDocument, semanticDigest } from "@studio/document";
+
+export type ClientMode = "fixture" | "live";
+
+export interface DraftWrite {
+  draftId: string;
+  definitionId: string;
+  revision: number;
+  etag: string;
+  document: WorkflowDefinition;
+}
+
+export interface StudioClient {
+  readonly mode: ClientMode;
+  listDefinitions(): Promise<DefinitionRecord[]>;
+  getDraft(draftId: string): Promise<DraftRecord | undefined>;
+  saveDraft(write: DraftWrite): Promise<DraftRecord>;
+  health(): Promise<{ status: string }>;
+  capabilities(): Promise<CapabilityResponse>;
+  validate(definition: WorkflowDefinition): Promise<ValidateResponse>;
+  inspect(definition: WorkflowDefinition): Promise<InspectResponse>;
+  diff(oldDefinition: WorkflowDefinition, newDefinition: WorkflowDefinition): Promise<{
+    old_definition_digest: string;
+    new_definition_digest: string;
+    semantic_change: boolean;
+    changed_paths: string[];
+  }>;
+  submitRun(definition: WorkflowDefinition, instanceId: string, profile: string): Promise<RunSubmissionResponse>;
+  status(runId: string): Promise<StatusResponse>;
+  events(runId: string, afterSequence: number, limit?: number): Promise<EventPage>;
+  command(runId: string, expectedRevision: number, kind: CommandKind): Promise<CommandResponse>;
+  replay(runId: string): Promise<ReplayResponse>;
+  export(runId: string): Promise<ExportResponse>;
+}
+
+export class ClientError extends Error {
+  public constructor(
+    message: string,
+    public readonly code: string,
+    public readonly status?: number,
+  ) {
+    super(message);
+    this.name = "ClientError";
+  }
+}
+
+export class CapabilityGateError extends ClientError {
+  public constructor(message: string, code = "capability_unavailable") {
+    super(message, code, 501);
+    this.name = "CapabilityGateError";
+  }
+}
+
+export interface OwnerApiClientOptions {
+  baseUrl?: string;
+  token?: string;
+  fetcher?: typeof fetch;
+}
+
+export class OwnerApiClient implements StudioClient {
+  public readonly mode = "live" as const;
+  private readonly baseUrl: string;
+  private readonly fetcher: typeof fetch;
+  private token: string | undefined;
+
+  public constructor(options: OwnerApiClientOptions = {}) {
+    this.baseUrl = normalizeRelativeBase(options.baseUrl ?? "/v1");
+    this.fetcher = options.fetcher ?? fetch;
+    this.token = options.token;
+  }
+
+  public setToken(token: string | undefined): void {
+    this.token = token?.trim() || undefined;
+  }
+
+  public async listDefinitions(): Promise<DefinitionRecord[]> {
+    throw new CapabilityGateError("The admitted Phase 1 API has no definition-list route");
+  }
+
+  public async getDraft(_draftId: string): Promise<DraftRecord | undefined> {
+    throw new CapabilityGateError("Draft persistence is not exported by the admitted Phase 1 API");
+  }
+
+  public async saveDraft(_write: DraftWrite): Promise<DraftRecord> {
+    throw new CapabilityGateError("Draft persistence is not exported by the admitted Phase 1 API");
+  }
+
+  public async health(): Promise<{ status: string }> {
+    const response = await this.request("/health", { method: "GET" });
+    return decodeWith(HealthResponseSchema, response, "health");
+  }
+
+  public async capabilities(): Promise<CapabilityResponse> {
+    const response = await this.request("/capabilities", { method: "GET" });
+    return decodeWith(CapabilityResponseSchema, response, "capabilities");
+  }
+
+  public async validate(definition: WorkflowDefinition): Promise<ValidateResponse> {
+    const response = await this.request("/workflow-definitions/validate", {
+      method: "POST",
+      body: JSON.stringify({
+        schema_version: "ascension.management/v1",
+        definition,
+        capabilities: { capabilities: [] },
+      }),
+    });
+    return decodeWith(ValidateResponseSchema, response, "definition validation");
+  }
+
+  public async inspect(definition: WorkflowDefinition): Promise<InspectResponse> {
+    const response = await this.request("/workflow-definitions/inspect", {
+      method: "POST",
+      body: JSON.stringify({ schema_version: "ascension.management/v1", definition, format: "json" }),
+    });
+    return decodeWith(InspectResponseSchema, response, "definition inspection");
+  }
+
+  public async diff(oldDefinition: WorkflowDefinition, newDefinition: WorkflowDefinition): Promise<{
+    old_definition_digest: string;
+    new_definition_digest: string;
+    semantic_change: boolean;
+    changed_paths: string[];
+  }> {
+    const response = await this.request("/workflow-definitions/diff", {
+      method: "POST",
+      body: JSON.stringify({
+        schema_version: "ascension.management/v1",
+        old_definition: oldDefinition,
+        new_definition: newDefinition,
+        format: "json",
+      }),
+    });
+    return decodeWith(DiffResponseSchema, response, "definition diff");
+  }
+
+  public async submitRun(definition: WorkflowDefinition, instanceId: string, profile: string): Promise<RunSubmissionResponse> {
+    const response = await this.request("/workflow-runs", {
+      method: "POST",
+      body: JSON.stringify({
+        schema_version: "ascension.management/v1",
+        request_id: `studio.${cryptoRandomId()}`,
+        definition,
+        artifact_id: null,
+        instance_id: instanceId,
+        profile,
+      }),
+    });
+    return decodeWith(RunSubmissionResponseSchema, response, "run submission");
+  }
+
+  public async status(runId: string): Promise<StatusResponse> {
+    const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}`, { method: "GET" });
+    return decodeWith(StatusResponseSchema, response, "run status");
+  }
+
+  public async events(runId: string, afterSequence: number, limit = 128): Promise<EventPage> {
+    const query = new URLSearchParams({ after_sequence: String(afterSequence), limit: String(limit) });
+    const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}/events?${query.toString()}`, { method: "GET" });
+    return decodeWith(EventPageSchema, response, "run events");
+  }
+
+  public async command(runId: string, expectedRevision: number, kind: CommandKind): Promise<CommandResponse> {
+    const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}/commands`, {
+      method: "POST",
+      body: JSON.stringify({
+        schema_version: "ascension.management/v1",
+        command_id: `studio.command.${cryptoRandomId()}`,
+        run_id: runId,
+        expected_revision: expectedRevision,
+        actor_scope: "workflow:control",
+        kind,
+        parameters: {},
+      }),
+    });
+    return decodeWith(CommandResponseSchema, response, "run command");
+  }
+
+  public async replay(runId: string): Promise<ReplayResponse> {
+    const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}/replay`, {
+      method: "POST",
+      body: JSON.stringify({ schema_version: "ascension.management/v1", run_id: runId, offline: true }),
+    });
+    return decodeWith(ReplayResponseSchema, response, "run replay");
+  }
+
+  public async export(runId: string): Promise<ExportResponse> {
+    const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}/export`, {
+      method: "POST",
+      body: JSON.stringify({ schema_version: "ascension.management/v1", run_id: runId, redacted: true }),
+    });
+    return decodeWith(ExportResponseSchema, response, "run export");
+  }
+
+  private async request(path: string, init: RequestInit): Promise<unknown> {
+    const headers = new Headers(init.headers);
+    headers.set("accept", "application/json");
+    if (init.body !== undefined) {
+      headers.set("content-type", "application/json");
+    }
+    if (this.token) {
+      headers.set("authorization", `Bearer ${this.token}`);
+    }
+    const response = await this.fetcher(`${this.baseUrl}${path}`, {
+      ...init,
+      headers,
+      credentials: "same-origin",
+    });
+    const body: unknown = await response.json().catch(() => undefined);
+    if (!response.ok) {
+      const decoded = ErrorResponseSchema.safeParse(body);
+      throw new ClientError(
+        decoded.success ? decoded.data.error.message : `Owner API returned HTTP ${response.status}`,
+        decoded.success ? decoded.data.error.code : "http_error",
+        response.status,
+      );
+    }
+    return body;
+  }
+}
+
+export function normalizeRelativeBase(baseUrl: string): string {
+  if (!baseUrl.startsWith("/")) {
+    throw new Error("Studio owner adapters require a same-origin relative API base");
+  }
+  if (baseUrl.startsWith("//") || baseUrl.includes("\\") || baseUrl.includes("#")) {
+    throw new Error("API base contains an unsafe origin or fragment");
+  }
+  return baseUrl.replace(/\/$/, "");
+}
+
+function encodeIdentifier(value: string): string {
+  if (!/^[A-Za-z0-9._:-]+$/.test(value)) {
+    throw new ClientError("Identifier contains unsupported characters", "invalid_identifier");
+  }
+  return encodeURIComponent(value);
+}
+
+function cryptoRandomId(): string {
+  const bytes = new Uint8Array(12);
+  globalThis.crypto?.getRandomValues(bytes);
+  return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+export interface RunProjection {
+  runId: string;
+  definitionDigest: string;
+  lastSequence: number;
+  events: RunEvent[];
+}
+
+export type ProjectionResult =
+  | { kind: "applied"; projection: RunProjection; added: number }
+  | { kind: "duplicate"; projection: RunProjection }
+  | { kind: "resnapshot"; reason: string; projection: RunProjection };
+
+export function createProjection(runId: string, definitionDigest: string): RunProjection {
+  return { runId, definitionDigest, lastSequence: 0, events: [] };
+}
+
+export function applyEventPage(projection: RunProjection, page: EventPage): ProjectionResult {
+  if (page.workflow_run_id !== projection.runId) {
+    return { kind: "resnapshot", reason: "event page belongs to another run", projection };
+  }
+  if (page.gap) {
+    return { kind: "resnapshot", reason: "owner reported an event retention gap", projection };
+  }
+  if (page.events.length === 0) {
+    return { kind: "duplicate", projection };
+  }
+  const next = {
+    ...projection,
+    events: [...projection.events],
+  };
+  let added = 0;
+  for (const rawEvent of page.events) {
+    const event = decodeWith(RunEventSchema, rawEvent, "event page");
+    if (event.workflow_run_id !== projection.runId || event.definition_digest !== projection.definitionDigest) {
+      return { kind: "resnapshot", reason: "event identity or definition digest changed", projection };
+    }
+    const existing = next.events.find((candidate) => candidate.sequence === event.sequence);
+    if (existing) {
+      if (canonicalJson(existing) !== canonicalJson(event)) {
+        return { kind: "resnapshot", reason: "duplicate sequence has conflicting payload", projection };
+      }
+      continue;
+    }
+    if (event.sequence !== next.lastSequence + 1) {
+      return { kind: "resnapshot", reason: "event sequence is not contiguous", projection };
+    }
+    next.events.push(event);
+    next.lastSequence = event.sequence;
+    added += 1;
+  }
+  if (added === 0) {
+    return { kind: "duplicate", projection };
+  }
+  return { kind: "applied", projection: next, added };
+}
+
+export function parseSseDataChunk(chunk: string): unknown[] {
+  const records: unknown[] = [];
+  let dataLines: string[] = [];
+  const flush = (): void => {
+    if (dataLines.length === 0) {
+      return;
+    }
+    const text = dataLines.join("\n");
+    records.push(JSON.parse(text) as unknown);
+    dataLines = [];
+  };
+  for (const line of chunk.split(/\r?\n/)) {
+    if (line === "") {
+      flush();
+    } else if (line.startsWith("data:")) {
+      dataLines.push(line.slice(5).trimStart());
+    }
+  }
+  flush();
+  return records;
+}
+
+export function buildSafeCommand(runId: string, expectedRevision: number, kind: CommandKind): {
+  runId: string;
+  expectedRevision: number;
+  kind: CommandKind;
+} {
+  if (!/^[A-Za-z0-9._:-]+$/.test(runId) || !Number.isSafeInteger(expectedRevision) || expectedRevision < 0) {
+    throw new ClientError("A command requires a qualified run ID and current revision", "unsafe_command");
+  }
+  return { runId, expectedRevision, kind };
+}
+
+export class FixtureClient implements StudioClient {
+  public readonly mode = "fixture" as const;
+  private readonly definitions: DefinitionRecord[];
+  private readonly drafts = new Map<string, DraftRecord>();
+  private readonly runs = new Map<string, { definition: WorkflowDefinition; status: StatusResponse; events: RunEvent[] }>();
+
+  public constructor(definitions: DefinitionRecord[]) {
+    this.definitions = definitions.map((record) => DefinitionRecordSchema.parse(record));
+  }
+
+  public async listDefinitions(): Promise<DefinitionRecord[]> {
+    return this.definitions.map((record) => DefinitionRecordSchema.parse(JSON.parse(JSON.stringify(record)) as unknown));
+  }
+
+  public async getDraft(draftId: string): Promise<DraftRecord | undefined> {
+    const record = this.drafts.get(draftId);
+    return record ? DraftRecordSchema.parse(JSON.parse(JSON.stringify(record)) as unknown) : undefined;
+  }
+
+  public async saveDraft(write: DraftWrite): Promise<DraftRecord> {
+    const current = this.drafts.get(write.draftId);
+    if (current && current.etag !== write.etag) {
+      const conflict: DraftRecord = {
+        ...current,
+        conflict: {
+          serverRevision: current.revision,
+          serverDocument: cloneDocument(current.document),
+        },
+      };
+      this.drafts.set(write.draftId, conflict);
+      return DraftRecordSchema.parse(JSON.parse(JSON.stringify(conflict)) as unknown);
+    }
+    const record: DraftRecord = {
+      draftId: write.draftId,
+      definitionId: write.definitionId,
+      revision: write.revision,
+      etag: `fixture-${write.revision}`,
+      document: cloneDocument(write.document),
+      updatedAt: new Date().toISOString(),
+      conflict: null,
+    };
+    this.drafts.set(write.draftId, record);
+    return DraftRecordSchema.parse(JSON.parse(JSON.stringify(record)) as unknown);
+  }
+
+  public async health(): Promise<{ status: string }> {
+    return { status: "fixture" };
+  }
+
+  public async capabilities(): Promise<CapabilityResponse> {
+    return {
+      schema_version: "ascension.capabilities/v1",
+      capabilities: {
+        capabilities: ["observe.fair-play.v1", "actions.catalog.v1", "actions.settlement.v1", "studio.fixture.v1"],
+      },
+    };
+  }
+
+  public async validate(definition: WorkflowDefinition): Promise<ValidateResponse> {
+    const diagnostics: ValidateResponse["diagnostics"] = [];
+    for (const graph of definition.graphs) {
+      const nodeIds = new Set(graph.nodes.map((node) => node.id));
+      if (!nodeIds.has(graph.entry_node)) {
+        diagnostics.push({ code: "entry_node_missing", severity: "error", path: `$.graphs.${graph.id}.entry_node`, message: "Entry node is not present in the graph." });
+      }
+      for (const edge of graph.edges) {
+        if (!nodeIds.has(edge.from) || !nodeIds.has(edge.to)) {
+          diagnostics.push({ code: "edge_endpoint_missing", severity: "error", path: `$.graphs.${graph.id}.edges`, message: "Every edge endpoint must name a node in the same graph." });
+        }
+      }
+    }
+    const digest = await semanticDigest(definition);
+    return {
+      schema_version: "ascension.management/v1",
+      valid: diagnostics.every((diagnostic) => diagnostic.severity !== "error"),
+      definition_digest: digest,
+      diagnostics,
+    };
+  }
+
+  public async inspect(definition: WorkflowDefinition): Promise<InspectResponse> {
+    return {
+      schema_version: "ascension.management/v1",
+      definition_digest: await semanticDigest(definition),
+      workflow_id: definition.workflow_id,
+      workflow_version: definition.version,
+      required_capabilities: definition.capabilities.required,
+      graph_count: definition.graphs.length,
+      node_count: definition.graphs.reduce((count, graph) => count + graph.nodes.length, 0),
+    };
+  }
+
+  public async diff(oldDefinition: WorkflowDefinition, newDefinition: WorkflowDefinition): Promise<{
+    old_definition_digest: string;
+    new_definition_digest: string;
+    semantic_change: boolean;
+    changed_paths: string[];
+  }> {
+    const oldDigest = await semanticDigest(oldDefinition);
+    const newDigest = await semanticDigest(newDefinition);
+    return {
+      old_definition_digest: oldDigest,
+      new_definition_digest: newDigest,
+      semantic_change: oldDigest !== newDigest,
+      changed_paths: oldDigest === newDigest ? [] : ["$"],
+    };
+  }
+
+  public async submitRun(definition: WorkflowDefinition, _instanceId: string, _profile: string): Promise<RunSubmissionResponse> {
+    const digest = await semanticDigest(definition);
+    const runId = `run.fixture.${this.runs.size + 1}`;
+    const snapshot = makeFixtureSnapshot(runId, digest, "running", 1);
+    const event = makeFixtureEvent(runId, digest, 1, "run_started", snapshot.cursor.node_execution_id);
+    const status: StatusResponse = {
+      schema_version: "ascension.workflow-status/v1",
+      run: snapshot,
+      accepted_plan_revision: null,
+      waiting_reason: null,
+      authority: { state: "fixture_projection", recovery: "fixture" },
+      recovery_admission: { kind: "no_pending_effects" },
+      last_progress_sequence: 1,
+    };
+    this.runs.set(runId, { definition: cloneDocument(definition), status, events: [event] });
+    return { schema_version: "ascension.workflow-run/v1", workflow_run_id: runId, run_revision: 1, status: "running" };
+  }
+
+  public async status(runId: string): Promise<StatusResponse> {
+    const run = this.runs.get(runId) ?? this.createDefaultRun(runId);
+    return JSON.parse(JSON.stringify(run.status)) as StatusResponse;
+  }
+
+  public async events(runId: string, afterSequence: number, limit = 128): Promise<EventPage> {
+    const run = this.runs.get(runId) ?? this.createDefaultRun(runId);
+    const selected = run.events.filter((event) => event.sequence > afterSequence).slice(0, limit);
+    return {
+      schema_version: "ascension.workflow-event/v1",
+      workflow_run_id: runId,
+      after_sequence: afterSequence,
+      oldest_sequence: run.events[0]?.sequence ?? null,
+      newest_sequence: run.events.at(-1)?.sequence ?? null,
+      next_after_sequence: selected.at(-1)?.sequence ?? afterSequence,
+      gap: null,
+      events: JSON.parse(JSON.stringify(selected)) as RunEvent[],
+    };
+  }
+
+  public async command(runId: string, expectedRevision: number, kind: CommandKind): Promise<CommandResponse> {
+    const safe = buildSafeCommand(runId, expectedRevision, kind);
+    const run = this.runs.get(runId) ?? this.createDefaultRun(runId);
+    if (run.status.run.run_revision !== safe.expectedRevision) {
+      throw new ClientError("Fixture run revision is stale", "stale_revision", 409);
+    }
+    const nextRevision = run.status.run.run_revision + 1;
+    const status: RunSnapshot["status"] = kind === "pause" ? "paused" : kind === "cancel" ? "cancelled" : kind === "resume" ? "running" : "running";
+    run.status.run = { ...run.status.run, run_revision: nextRevision, status };
+    run.status.last_progress_sequence += 1;
+    const event = makeFixtureEvent(runId, run.status.run.definition_digest, run.status.last_progress_sequence, "command_applied", run.status.run.cursor.node_execution_id);
+    run.events.push(event);
+    return {
+      schema_version: "ascension.management/v1",
+      command_id: `fixture.command.${nextRevision}`,
+      workflow_run_id: runId,
+      outcome: "applied",
+      run_revision: nextRevision,
+      sequence: event.sequence,
+    };
+  }
+
+  public async replay(runId: string): Promise<ReplayResponse> {
+    const run = this.runs.get(runId) ?? this.createDefaultRun(runId);
+    return { schema_version: "ascension.workflow-replay/v1", workflow_run_id: runId, matched: true, compared_events: run.events.length, first_divergence: null };
+  }
+
+  public async export(runId: string): Promise<ExportResponse> {
+    const run = this.runs.get(runId) ?? this.createDefaultRun(runId);
+    return { schema_version: "ascension.workflow-export/v1", workflow_run_id: runId, redacted: true, run: run.status.run, events: run.events };
+  }
+
+  private createDefaultRun(runId: string): { definition: WorkflowDefinition; status: StatusResponse; events: RunEvent[] } {
+    const definition = this.definitions[0]?.definition;
+    if (!definition) {
+      throw new ClientError("Fixture catalog has no definition", "fixture_empty");
+    }
+    const digest = "fixture-catalog-digest";
+    const snapshot = makeFixtureSnapshot(runId, digest, "paused", 1);
+    const event = makeFixtureEvent(runId, digest, 1, "run_started", snapshot.cursor.node_execution_id);
+    const run = {
+      definition: cloneDocument(definition),
+      status: {
+        schema_version: "ascension.workflow-status/v1",
+        run: snapshot,
+        accepted_plan_revision: null,
+        waiting_reason: "Fixture inspection run",
+        authority: { state: "fixture_projection", recovery: "fixture" },
+        recovery_admission: { kind: "no_pending_effects" as const },
+        last_progress_sequence: 1,
+      },
+      events: [event],
+    };
+    this.runs.set(runId, run);
+    return run;
+  }
+}
+
+function makeFixtureSnapshot(runId: string, digest: string, status: RunSnapshot["status"], revision: number): RunSnapshot {
+  return {
+    schema_version: "ascension.workflow-run/v1",
+    workflow_run_id: runId,
+    definition_digest: digest,
+    run_revision: revision,
+    status,
+    game_outcome: "not_terminal",
+    cursor: { graph_id: "main", node_id: "observe", node_execution_id: `${runId}.node.1` },
+    pending_operation: null,
+    budget: { provider_calls_consumed: 0, provider_calls_reserved: 0, node_steps_consumed: 1, replans_consumed: 0 },
+    cleanup: "not_started",
+  };
+}
+
+function makeFixtureEvent(runId: string, digest: string, sequence: number, eventType: RunEvent["event_type"], nodeExecutionId: string): RunEvent {
+  return {
+    schema_version: "ascension.workflow-event/v1",
+    workflow_run_id: runId,
+    sequence,
+    run_revision: sequence,
+    event_type: eventType,
+    definition_digest: digest,
+    node_execution_id: nodeExecutionId,
+    payload: { operation_id: null, classification: eventType === "command_applied" ? "settled" : null, reason_code: eventType },
+    integrity_digest: null,
+  };
+}

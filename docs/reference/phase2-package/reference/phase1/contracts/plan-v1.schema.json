@@ -1,0 +1,164 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ascension:plan:v1-seed",
+  "title": "Proposed bounded analysis/decision plan",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "ascension.plan/v1"
+    },
+    "plan_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 1000000
+    },
+    "base_run_revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "region_id": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    },
+    "observation_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "state_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "generation": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        }
+      },
+      "required": [
+        "state_id",
+        "generation"
+      ]
+    },
+    "policy_digest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "dependency_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+      },
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true
+    },
+    "nodes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+          },
+          "operation_ref": {
+            "enum": [
+              "analyze.threat.v1",
+              "analyze.resources.v1",
+              "decide.synthesize.v1",
+              "select.subworkflow.v1"
+            ]
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+            },
+            "minItems": 0,
+            "maxItems": 32,
+            "uniqueItems": true
+          },
+          "output_type": {
+            "enum": [
+              "ThreatAssessment",
+              "ResourceAssessment",
+              "DecisionProposal"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "operation_ref",
+          "depends_on",
+          "output_type"
+        ]
+      },
+      "minItems": 1,
+      "maxItems": 32
+    },
+    "output": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "node_id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+        },
+        "type": {
+          "const": "DecisionProposal"
+        }
+      },
+      "required": [
+        "node_id",
+        "type"
+      ]
+    },
+    "reservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "provider_calls": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32
+        },
+        "max_output_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65536
+        }
+      },
+      "required": [
+        "provider_calls",
+        "max_output_tokens"
+      ]
+    },
+    "reason_code": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$"
+    }
+  },
+  "required": [
+    "schema_version",
+    "plan_id",
+    "revision",
+    "base_run_revision",
+    "region_id",
+    "observation_binding",
+    "policy_digest",
+    "dependency_refs",
+    "nodes",
+    "output",
+    "reservation",
+    "reason_code"
+  ]
+}

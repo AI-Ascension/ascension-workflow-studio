@@ -1,0 +1,87 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "ascension.studio-command-view/v1-seed"
+    },
+    "command_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "expected_run_revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "view_status": {
+      "enum": [
+        "submitting",
+        "accepted",
+        "applied",
+        "rejected",
+        "unknown"
+      ]
+    },
+    "applied_run_revision": {
+      "anyOf": [
+        {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "message_code": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    }
+  },
+  "required": [
+    "schema_version",
+    "command_id",
+    "run_id",
+    "expected_run_revision",
+    "view_status",
+    "applied_run_revision",
+    "message_code"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ascension:studio:command-view:v1-seed",
+  "description": "Display fixture only. Actual command request/receipt contracts are discovered from Phase 1.",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "view_status": {
+            "const": "applied"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "applied_run_revision": {
+            "type": "integer"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "applied_run_revision": {
+            "type": "null"
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "phase": 2,
+  "status": "not_started",
+  "integration_heads": {},
+  "phase1_lock_path": null,
+  "active_agent_ids": [],
+  "write_leases": [],
+  "task_status": {},
+  "stale_evidence": [],
+  "blockers": [],
+  "next_safe_actions": []
+}

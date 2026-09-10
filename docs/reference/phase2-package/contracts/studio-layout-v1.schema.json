@@ -1,0 +1,146 @@
+{
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "const": "ascension.studio-layout/v1-seed"
+    },
+    "binding": {
+      "type": "object",
+      "properties": {
+        "workflow_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "definition_artifact_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      },
+      "required": [
+        "workflow_id",
+        "revision",
+        "definition_artifact_sha256"
+      ],
+      "additionalProperties": false
+    },
+    "nodes": {
+      "type": "array",
+      "maxItems": 4096,
+      "items": {
+        "type": "object",
+        "properties": {
+          "graph_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "node_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "x": {
+            "type": "number",
+            "minimum": -1000000,
+            "maximum": 1000000
+          },
+          "y": {
+            "type": "number",
+            "minimum": -1000000,
+            "maximum": 1000000
+          },
+          "collapsed": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "graph_id",
+          "node_id",
+          "x",
+          "y",
+          "collapsed"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "viewport": {
+      "type": "object",
+      "properties": {
+        "x": {
+          "type": "number",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "y": {
+          "type": "number",
+          "minimum": -1000000,
+          "maximum": 1000000
+        },
+        "zoom": {
+          "type": "number",
+          "minimum": 0.05,
+          "maximum": 8
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "zoom"
+      ],
+      "additionalProperties": false
+    },
+    "notes": {
+      "type": "array",
+      "maxItems": 256,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "text": {
+            "type": "string",
+            "maxLength": 4096
+          },
+          "x": {
+            "type": "number",
+            "minimum": -1000000,
+            "maximum": 1000000
+          },
+          "y": {
+            "type": "number",
+            "minimum": -1000000,
+            "maximum": 1000000
+          }
+        },
+        "required": [
+          "id",
+          "text",
+          "x",
+          "y"
+        ],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": [
+    "schema_version",
+    "binding",
+    "nodes",
+    "viewport",
+    "notes"
+  ],
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:ascension:studio:layout:v1-seed",
+  "title": "Proposed inert Studio layout seed; not an admitted API artifact",
+  "description": "Semantic binding is verified separately. Artifact SHA-256 binds exact reference bytes, not a canonical compiler digest."
+}

@@ -1,0 +1,58 @@
+{
+  "schema_version": "ascension.studio-layout/v1-seed",
+  "binding": {
+    "workflow_id": "fixture.one-action.strict",
+    "revision": "0.1.0",
+    "definition_artifact_sha256": "3a4d50a4572058d2a9abd20e5a58d5a22508a2f2f7c225fe9a107766cb0f78b7"
+  },
+  "nodes": [
+    {
+      "graph_id": "main",
+      "node_id": "observe",
+      "x": 450,
+      "y": 100,
+      "collapsed": false
+    },
+    {
+      "graph_id": "main",
+      "node_id": "decide",
+      "x": 220,
+      "y": 0,
+      "collapsed": false
+    },
+    {
+      "graph_id": "main",
+      "node_id": "execute",
+      "x": 440,
+      "y": 0,
+      "collapsed": false
+    },
+    {
+      "graph_id": "main",
+      "node_id": "done",
+      "x": 660,
+      "y": 0,
+      "collapsed": false
+    },
+    {
+      "graph_id": "main",
+      "node_id": "blocked",
+      "x": 880,
+      "y": 0,
+      "collapsed": false
+    }
+  ],
+  "viewport": {
+    "x": 0,
+    "y": 0,
+    "zoom": 1
+  },
+  "notes": [
+    {
+      "id": "note-1",
+      "text": "Synthetic fixture; not native gameplay evidence.",
+      "x": 0,
+      "y": -100
+    }
+  ]
+}

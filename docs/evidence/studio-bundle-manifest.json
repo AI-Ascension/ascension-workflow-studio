@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "bundle": "artifacts/studio-bundle",
+  "source_maps": false,
+  "files": [
+    {
+      "path": "artifacts/studio-bundle/assets/index-DByLPQiY.js",
+      "bytes": 515086
+    },
+    {
+      "path": "artifacts/studio-bundle/assets/index-DR9AUPxe.css",
+      "bytes": 31726
+    },
+    {
+      "path": "artifacts/studio-bundle/index.html",
+      "bytes": 460
+    }
+  ],
+  "checksums": "docs/evidence/studio-bundle.SHA256SUMS",
+  "sbom": "docs/evidence/studio-sbom.spdx.json",
+  "network_policy": "production_network_false"
+}

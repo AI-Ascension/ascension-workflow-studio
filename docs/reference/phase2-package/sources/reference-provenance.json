@@ -1,0 +1,72 @@
+{
+  "source_zip": "ascension-workflow-phase1-luna-max-meta-prompt-package.zip",
+  "source_zip_sha256": "e447bc09d82498413dc949adb7d059901c63ca4eab26d629414dd9d65d619566",
+  "copy_mode": "byte_preserved_reference_only",
+  "files": [
+    {
+      "archive_member": "ascension-workflow-phase1-package/01_MASTER_ORCHESTRATION_PROMPT.md",
+      "package_path": "reference/phase1/01_MASTER_ORCHESTRATION_PROMPT.md",
+      "sha256": "497084f50ae448b2c7ec8db7c759fbb7a37998060bb03efdb23553c239024f65"
+    },
+    {
+      "archive_member": "ascension-workflow-phase1-package/spec/03_CANONICAL_DEFINITION_AND_COMPILER.md",
+      "package_path": "reference/phase1/spec/03_CANONICAL_DEFINITION_AND_COMPILER.md",
+      "sha256": "f1cedb85f757aba0dca0c7be1f3a69f65d5da88acfc834290652c88edea6a7b3"
+    },
+    {
+      "archive_member": "ascension-workflow-phase1-package/spec/05_BOUNDED_DYNAMIC_PLANNING.md",
+      "package_path": "reference/phase1/spec/05_BOUNDED_DYNAMIC_PLANNING.md",
+      "sha256": "4322b50d8ad2f78e3af80d145e67717ddc02a838473a594af130cf7aad78a44c"
+    },
+    {
+      "archive_member": "ascension-workflow-phase1-package/spec/08_HEADLESS_CLI_AND_API.md",
+      "package_path": "reference/phase1/spec/08_HEADLESS_CLI_AND_API.md",
+      "sha256": "13395017c5e41892844080164d4618a19048a4566f464a1921516366a3dd3a5d"
+    },
+    {
+      "archive_member": "ascension-workflow-phase1-package/spec/09_OBSERVABILITY_REPLAY_AND_PRIVACY.md",
+      "package_path": "reference/phase1/spec/09_OBSERVABILITY_REPLAY_AND_PRIVACY.md",
+      "sha256": "745815d690891e35a818ee7bbf412bda763063c7d3dada55d0c59f161d4658d6"
+    },
+    {
+      "archive_member": "ascension-workflow-phase1-package/contracts/workflow-v1.schema.json",
+      "package_path": "reference/phase1/contracts/workflow-v1.schema.json",
+      "sha256": "f746cbd8101ae8357ac698c8ace1ef6b4f06af61d99b32f9b13a832950b010c1"
+    },
+    {
+      "archive_member": "ascension-workflow-phase1-package/contracts/plan-v1.schema.json",
+      "package_path": "reference/phase1/contracts/plan-v1.schema.json",
+      "sha256": "857b9511214bd811db8366f5dec056b2aca7d88dbc0ae9d4eccb735e170bb239"
+    },
+    {
+      "archive_member": "ascension-workflow-phase1-package/contracts/run-event-v1.schema.json",
+      "package_path": "reference/phase1/contracts/run-event-v1.schema.json",
+      "sha256": "98676eff0ccbb014029ee6074773d79a83e9357947cdaee60bdc0f745716a647"
+    },
+    {
+      "archive_member": "ascension-workflow-phase1-package/contracts/workflow-run-v1.schema.json",
+      "package_path": "reference/phase1/contracts/workflow-run-v1.schema.json",
+      "sha256": "de6d232ae0da3586474b93dcaa46023589d421b30ce01dd0ba4b76c69087b593"
+    },
+    {
+      "archive_member": "ascension-workflow-phase1-package/examples/workflows/strict-fixture.json",
+      "package_path": "reference/phase1/examples/workflows/strict-fixture.json",
+      "sha256": "3a4d50a4572058d2a9abd20e5a58d5a22508a2f2f7c225fe9a107766cb0f78b7"
+    },
+    {
+      "archive_member": "ascension-workflow-phase1-package/examples/workflows/dynamic-fixture.json",
+      "package_path": "reference/phase1/examples/workflows/dynamic-fixture.json",
+      "sha256": "d019480f11ba6b15a1e149706f5e4d537b8251740f0a44974364f8a68adee7da"
+    },
+    {
+      "archive_member": "ascension-workflow-phase1-package/examples/plans/valid-plan.json",
+      "package_path": "reference/phase1/examples/plans/valid-plan.json",
+      "sha256": "c5c48ce24caa8c1a54dbe8d1f8b5b7d29bf7cf31a9b0f39b2ce224f1127d5ffe"
+    },
+    {
+      "archive_member": "ascension-workflow-phase1-package/examples/plans/valid-simple-plan.json",
+      "package_path": "reference/phase1/examples/plans/valid-simple-plan.json",
+      "sha256": "dcaa4a2ea59b9eee7aa639d4cdb07d482e2d4ba706dc45561237f65ef455d727"
+    }
+  ]
+}

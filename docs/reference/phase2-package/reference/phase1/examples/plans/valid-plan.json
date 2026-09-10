@@ -1,0 +1,49 @@
+{
+  "schema_version": "ascension.plan/v1",
+  "plan_id": "plan.synthetic.1",
+  "revision": 1,
+  "base_run_revision": 4,
+  "region_id": "combat.analysis",
+  "observation_binding": {
+    "state_id": "state.synthetic.10",
+    "generation": 10
+  },
+  "policy_digest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "dependency_refs": [
+    "observation.turn",
+    "observation.player_hp",
+    "observation.catalog_digest"
+  ],
+  "nodes": [
+    {
+      "id": "threat",
+      "operation_ref": "analyze.threat.v1",
+      "depends_on": [],
+      "output_type": "ThreatAssessment"
+    },
+    {
+      "id": "resources",
+      "operation_ref": "analyze.resources.v1",
+      "depends_on": [],
+      "output_type": "ResourceAssessment"
+    },
+    {
+      "id": "synthesize",
+      "operation_ref": "decide.synthesize.v1",
+      "depends_on": [
+        "threat",
+        "resources"
+      ],
+      "output_type": "DecisionProposal"
+    }
+  ],
+  "output": {
+    "node_id": "synthesize",
+    "type": "DecisionProposal"
+  },
+  "reservation": {
+    "provider_calls": 3,
+    "max_output_tokens": 3072
+  },
+  "reason_code": "complex_visible_state"
+}
