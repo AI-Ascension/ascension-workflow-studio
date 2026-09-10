@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { EventPage, RunEvent } from "@studio/contracts";
 
 import {
+  OwnerApiClient,
   applyEventPage,
   buildSafeCommand,
   createProjection,
@@ -75,5 +76,22 @@ describe("same-origin client boundary", () => {
     expect(() => normalizeRelativeBase("https://example.invalid/v1")).toThrow();
     expect(() => normalizeRelativeBase("//example.invalid/v1")).toThrow();
     expect(() => normalizeRelativeBase("/v1\\escape")).toThrow();
+  });
+
+  it("uses a relative URL and decodes owner responses at runtime", async () => {
+    const requests: string[] = [];
+    const fetcher: typeof fetch = async (input) => {
+      requests.push(String(input));
+      return new Response(JSON.stringify({ schema_version: "ascension.management/v1", status: "ok" }), { status: 200, headers: { "content-type": "application/json" } });
+    };
+    const client = new OwnerApiClient({ baseUrl: "/v1", fetcher });
+    await expect(client.health()).resolves.toEqual({ status: "ok", schema_version: "ascension.management/v1" });
+    expect(requests).toEqual(["/v1/health"]);
+  });
+
+  it("rejects a successful HTTP response with an invalid owner shape", async () => {
+    const fetcher: typeof fetch = async () => new Response(JSON.stringify({ status: "ok" }), { status: 200 });
+    const client = new OwnerApiClient({ baseUrl: "/v1", fetcher });
+    await expect(client.health()).rejects.toThrow("health failed runtime decoding");
   });
 });
