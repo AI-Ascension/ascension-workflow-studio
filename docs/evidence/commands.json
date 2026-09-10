@@ -10,6 +10,8 @@
     { "command": "npm audit --audit-level=moderate", "status": "passed", "scope": "pinned dependency graph" },
     { "command": "python3 docs/reference/phase2-package/tools/verify_package.py", "status": "passed", "scope": "package integrity and seed checks" },
     { "command": "python3 -m unittest discover -s docs/reference/phase2-package/tools -p 'test_*.py'", "status": "passed", "scope": "34 package checker tests" },
+    { "command": "cargo test -p sts2-harness --test management --locked", "status": "passed", "scope": "6 cases at merged Phase 1 head" },
+    { "command": "cargo test -p sts2-harness --test management_sqlite --locked", "status": "passed", "scope": "5 cases at merged Phase 1 head" },
     { "command": "vite preview + curl / and emitted assets", "status": "passed", "scope": "local static serving; no browser engine installed" }
   ],
   "unverified": [
