@@ -9,6 +9,8 @@ import {
   diffDocuments,
   layoutOnlyChange,
   layoutIsValid,
+  parseStudioBundle,
+  serializeStudioBundle,
   semanticDigest,
 } from "./index";
 
@@ -67,5 +69,15 @@ describe("workflow document identity", () => {
     expect(history.present().version).toBe("1.1.0");
     expect(history.undo().version).toBe("1.0.0");
     expect(history.redo().version).toBe("1.1.0");
+  });
+
+  it("round-trips a digest-bound Studio bundle and rejects tampering", async () => {
+    const document = definition();
+    const digest = await semanticDigest(document);
+    const bundle = { semantic: document, layout: createLayout(document, digest) };
+    const raw = await serializeStudioBundle(bundle);
+    const parsed = await parseStudioBundle(raw);
+    expect(parsed.semantic.workflow_id).toBe(document.workflow_id);
+    await expect(parseStudioBundle(raw.replace('"test.workflow"', '"tampered.workflow"'))).rejects.toThrow("digest");
   });
 });

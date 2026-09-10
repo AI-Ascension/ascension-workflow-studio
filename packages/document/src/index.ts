@@ -33,6 +33,13 @@ export interface DocumentBundle {
   layout: LayoutSidecar;
 }
 
+export interface StudioBundleEnvelope {
+  bundleVersion: "ascension.studio-bundle/v1";
+  semanticDigest: string;
+  semantic: SemanticDocument;
+  layout: LayoutSidecar;
+}
+
 export interface DocumentChange {
   path: string;
   before: JsonValue | undefined;
@@ -86,6 +93,46 @@ export async function sha256Hex(value: string): Promise<string> {
 
 export async function semanticDigest(document: SemanticDocument): Promise<string> {
   return sha256Hex(canonicalJson(document));
+}
+
+export async function serializeStudioBundle(bundle: DocumentBundle): Promise<string> {
+  const digest = await semanticDigest(bundle.semantic);
+  if (bundle.layout.semanticDigest !== digest || !layoutIsValid(bundle.semantic, bundle.layout)) {
+    throw new Error("cannot export a bundle with an unbound or invalid layout sidecar");
+  }
+  const envelope: StudioBundleEnvelope = {
+    bundleVersion: "ascension.studio-bundle/v1",
+    semanticDigest: digest,
+    semantic: cloneDocument(bundle.semantic),
+    layout: LayoutSidecarSchema.parse(bundle.layout),
+  };
+  return JSON.stringify(envelope, null, 2);
+}
+
+export async function parseStudioBundle(raw: string): Promise<DocumentBundle> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    throw new Error("Studio bundle is not valid JSON");
+  }
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new Error("Studio bundle must be a JSON object");
+  }
+  const record = parsed as Record<string, unknown>;
+  if (record.bundleVersion !== "ascension.studio-bundle/v1") {
+    throw new Error("Studio bundle version is unsupported");
+  }
+  const semantic = WorkflowDefinitionSchema.parse(record.semantic);
+  const layout = LayoutSidecarSchema.parse(record.layout);
+  const digest = await semanticDigest(semantic);
+  if (record.semanticDigest !== digest || layout.semanticDigest !== digest) {
+    throw new Error("Studio bundle semantic digest does not match its content");
+  }
+  if (!layoutIsValid(semantic, layout)) {
+    throw new Error("Studio bundle layout contains an unknown or missing node binding");
+  }
+  return { semantic, layout };
 }
 
 export function qualifiedNodeId(graphId: string, nodeId: string): string {

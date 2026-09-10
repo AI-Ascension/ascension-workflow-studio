@@ -1,4 +1,5 @@
 import {
+  type ChangeEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -34,6 +35,8 @@ import {
   createLayout,
   layoutIsValid,
   removeNode,
+  parseStudioBundle,
+  serializeStudioBundle,
   updateLayout,
   updateNode,
   type SemanticDocument,
@@ -74,6 +77,7 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
   const [validationMessage, setValidationMessage] = useState("");
   const [draft, setDraft] = useState<DraftState>({ revision: 0, etag: "fixture-0", state: "saved", message: "Draft changes are local until autosave completes." });
   const history = useRef(new History(initialDocument, (value) => JSON.parse(JSON.stringify(value)) as WorkflowDefinition));
+  const bundleInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const nextLayout = createLayout(initialDocument, "pending");
@@ -125,7 +129,7 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
   }, []);
 
   const commit = useCallback((nextDocument: SemanticDocument): void => {
-    const nextLayout = ensureLayout(nextDocument, layout);
+    const nextLayout = { ...ensureLayout(nextDocument, layout), semanticDigest: "pending" } as LayoutSidecar;
     history.current.commit(nextDocument);
     setDocument(nextDocument);
     setLayout(nextLayout);
@@ -136,7 +140,7 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
 
   const undo = (): void => {
     const next = history.current.undo();
-    const nextLayout = ensureLayout(next, layout);
+    const nextLayout = { ...ensureLayout(next, layout), semanticDigest: "pending" } as LayoutSidecar;
     setDocument(next);
     setLayout(nextLayout);
     setNodes(toFlowNodes(next, nextLayout));
@@ -144,7 +148,7 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
 
   const redo = (): void => {
     const next = history.current.redo();
-    const nextLayout = ensureLayout(next, layout);
+    const nextLayout = { ...ensureLayout(next, layout), semanticDigest: "pending" } as LayoutSidecar;
     setDocument(next);
     setLayout(nextLayout);
     setNodes(toFlowNodes(next, nextLayout));
@@ -197,6 +201,43 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
     setSelectedId(`${graph.id}:${id}`);
   };
 
+  const exportBundle = async (): Promise<void> => {
+    try {
+      const raw = await serializeStudioBundle({ semantic: document, layout });
+      const url = URL.createObjectURL(new Blob([raw], { type: "application/json" }));
+      const link = window.document.createElement("a");
+      link.href = url;
+      link.download = `${document.workflow_id.replaceAll(/[^A-Za-z0-9._-]/g, "_")}.studio.json`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setValidationState("valid");
+      setValidationMessage("Exported a digest-bound Studio bundle.");
+    } catch (error: unknown) {
+      setValidationState("error");
+      setValidationMessage(error instanceof Error ? error.message : "Bundle export failed.");
+    }
+  };
+
+  const importBundle = async (event: ChangeEvent<HTMLInputElement>): Promise<void> => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    try {
+      const bundle = await parseStudioBundle(await file.text());
+      history.current = new History(bundle.semantic, (value) => JSON.parse(JSON.stringify(value)) as WorkflowDefinition);
+      setDocument(bundle.semantic);
+      setLayout(bundle.layout);
+      setNodes(toFlowNodes(bundle.semantic, bundle.layout));
+      setSelectedId(undefined);
+      setDiagnostics(undefined);
+      setValidationState("valid");
+      setValidationMessage("Imported and verified a digest-bound Studio bundle.");
+    } catch (error: unknown) {
+      setValidationState("error");
+      setValidationMessage(error instanceof Error ? error.message : "Bundle import failed.");
+    }
+  };
+
   const updateSelected = (update: (node: WorkflowNode) => WorkflowNode): void => {
     if (!selected || selected.node.kind === "adaptive_region") return;
     commit(updateNode(document, selected.graphId, selected.node.id, update));
@@ -245,6 +286,9 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
         <button className="button button-quiet" onClick={undo} disabled={!history.current.canUndo()}>Undo</button>
         <button className="button button-quiet" onClick={redo} disabled={!history.current.canRedo()}>Redo</button>
         <button className="button button-secondary" onClick={addNewNode}>＋ Node</button>
+        <button className="button button-quiet" onClick={() => void exportBundle()}>Export</button>
+        <button className="button button-quiet" onClick={() => bundleInput.current?.click()}>Import</button>
+        <input ref={bundleInput} className="sr-only" type="file" accept="application/json,.json" onChange={(event) => void importBundle(event)} />
       </div>
     </div>
     {tab === "canvas" ? <div className="designer-body">

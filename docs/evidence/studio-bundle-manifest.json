@@ -4,16 +4,16 @@
   "source_maps": false,
   "files": [
     {
-      "path": "artifacts/studio-bundle/assets/index-DByLPQiY.js",
-      "bytes": 515086
-    },
-    {
       "path": "artifacts/studio-bundle/assets/index-DR9AUPxe.css",
       "bytes": 31726
     },
     {
+      "path": "artifacts/studio-bundle/assets/index-NkL6iH40.js",
+      "bytes": 517517
+    },
+    {
       "path": "artifacts/studio-bundle/index.html",
-      "bytes": 460
+      "bytes": 700
     }
   ],
   "checksums": "docs/evidence/studio-bundle.SHA256SUMS",

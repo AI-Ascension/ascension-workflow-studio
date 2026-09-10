@@ -103,7 +103,7 @@ export function App(): JSX.Element {
         {view === "library" ? <LibraryView definitions={definitions} loading={loadingDefinitions} catalogNotice={catalogNotice} onOpen={openDefinition} onCreate={createDraft} /> : null}
         {view === "designer" ? <DesignerView client={client} definition={selectedDefinition} initialDocument={activeDocument} mode={mode} onBack={() => setView("library")} onRun={(document) => void runDocument(document)} /> : null}
         {view === "runs" ? <RunsView client={client} mode={mode} initialRunId={runId} onRunIdChange={setRunId} /> : null}
-        {view === "replay" ? <ReplayView client={client} mode={mode} definition={replayDocument} /> : null}
+        {view === "replay" ? <ReplayView client={client} mode={mode} definition={replayDocument} definitions={definitions} /> : null}
         {view === "compatibility" ? <CompatibilityView mode={mode} onModeChange={setMode} liveClient={liveClient} /> : null}
       </div>
     </main>

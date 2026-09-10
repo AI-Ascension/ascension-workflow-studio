@@ -6,7 +6,7 @@ This packet separates product evidence from package integrity and unresolved own
 
 - `npm run typecheck` passed.
 - `npm run lint` is wired to the same strict TypeScript project check and is expected to pass with typecheck.
-- `npm test` passed: 3 files, 9 tests. The tests cover canonical semantic identity, layout binding, edit history, owner event projection recovery, SSE framing, same-origin enforcement, safe commands, and the rendered library/designer/list-editor shell.
+- `npm test` passed: 3 files, 10 tests. The tests cover canonical semantic identity, layout binding, edit history, digest-bound bundle round-trips, owner event projection recovery, SSE framing, same-origin enforcement, safe commands, and the rendered library/designer/list-editor shell.
 - `npm run build` passed. Vite emitted a static source-map-free bundle under `dist/`.
 - `npm audit --audit-level=moderate` passed with zero vulnerabilities for the pinned dependency graph.
 - A local `vite preview` served `index.html`, JavaScript, and CSS with HTTP 200 responses. No real browser engine is installed in the environment, so browser-engine and screenshot gates remain unverified.
@@ -18,7 +18,7 @@ The live adapter is real code against the merged owner routes, but this worktree
 
 The runtime did not expose callable D0→D1→D2→D3 Luna Max child sessions. No subprocess chain or false attestation was substituted. The exact blocked and partial requirement entries are in `requirement-ledger.json`.
 
-The production bundle contains a single minified JavaScript chunk of roughly 515 kB before gzip because React Flow is included in the initial route. Vite reports this as a chunk-size warning; the static bundle is usable, and route-level code splitting is a follow-up.
+The production bundle contains a single minified JavaScript chunk of roughly 518 kB before gzip because React Flow is included in the initial route. Vite reports this as a chunk-size warning; the static bundle is usable, and route-level code splitting is a follow-up.
 
 ## Next verification gates
 
