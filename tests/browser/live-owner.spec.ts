@@ -42,7 +42,7 @@ test("renders an owner revision conflict after a stale browser save", async ({ p
   const definitionId = await page.locator(".definition-card").first().locator(".card-id").textContent();
   expect(definitionId).not.toBeNull();
   await page.getByRole("button", { name: "Clone draft" }).first().click();
-  await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+  await expect(page.getByText(/Loaded the owner-backed draft\.|Autosaved to the active adapter\./)).toBeVisible();
 
   const remoteSave = await page.evaluate(async (id) => {
     const headers = { Authorization: "Bearer studio-live-ci-token", "Content-Type": "application/json" };
@@ -102,4 +102,53 @@ test("renders an owner revision conflict after a stale browser save", async ({ p
   await page.getByRole("button", { name: "Publish revision" }).click();
   await expect(page.getByRole("heading", { name: "Local and remote drafts diverged" })).toBeVisible();
   await expect(page.locator(".validation-label")).toHaveText("Publication needs conflict resolution before it can create an immutable revision.");
+});
+
+test("retries a lost draft-save response with the original mutation identity", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open settings" }).click();
+  await page.getByLabel("Bearer token").fill("studio-live-ci-token");
+  await page.getByLabel("Authenticated actor subject").fill("profile:studio-live");
+  await page.getByRole("button", { name: "Check owner connection" }).click();
+  await page.getByRole("button", { name: /Live owner API/ }).click();
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  const definitionId = await page.locator(".definition-card").first().locator(".card-id").textContent();
+  expect(definitionId).not.toBeNull();
+  await page.getByRole("button", { name: "Clone draft" }).first().click();
+  await expect(page.getByText(/Loaded the owner-backed draft\.|Autosaved to the active adapter\./)).toBeVisible();
+  const before = await page.evaluate(async (id) => {
+    const response = await fetch(`/v1/studio/drafts/draft.${id}`, { headers: { Authorization: "Bearer studio-live-ci-token" } });
+    return { status: response.status, body: await response.json() };
+  }, definitionId);
+  expect(before.status).toBe(200);
+
+  let dropped = false;
+  await page.route("**/v1/studio/drafts/**", async (route) => {
+    if (!dropped && route.request().method() === "PUT") {
+      dropped = true;
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      await route.abort("connectionreset");
+      return;
+    }
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "JSON mode" }).click();
+  const raw = page.getByLabel("Raw workflow definition JSON");
+  const candidate = JSON.parse(await raw.inputValue()) as { annotations: { summary: string } };
+  candidate.annotations.summary = "Saved once despite a lost response";
+  await raw.fill(JSON.stringify(candidate, null, 2));
+  await page.getByRole("button", { name: "Apply candidate" }).click();
+  await expect(page.getByRole("button", { name: "Retry save" })).toBeVisible();
+  await page.getByRole("button", { name: "Retry save" }).click();
+  await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+  expect(dropped).toBe(true);
+
+  const saved = await page.evaluate(async (id) => {
+    const response = await fetch(`/v1/studio/drafts/draft.${id}`, { headers: { Authorization: "Bearer studio-live-ci-token" } });
+    return { status: response.status, body: await response.json() };
+  }, definitionId);
+  expect(saved.status).toBe(200);
+  expect(saved.body.revision).toBe(before.body.revision + 1);
+  expect(saved.body.document.annotations.summary).toBe("Saved once despite a lost response");
 });
