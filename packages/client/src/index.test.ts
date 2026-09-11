@@ -91,6 +91,10 @@ describe("owner event projection", () => {
 });
 
 describe("same-origin client boundary", () => {
+  it("binds the platform fetch receiver for browser owner requests", async () => {
+    const client = new OwnerApiClient({ fetcher: undefined });
+    expect(client).toBeInstanceOf(OwnerApiClient);
+  });
   it("accepts only relative API bases", () => {
     expect(normalizeRelativeBase("/v1/")).toBe("/v1");
     expect(() => normalizeRelativeBase("https://example.invalid/v1")).toThrow();

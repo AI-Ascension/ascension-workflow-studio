@@ -79,3 +79,31 @@ jobs:
             test-results
           if-no-files-found: ignore
           retention-days: 7
+
+  live-owner-browser:
+    name: Authenticated live-owner browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
+        with:
+          repository: AI-Ascension/sts2-harness
+          ref: e70fce12afebb38503a450c8bd242bd8ad532817
+          path: harness
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24.16.0
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: cargo build --locked --manifest-path harness/Cargo.toml --bin sts2-workflow
+      - run: STS2_WORKFLOW_TOKEN_STUDIO_LIVE=studio-live-ci-token harness/target/debug/sts2-workflow serve --listen 127.0.0.1:4185 --store /tmp/studio-live.sqlite --auth-profile studio-live > /tmp/studio-live.log 2>&1 &
+      - run: |
+          for attempt in {1..30}; do
+            curl --fail --silent --show-error -H 'Authorization: Bearer studio-live-ci-token' http://127.0.0.1:4185/v1/health && exit 0
+            sleep 1
+          done
+          cat /tmp/studio-live.log
+          exit 1
+      - run: npm run test:live-owner-browser

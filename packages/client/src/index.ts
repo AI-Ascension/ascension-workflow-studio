@@ -116,7 +116,7 @@ export class OwnerApiClient implements StudioClient {
 
   public constructor(options: OwnerApiClientOptions = {}) {
     this.baseUrl = normalizeRelativeBase(options.baseUrl ?? "/v1");
-    this.fetcher = options.fetcher ?? fetch;
+    this.fetcher = options.fetcher ?? fetch.bind(globalThis);
     this.token = options.token;
     this.actorScope = options.actorScope?.trim() || undefined;
   }
