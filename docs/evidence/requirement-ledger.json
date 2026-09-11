@@ -2,8 +2,8 @@
   "schema_version": 1,
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
-    "implemented": 43,
-    "partial": 31,
+    "implemented": 44,
+    "partial": 30,
     "blocked": 33,
     "not_started": 13
   },
@@ -182,8 +182,8 @@
       "id": "P2-018",
       "mandatory": true,
       "work_package": "WP-05",
-      "status": "partial",
-      "evidence": "Unsupported schema imports are classified and shown read-only by packages/document/src/index.ts and DesignerView.tsx; exact original byte preservation is not claimed.",
+      "status": "implemented",
+      "evidence": "Merged Studio commit 8db49dc preserves the exact caller-provided source text in parseDefinitionImport(). DesignerView renders it only in a read-only archival panel and excludes it from draft persistence, validation, and publication. Parser, rendered-shell, Chromium, and Firefox regressions cover the behavior.",
       "acceptance_cases": [
         "AT-018"
       ]

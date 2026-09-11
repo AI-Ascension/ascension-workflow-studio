@@ -38,13 +38,13 @@ The clean-install checks passed:
 - authenticated synthetic `sts2-workflow serve` flow: health, capabilities, definitions, draft create, conditional save, validation, publication, draft reload, and published-definition reload all returned HTTP 200; see `phase2-live-authoring-api.json`
 - Phase 2 package verifier and 34 package checker tests
 
-The real Chromium command passed both browser journeys (2/2) against the built preview. It covered template cloning, fixture mode disclosure, the list editor, bounded JSON mode, run controls, and replay navigation; the screenshot was reviewed and copied into the evidence directory. Firefox and WebKit are downloaded and configured but their launch checks are blocked by missing GTK/media libraries in this host image. This is browser evidence for Chromium only, not a cross-browser or accessibility sign-off.
+The initial Chromium command passed both browser journeys (2/2) against the built preview. The 2026-09-11 continuation added unsupported-import archival retention and passed all three Studio browser journeys in Chromium and Firefox. Firefox used a user-local dependency/font root and a test-only content-sandbox workaround. WebKit remains unavailable because this VM cannot create its required headless EGL display. This does not constitute a complete cross-browser or accessibility sign-off.
 
 The exact merged Phase 1 owner suites passed 6 management cases and 5 SQLite cases; the Phase 1 workflow contract, dynamic, runtime and durable-store suites passed 28 cases. Real temporary `sts2-workflow serve` processes passed the admitted health, capability, validation, inspect, run, status, event, replay, redacted-export, draft, save, publication, and reload API checks. Those records are in `docs/evidence/phase1-owner-tests.json`, `phase1-workflow-tests.json`, `phase1-live-api.json`, and `phase2-live-authoring-api.json`.
 
 ## Visual, accessibility and performance
 
-The reviewed screenshot is a desktop Chromium render of the cloned strict setup draft in list/JSON mode. Source styles include light/dark color variables, reduced-motion handling, responsive grids, keyboard-visible controls and compact list/form layouts. No claim is made for the required 390px-to-desktop, 200/400 percent zoom, full keyboard, screen-reader, Firefox or WebKit matrix; those remain follow-up evidence. Vite reports the single initial JavaScript chunk as larger than 500 kB because React Flow is included in the initial route.
+The reviewed screenshot is a desktop Chromium render of the cloned strict setup draft in list/JSON mode. Source styles include light/dark color variables, reduced-motion handling, responsive grids, keyboard-visible controls and compact list/form layouts. Chromium and Firefox desktop fixture journeys pass; no claim is made for the required 390px-to-desktop, 200/400 percent zoom, full keyboard, screen-reader, or WebKit matrix. Vite reports the single initial JavaScript chunk as larger than 500 kB because React Flow is included in the initial route.
 
 ## Orchestration
 
@@ -56,4 +56,4 @@ The Studio and owner PRs were merged in dependency order after their review chec
 
 ## Remaining gaps
 
-The mandatory unresolved work is explicit in the ledgers. The main blockers are the missing native child-session runtime; absent browser pairing, session revocation, plan/artifact retrieval and live browser attachment; Firefox/WebKit host dependencies; the full accessibility/viewport/zoom matrix; production CSP/static-host review; independent runtime egress and license review; and CI workflow/evidence configuration. Completing those requires the corresponding runtime, owner-surface, host-image, or repository-scope change. The implementation is merged, but it is not ready for a release decision.
+The mandatory unresolved work is explicit in the ledgers. The main blockers are the missing native child-session runtime; absent browser pairing, session revocation, plan/artifact retrieval and live browser attachment; WebKit's headless host requirements; the full accessibility/viewport/zoom matrix; production CSP/static-host review; independent runtime egress and license review; and CI workflow/evidence configuration. Completing those requires the corresponding runtime, owner-surface, host-image, or repository-scope change. The implementation is merged, but it is not ready for a release decision.
