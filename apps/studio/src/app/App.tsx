@@ -67,8 +67,10 @@ export function App(): JSX.Element {
   const createDraft = (template?: DefinitionRecord): void => {
     const base = template ?? definitions[0] ?? fixtureDefinitions[0];
     const draft = cloneDocument(base.definition);
-    draft.version = `${draft.version}-draft`;
-    draft.annotations = { ...(draft.annotations ?? {}), studioDraft: true, template_source: base.id, template_version: base.definition.version };
+    draft.annotations = {
+      summary: `Studio draft cloned from ${base.id}@${base.definition.version}`,
+      synthetic: true,
+    };
     setSelectedDefinition({ ...base, title: `${base.title} draft`, source: "draft", description: "Unsaved Studio draft with explicit adapter state." });
     setActiveDocument(draft);
     setView("designer");
