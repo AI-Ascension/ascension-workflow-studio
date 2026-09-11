@@ -33,22 +33,30 @@ test.describe("Studio fixture workbench", () => {
         { id: "completed", kind: "terminal", config: { outcome: "completed" } }, { id: "blocked", kind: "terminal", config: { outcome: "blocked" } },
       ], edges: [
         { from: "observe", to: "route", on: "ok", priority: 0 }, { from: "route", to: "completed", on: "true", priority: 0 }, { from: "route", to: "blocked", on: "unknown", priority: 1 },
-      ], guards: [{ id: "outcome.present", expression: { kind: "exists", value: "approved.outcome" } }] }],
+      ], guards: [{ id: "outcome.present", expression: { kind: "field", value: "approved.outcome" } }] }],
     };
     await page.goto("/");
     await page.getByRole("button", { name: "Open designer" }).first().click();
     await page.getByRole("button", { name: "JSON mode" }).click();
     await page.getByRole("textbox", { name: "Raw workflow definition JSON" }).fill(JSON.stringify(definition));
     await page.getByRole("button", { name: "Apply candidate" }).click();
-    await expect(page.getByRole("alert")).toContainText("Missing explicit exits: false");
+    await expect(page.getByText(/Missing explicit exits: false/)).toBeVisible();
     await expect(page.getByLabel("outcome.present observation field")).toHaveValue("approved.outcome");
+    const preview = page.getByTestId("guard-preview-result-outcome.present");
+    await expect(preview).toHaveText("unknown");
+    await expect(preview).toHaveAttribute("data-truth", "unknown");
+    await page.getByLabel("outcome.present approved.outcome sample type").selectOption("boolean");
+    await page.getByLabel("outcome.present approved.outcome sample value").selectOption("true");
+    await expect(preview).toHaveText("true");
     await page.getByLabel("route branch 1 outcome").selectOption("false");
-    await expect(page.getByLabel("route false target")).toHaveValue("completed");
+    await expect(page.getByLabel("route branch 1 target")).toHaveValue("completed");
     await page.getByRole("button", { name: "Move unknown branch earlier" }).click();
     await expect(page.getByLabel("route branch 1 outcome")).toHaveValue("unknown");
     await page.getByLabel("outcome.present observation field").fill("");
     await page.getByLabel("outcome.present observation field").blur();
-    await expect(page.getByRole("alert")).toContainText("missing data must remain unknown");
+    await expect(page.getByText("Select an approved observation field; missing data must remain unknown.")).toBeVisible();
+    await page.getByLabel("route branch 2 target").selectOption("blocked");
+    await expect(page.getByLabel("outcome.present observation field")).toHaveValue("");
   });
 
   test("shows safe run controls and replay compare without leaving the app", async ({ page }) => {

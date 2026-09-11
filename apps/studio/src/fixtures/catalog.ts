@@ -8,41 +8,22 @@ import {
   type DefinitionRecord,
 } from "@studio/contracts";
 
+function fixture(id: string, title: string, description: string, updatedAt: string, raw: unknown): DefinitionRecord {
+  const definition = WorkflowDefinitionSchema.parse(raw as unknown);
+  return DefinitionRecordSchema.parse({
+    id,
+    title,
+    description,
+    source: "catalog",
+    updatedAt,
+    definition,
+    capabilities: [...definition.capabilities.required],
+  });
+}
+
 export const fixtureDefinitions: DefinitionRecord[] = [
-  DefinitionRecordSchema.parse({
-    id: "sts2.setup.strict",
-    title: "Strict setup",
-    description: "A bounded setup admission path with explicit observation and settlement.",
-    source: "catalog",
-    updatedAt: "2026-09-10T00:00:00.000Z",
-    definition: WorkflowDefinitionSchema.parse(setup as unknown),
-    capabilities: ["observe.fair-play.v1", "actions.catalog.v1", "actions.settlement.v1", "actions.setup.v1"],
-  }),
-  DefinitionRecordSchema.parse({
-    id: "sts2.combat.dynamic",
-    title: "Adaptive combat",
-    description: "A bounded dynamic region returning one proposal to protected execution.",
-    source: "catalog",
-    updatedAt: "2026-09-10T00:00:00.000Z",
-    definition: WorkflowDefinitionSchema.parse(combatDynamic as unknown),
-    capabilities: ["observe.fair-play.v1", "actions.catalog.v1", "actions.settlement.v1", "actions.combat.v1", "analysis.combat.v1"],
-  }),
-  DefinitionRecordSchema.parse({
-    id: "sts2.campaign.strict",
-    title: "Campaign coordinator",
-    description: "A strict campaign graph with explicit stage routing and operator terminal state.",
-    source: "catalog",
-    updatedAt: "2026-09-10T00:00:00.000Z",
-    definition: WorkflowDefinitionSchema.parse(campaign as unknown),
-    capabilities: ["observe.fair-play.v1", "actions.catalog.v1", "actions.settlement.v1", "actions.campaign.v1"],
-  }),
-  DefinitionRecordSchema.parse({
-    id: "sts2.terminal.strict",
-    title: "Terminal outcome",
-    description: "A strict route with explicit true, false, and unknown settlement outcomes.",
-    source: "catalog",
-    updatedAt: "2026-09-11T00:00:00.000Z",
-    definition: WorkflowDefinitionSchema.parse(terminal as unknown),
-    capabilities: ["observe.fair-play.v1", "actions.catalog.v1", "actions.settlement.v1"],
-  }),
+  fixture("sts2.setup.strict", "Strict setup", "A bounded setup admission path with explicit observation and settlement.", "2026-09-10T00:00:00.000Z", setup),
+  fixture("sts2.combat.dynamic", "Adaptive combat", "A bounded dynamic region returning one proposal to protected execution.", "2026-09-10T00:00:00.000Z", combatDynamic),
+  fixture("sts2.campaign.strict", "Campaign coordinator", "A strict campaign graph with explicit stage routing and operator terminal state.", "2026-09-10T00:00:00.000Z", campaign),
+  fixture("sts2.terminal.strict", "Terminal outcome", "A strict route with explicit true, false, and unknown settlement outcomes.", "2026-09-11T00:00:00.000Z", terminal),
 ];

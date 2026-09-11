@@ -9,6 +9,8 @@ import {
   WorkflowDefinitionSchema,
 } from "@studio/contracts";
 
+export * from "./guard";
+
 export type SemanticDocument = WorkflowDefinition;
 
 export interface StudioFlowNode {
