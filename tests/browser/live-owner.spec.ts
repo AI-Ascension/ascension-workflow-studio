@@ -35,12 +35,13 @@ async function ownerResetBase(page: Page, definitionId: string): Promise<void> {
     const current = await (await fetch(draftPath, { headers })).json();
     const definitions = await (await fetch("/v1/studio/definitions", { headers })).json();
     const definition = definitions.definitions.find((candidate: { id: string }) => candidate.id === id);
+    const baseDocument = definition ? definition.definition : current.document;
     const response = await fetch(draftPath, { method: "PUT", headers, body: JSON.stringify({
       schema_version: "ascension.studio-authoring/v1",
       expected_revision: current.revision,
       etag: current.etag,
       client_mutation_id: `studio.live-browser.reset-base.${Date.now()}`,
-      document: definition.definition,
+      document: baseDocument,
       layout: current.layout,
     }) });
     return { status: response.status, revision: (await response.json()).revision };
@@ -79,6 +80,12 @@ async function ownerMutate(page: Page, definitionId: string, mutation: string, m
 async function openRawCandidate(page: Page): Promise<import("@playwright/test").Locator> {
   await page.getByRole("button", { name: "JSON mode" }).click();
   return page.getByLabel("Raw workflow definition JSON");
+}
+
+async function openExistingDraft(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await page.getByRole("button", { name: "Open designer" }).first().click();
+  await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
 }
 
 async function applyLocalEdit(page: Page, edit: (document: { version: string; graphs: Array<{ nodes: Array<{ config: Record<string, unknown> }>; edges: Array<Record<string, unknown>> }> }) => void): Promise<void> {
@@ -377,4 +384,27 @@ test("keeps draft, definition, layout, and compiler identities independent", asy
   await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
   await expect(definitionDigest).not.toHaveText(definitionBefore ?? "");
   await expect(compiler).toHaveText("sts2-harness.workflow-compiler.v1");
+});
+
+test("two tabs: a conflicting pinned reference change requires review", async ({ context, page }) => {
+  await connectLiveOwner(page);
+  const definitionId = await openOwnedDraft(page);
+  await ownerResetBase(page, definitionId);
+  await reopenDesigner(page);
+  const second = await context.newPage();
+  await connectLiveOwner(second);
+  await openExistingDraft(second);
+
+  await applyLocalEdit(page, (local) => { local.graphs[0].nodes[0].config.projection_ref = "approved.pinned.a"; });
+  await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+
+  await applyLocalEdit(second, (local) => { local.graphs[0].nodes[0].config.projection_ref = "approved.pinned.b"; });
+  await expect(second.getByRole("heading", { name: "Local and remote drafts diverged" })).toBeVisible();
+  const panel = second.locator(".conflict-panel");
+  await expect(panel.locator(".status-badge")).toContainText("conflicts");
+  await expect(panel.getByText("Local paths")).toBeVisible();
+  await expect(panel.getByText("Remote paths")).toBeVisible();
+  await expect(second.getByRole("button", { name: "Apply non-overlapping merge" })).toBeDisabled();
+  await expect(second.getByLabel("Raw workflow definition JSON")).toHaveValue(/approved.pinned.b/);
+  await expect(page.getByLabel("Raw workflow definition JSON")).toHaveValue(/approved.pinned.a/);
 });
