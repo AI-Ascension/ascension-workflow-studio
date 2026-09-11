@@ -68,9 +68,11 @@ interface DesignerViewProps {
   client: StudioClient;
   definition: DefinitionRecord;
   initialDocument: WorkflowDefinition;
+  initialRawText?: string;
   mode: "fixture" | "live";
   onBack: () => void;
   onRun: (document: WorkflowDefinition) => void;
+  onRawTextChange: (definitionId: string, value: string) => void;
 }
 
 interface DraftState {
@@ -87,7 +89,7 @@ interface ArchivalImport {
   reason: string;
 }
 
-export function DesignerView({ client, definition, initialDocument, mode, onBack, onRun }: DesignerViewProps): JSX.Element {
+export function DesignerView({ client, definition, initialDocument, initialRawText, mode, onBack, onRun, onRawTextChange }: DesignerViewProps): JSX.Element {
   const [document, setDocument] = useState<SemanticDocument>(() => initialDocument);
   const [layout, setLayout] = useState<LayoutSidecar>(() => createLayout(initialDocument, "pending"));
   const [nodes, setNodes] = useState<FlowNode[]>(() => toFlowNodes(initialDocument, createLayout(initialDocument, "pending")));
@@ -97,7 +99,7 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
   const [selectedEdge, setSelectedEdge] = useState<{ graphId: string; edgeIndex: number } | undefined>();
   const [clipboard, setClipboard] = useState<NodeClipboard | undefined>();
   const [rawMode, setRawMode] = useState(false);
-  const [rawText, setRawText] = useState(() => JSON.stringify(initialDocument, null, 2));
+  const [rawText, setRawText] = useState(() => initialRawText ?? JSON.stringify(initialDocument, null, 2));
   const [rawError, setRawError] = useState<string | undefined>();
   const [archivalImport, setArchivalImport] = useState<ArchivalImport | undefined>();
   const [bundlePreview, setBundlePreview] = useState<string | undefined>();
@@ -130,7 +132,7 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
     setSelectedId(undefined);
     setSelectedIds([]);
     setSelectedEdge(undefined);
-    setRawText(JSON.stringify(initialDocument, null, 2));
+    setRawText(initialRawText ?? JSON.stringify(initialDocument, null, 2));
     setRawError(undefined);
     setArchivalImport(undefined);
     setDiagnostics(undefined);
@@ -153,7 +155,7 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
           setDocument(saved.document);
           setLayout(nextLayout);
           setNodes(toFlowNodes(saved.document, nextLayout));
-          setRawText(JSON.stringify(saved.document, null, 2));
+          if (!initialRawText) setRawText(JSON.stringify(saved.document, null, 2));
           setDraft({ revision: saved.revision, etag: saved.etag, state: saved.conflict ? "conflict" : "saved", message: saved.conflict ? "The owner returned a persisted draft conflict." : "Loaded the owner-backed draft.", server: saved.conflict ? saved : undefined });
           persistedKeyRef.current = valueKey(saved.document, nextLayout);
         }
@@ -226,12 +228,14 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
     setDocument(nextDocument);
     setLayout(nextLayout);
     setNodes(toFlowNodes(nextDocument, nextLayout));
-    setRawText(JSON.stringify(nextDocument, null, 2));
+    const nextRawText = JSON.stringify(nextDocument, null, 2);
+    setRawText(nextRawText);
+    onRawTextChange(definition.id, nextRawText);
     setRawError(undefined);
     setArchivalImport(undefined);
     setDiagnostics(undefined);
     setValidationState("idle");
-  }, [ensureLayout, layout]);
+  }, [definition.id, ensureLayout, layout, onRawTextChange]);
 
   const undo = (): void => {
     const next = history.current.undo();
@@ -577,7 +581,7 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
       </div>
     </div>
     <DefinitionControls document={document} onCommit={commit} />
-    {rawMode ? <RawDefinitionPanel rawText={rawText} error={rawError} onChange={(value) => { setRawText(value); setRawError(undefined); }} onApply={applyRawDefinition} /> : null}
+    {rawMode ? <RawDefinitionPanel rawText={rawText} error={rawError} onChange={(value) => { setRawText(value); onRawTextChange(definition.id, value); setRawError(undefined); }} onApply={applyRawDefinition} /> : null}
     {archivalImport ? <ArchivalImportPanel archival={archivalImport} /> : null}
     {bundlePreview ? <details className="bundle-preview"><summary>Last portable bundle preview</summary><pre>{bundlePreview}
 …</pre></details> : null}
