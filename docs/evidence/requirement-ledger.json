@@ -2,9 +2,9 @@
   "schema_version": 1,
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
-    "implemented": 44,
+    "implemented": 45,
     "partial": 30,
-    "blocked": 33,
+    "blocked": 32,
     "not_started": 13
   },
   "requirements": [
@@ -1122,8 +1122,8 @@
       "id": "P2-112",
       "mandatory": true,
       "work_package": "WP-37",
-      "status": "blocked",
-      "evidence": "CI workflow is not configured in this initial delivery.",
+      "status": "implemented",
+      "evidence": "Merged Studio commit e9037d3 adds .github/workflows/validate.yml. Main-head GitHub Actions run 34624430891 passed clean install, lint/typecheck, unit tests, production build, Chromium, Firefox, WebKit, and recorded-run Chromium browser checks.",
       "acceptance_cases": [
         "AT-112"
       ]

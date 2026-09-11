@@ -8,7 +8,8 @@ This packet separates product evidence from package integrity and unresolved own
 
 - Merged Studio commit `8db49dc2bb8a76f42c5b7baa225117c09ee76200` preserves exact unsupported-workflow import text in a read-only archival panel. The text is excluded from draft persistence, validation, and publication.
 - `npm test -- --run --pool=threads --maxWorkers=1` passed: 4 files, 99 tests. `npm run build` also passed at the merged source head.
-- Against the built local preview, the three Studio browser journeys passed in Chromium and Firefox: fixture designer, run/replay navigation, and unsupported-import archival retention. Firefox required a user-local dependency/font root and a test-only content-sandbox workaround. WebKit remains unverified because this headless VM cannot create its required EGL display.
+- Against the built local preview, the three Studio browser journeys passed in Chromium and Firefox: fixture designer, run/replay navigation, and unsupported-import archival retention. Firefox required a user-local dependency/font root and a test-only content-sandbox workaround. This local VM cannot create WebKit's required EGL display; the GitHub-hosted WebKit CI result below supplies the cross-engine execution evidence.
+- Merged Studio commit `e9037d3a210dc967a82d23f48948e4d49aa4bd87` adds the GitHub Actions validation workflow. Main-head run `34624430891` passed clean installation, lint/typecheck, unit tests, production build, Chromium, Firefox, WebKit, and the recorded-run Chromium regression.
 
 - `npm ci` passed with the pinned lockfile, including `@playwright/test` 1.63.0.
 - `npm run typecheck` and `npm run lint` passed for the strict app and Vite configuration projects.
