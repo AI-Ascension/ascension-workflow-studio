@@ -27,6 +27,7 @@ export function App(): JSX.Element {
   const [view, setView] = useState<View>("library");
   const [definitions, setDefinitions] = useState<DefinitionRecord[]>(fixtureDefinitions);
   const [loadingDefinitions, setLoadingDefinitions] = useState(false);
+  const [catalogRefresh, setCatalogRefresh] = useState(0);
   const [catalogNotice, setCatalogNotice] = useState<string | undefined>();
   const [selectedDefinition, setSelectedDefinition] = useState<DefinitionRecord>(fixtureDefinitions[0]);
   const [activeDocument, setActiveDocument] = useState<WorkflowDefinition>(fixtureDefinitions[0].definition);
@@ -55,7 +56,7 @@ export function App(): JSX.Element {
       if (mounted) setLoadingDefinitions(false);
     });
     return () => { mounted = false; };
-  }, [client, mode]);
+  }, [catalogRefresh, client, mode]);
 
   const openDefinition = (definition: DefinitionRecord): void => {
     setSelectedDefinition(definition);
@@ -110,7 +111,7 @@ export function App(): JSX.Element {
       {appMessage ? <div className="app-message" role="status"><span>{appMessage}</span><button aria-label="Dismiss message" onClick={() => setAppMessage(undefined)}>×</button></div> : null}
       <div className="content-shell">
         {view === "recordings" ? <RecordingsView {...recording} /> : null}
-        {view === "library" ? <LibraryView definitions={definitions} loading={loadingDefinitions} catalogNotice={catalogNotice} onOpen={openDefinition} onCreate={createDraft} /> : null}
+        {view === "library" ? <LibraryView definitions={definitions} loading={loadingDefinitions} catalogNotice={catalogNotice} onOpen={openDefinition} onCreate={createDraft} onRefresh={() => setCatalogRefresh((current) => current + 1)} /> : null}
         {view === "designer" ? <DesignerView client={client} definition={selectedDefinition} initialDocument={activeDocument} mode={mode} onBack={() => setView("library")} onRun={(document) => void runDocument(document)} /> : null}
         {view === "runs" ? <RunsView client={client} mode={mode} initialRunId={runId} onRunIdChange={setRunId} /> : null}
         {view === "replay" ? <ReplayView client={client} mode={mode} definition={replayDocument} definitions={definitions} /> : null}

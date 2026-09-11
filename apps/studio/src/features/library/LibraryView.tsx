@@ -11,9 +11,10 @@ interface LibraryViewProps {
   catalogNotice: string | undefined;
   onOpen: (definition: DefinitionRecord) => void;
   onCreate: (template?: DefinitionRecord) => void;
+  onRefresh: () => void;
 }
 
-export function LibraryView({ definitions, loading, catalogNotice, onOpen, onCreate }: LibraryViewProps): JSX.Element {
+export function LibraryView({ definitions, loading, catalogNotice, onOpen, onCreate, onRefresh }: LibraryViewProps): JSX.Element {
   const [query, setQuery] = useState("");
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -37,6 +38,7 @@ export function LibraryView({ definitions, loading, catalogNotice, onOpen, onCre
         <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Filter by name or ID" />
         <span aria-hidden="true">⌕</span>
       </label>
+      <button className="button button-quiet" onClick={onRefresh} disabled={loading}>Refresh library</button>
       <span className="toolbar-meta">{filtered.length} definition{filtered.length === 1 ? "" : "s"}</span>
     </div>
     {loading ? <div className="loading-line">Loading admitted catalog…</div> : null}

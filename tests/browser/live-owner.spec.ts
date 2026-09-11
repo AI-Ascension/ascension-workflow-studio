@@ -16,4 +16,7 @@ test("pairs with the authenticated owner through the same-origin adapter", async
   await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
   await page.getByRole("button", { name: "Publish revision" }).click();
   await expect(page.locator(".validation-label")).toHaveText(/Published an immutable owner revision\.|This exact semantic digest is already published\./);
+  await page.getByRole("button", { name: "Library" }).click();
+  await page.getByRole("button", { name: "Refresh library" }).click();
+  await expect(page.getByText("published", { exact: true })).toBeVisible();
 });
