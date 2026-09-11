@@ -561,7 +561,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the synthetic live process completed draft create and reload. Browser integration remains unverified."
+      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the synthetic live process completed draft create and reload. Studio CI run 34630449100 verified an authenticated Chromium user creates a draft and observes the owner-backed autosave. Browser reload and conflict handling remain unverified."
     },
     {
       "id": "AT-047",
@@ -572,7 +572,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Merged owner PR #57 supplies conditional revision/etag writes and client mutation IDs with focused tests; the synthetic live process completed a conditional save. Browser integration remains unverified."
+      "evidence": "Merged owner PR #57 supplies conditional revision/etag writes and client mutation IDs with focused tests; the synthetic live process completed a conditional save. Studio CI run 34630449100 verified an authenticated Chromium draft autosave through the same-origin adapter. Browser conflict and retry handling remain unverified."
     },
     {
       "id": "AT-048",
