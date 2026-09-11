@@ -2,10 +2,10 @@
   "schema_version": 1,
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
-    "implemented": 45,
-    "partial": 30,
-    "blocked": 32,
-    "not_started": 13
+    "blocked": 33,
+    "implemented": 49,
+    "partial": 26,
+    "not_started": 12
   },
   "requirements": [
     {
@@ -383,7 +383,7 @@
       "mandatory": true,
       "work_package": "WP-12",
       "status": "partial",
-      "evidence": "Branch labels are rendered; typed guard editing remains.",
+      "evidence": "Merged Studio PR #44 (commits 43114c3 and 09af450; merge 275adba) replaces the free-text guard field with a registered-operator builder: typed operands, admitted observation-field suggestions, explicit three-valued outcomes, and a bounded advisory client preview of the owner's Kleene semantics so absent observation data previews unknown. Unregistered or nested expressions are read-only rather than editable arbitrary JSON. Remaining: no digest-bound owner-exported observation/field registry projection, and nested and/or/not composition is read-only. P2-038 stays partial until those are delivered.",
       "acceptance_cases": [
         "AT-038"
       ]

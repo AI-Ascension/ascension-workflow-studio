@@ -2,10 +2,11 @@
   "schema_version": 1,
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
+    "blocked": 34,
     "evidenced": 38,
-    "partial": 36,
-    "blocked": 33,
-    "not_run": 13
+    "partial": 32,
+    "implemented": 4,
+    "not_run": 12
   },
   "cases": [
     {
@@ -463,9 +464,17 @@
       ],
       "work_package": "WP-12",
       "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Branch labels are rendered; typed guard editing remains."
+      "actual_command": "GitHub Actions Studio validation run 34650717771 (npm test; Playwright chromium, firefox, webkit; recorded-run regression; authenticated live-owner)",
+      "actual_source_heads": {
+        "studio": "09af450"
+      },
+      "evidence": "Studio CI run 34650717771 passed all six jobs on commit 09af450. The browser test authors a field guard with a true/unknown branch pair, asserts a real preview evaluation where absent observation data is unknown and a present boolean is true, reorders the unknown branch and verifies the rewritten authoritative priority order, and confirms a cleared field reference keeps invalid local input with a specific error instead of a strict-locator alert collision. Remaining before implemented: digest-bound owner field registry and nested composition editing.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "packages/document/src/guard.ts",
+        "packages/document/src/guard.test.ts",
+        "tests/browser/studio.spec.ts"
+      ]
     },
     {
       "id": "AT-039",
@@ -492,8 +501,8 @@
       "evidence": "Studio CI runs 34639729580 and 34642971172 verified malformed JSON remains visible after Library navigation, does not replace the saved draft, and can be repaired, atomically applied, autosaved, and reopened; duplicate keys are rejected without draft mutation; unsupported future-schema text is retained read-only.",
       "actual_evidence_refs": [
         "apps/studio/src/features/designer/DesignerView.tsx",
-    "packages/document/src/index.ts",
-    "tests/browser/studio.spec.ts"
+        "packages/document/src/index.ts",
+        "tests/browser/studio.spec.ts"
       ]
     },
     {
