@@ -89,6 +89,18 @@ interface ArchivalImport {
   reason: string;
 }
 
+interface EditorSnapshot {
+  document: SemanticDocument;
+  layout: LayoutSidecar;
+}
+
+function copyEditorSnapshot(snapshot: EditorSnapshot): EditorSnapshot {
+  return {
+    document: cloneDocument(snapshot.document),
+    layout: LayoutSidecarSchema.parse(JSON.parse(JSON.stringify(snapshot.layout)) as unknown),
+  };
+}
+
 export function DesignerView({ client, definition, initialDocument, initialRawText, mode, onBack, onRun, onRawTextChange }: DesignerViewProps): JSX.Element {
   const [document, setDocument] = useState<SemanticDocument>(() => initialDocument);
   const [layout, setLayout] = useState<LayoutSidecar>(() => createLayout(initialDocument, "pending"));
@@ -114,7 +126,10 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
   const mutationIdsRef = useRef(new Map<string, string>());
   const publicationIdsRef = useRef(new Map<string, string>());
   const saveGenerationRef = useRef(0);
-  const history = useRef(new History(initialDocument, (value) => JSON.parse(JSON.stringify(value)) as WorkflowDefinition));
+  const history = useRef(new History<EditorSnapshot>(
+    { document: initialDocument, layout: createLayout(initialDocument, "pending") },
+    copyEditorSnapshot,
+  ));
   const bundleInput = useRef<HTMLInputElement>(null);
 
   draftRef.current = draft;
@@ -125,7 +140,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
 
   useEffect(() => {
     const nextLayout = createLayout(initialDocument, "pending");
-    history.current = new History(initialDocument, (value) => JSON.parse(JSON.stringify(value)) as WorkflowDefinition);
+    history.current = new History<EditorSnapshot>({ document: initialDocument, layout: nextLayout }, copyEditorSnapshot);
     setDocument(initialDocument);
     setLayout(nextLayout);
     setNodes(toFlowNodes(initialDocument, nextLayout));
@@ -151,7 +166,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
         if (saved) {
           const parsedLayout = LayoutSidecarSchema.safeParse(saved.layout);
           const nextLayout = parsedLayout.success ? parsedLayout.data : createLayout(saved.document, "pending");
-          history.current = new History(saved.document, (value) => JSON.parse(JSON.stringify(value)) as WorkflowDefinition);
+          history.current = new History<EditorSnapshot>({ document: saved.document, layout: nextLayout }, copyEditorSnapshot);
           setDocument(saved.document);
           setLayout(nextLayout);
           setNodes(toFlowNodes(saved.document, nextLayout));
@@ -224,7 +239,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
 
   const commit = useCallback((nextDocument: SemanticDocument): void => {
     const nextLayout = { ...ensureLayout(nextDocument, layout), semanticDigest: "pending" } as LayoutSidecar;
-    history.current.commit(nextDocument);
+    history.current.commit({ document: nextDocument, layout: nextLayout });
     setDocument(nextDocument);
     setLayout(nextLayout);
     setNodes(toFlowNodes(nextDocument, nextLayout));
@@ -239,21 +254,19 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
 
   const undo = (): void => {
     const next = history.current.undo();
-    const nextLayout = { ...ensureLayout(next, layout), semanticDigest: "pending" } as LayoutSidecar;
-    setDocument(next);
-    setLayout(nextLayout);
-    setNodes(toFlowNodes(next, nextLayout));
-    setRawText(JSON.stringify(next, null, 2));
+    setDocument(next.document);
+    setLayout(next.layout);
+    setNodes(toFlowNodes(next.document, next.layout));
+    setRawText(JSON.stringify(next.document, null, 2));
     setRawError(undefined);
   };
 
   const redo = (): void => {
     const next = history.current.redo();
-    const nextLayout = { ...ensureLayout(next, layout), semanticDigest: "pending" } as LayoutSidecar;
-    setDocument(next);
-    setLayout(nextLayout);
-    setNodes(toFlowNodes(next, nextLayout));
-    setRawText(JSON.stringify(next, null, 2));
+    setDocument(next.document);
+    setLayout(next.layout);
+    setNodes(toFlowNodes(next.document, next.layout));
+    setRawText(JSON.stringify(next.document, null, 2));
     setRawError(undefined);
   };
 
@@ -319,7 +332,10 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
 
   const alignSelection = (): void => {
     try {
-      setLayout((current) => alignLayout(current, selectedIds, "x"));
+      const nextLayout = alignLayout(layout, selectedIds, "x");
+      history.current.commit({ document, layout: nextLayout });
+      setLayout(nextLayout);
+      setNodes(toFlowNodes(document, nextLayout));
       setValidationState("valid");
       setValidationMessage("Aligned the selected nodes without changing semantic execution.");
     } catch (error: unknown) {
@@ -475,7 +491,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     const raw = await file.text();
     try {
       const bundle = await parseStudioBundle(raw);
-      history.current = new History(bundle.semantic, (value) => JSON.parse(JSON.stringify(value)) as WorkflowDefinition);
+      history.current = new History<EditorSnapshot>({ document: bundle.semantic, layout: bundle.layout }, copyEditorSnapshot);
       setDocument(bundle.semantic);
       setLayout(bundle.layout);
       setNodes(toFlowNodes(bundle.semantic, bundle.layout));
@@ -528,7 +544,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     if (!remote || !draft.server) return;
     const remoteLayoutResult = LayoutSidecarSchema.safeParse(draft.server.conflict?.serverLayout ?? draft.server.layout);
     const remoteLayout = remoteLayoutResult.success ? remoteLayoutResult.data : createLayout(remote, "pending");
-    history.current = new History(remote, (value) => JSON.parse(JSON.stringify(value)) as WorkflowDefinition);
+    history.current = new History<EditorSnapshot>({ document: remote, layout: remoteLayout }, copyEditorSnapshot);
     setDocument(remote);
     setLayout(remoteLayout);
     setNodes(toFlowNodes(remote, remoteLayout));
@@ -617,7 +633,10 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
           onNodeClick={(event, node) => selectNode(node.id, event.metaKey || event.ctrlKey)}
           onEdgeClick={onEdgeClick}
           onNodeDragStop={(_event, node) => {
-            setLayout((current) => updateLayout(current, { [node.id]: node.position }));
+            const nextLayout = updateLayout(layout, { [node.id]: node.position });
+            history.current.commit({ document, layout: nextLayout });
+            setLayout(nextLayout);
+            setNodes(toFlowNodes(document, nextLayout));
           }}
           fitView
           fitViewOptions={{ padding: 0.2 }}
