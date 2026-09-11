@@ -273,7 +273,7 @@
       "mandatory": true,
       "work_package": "WP-08",
       "status": "partial",
-      "evidence": "Fixture validation and live owner validation are wired; merged owner PR #57 supplies a publication route with digest and validation checks, and the synthetic live process completed validation/publication. Studio CI run 34628564577 also verified authenticated Chromium pairing and live-mode selection through the same-origin adapter. Browser draft validation/publication and native-gameplay evidence remain unavailable.",
+      "evidence": "Fixture validation and live owner validation are wired; merged owner PR #57 supplies a publication route with digest and validation checks, and the synthetic live process completed validation/publication. Studio CI run 34631851055 verified authenticated Chromium pairing, live-mode selection, draft autosave, and an owner validation digest through the same-origin adapter. Browser publication and native-gameplay evidence remain unavailable.",
       "acceptance_cases": [
         "AT-027"
       ]
