@@ -472,8 +472,8 @@
       "id": "P2-047",
       "mandatory": true,
       "work_package": "WP-15",
-      "status": "partial",
-      "evidence": "Merged owner PR #57 supplies conditional revision/etag writes and client mutation IDs with focused tests; the synthetic live process completed a conditional save. Studio CI run 34636278029 verified authenticated Chromium receives and presents the owner conflict record after a stale revision/etag save. Browser retry handling remains unverified.",
+      "status": "implemented",
+      "evidence": "Merged owner PR #57 supplies conditional revision/etag writes and client mutation IDs. Merged Studio commit 64cc163 adds a retry action that reuses the original save identity and precondition. Studio CI run 34644931285 drops an owner-success save response, retries through the authenticated browser, and verifies the owner revision advances exactly once.",
       "acceptance_cases": [
         "AT-047"
       ]
