@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 38,
-    "partial": 32,
+    "evidenced": 39,
+    "partial": 31,
     "implemented": 6,
     "not_run": 10
   },
@@ -452,10 +452,17 @@
         "P2-037"
       ],
       "work_package": "WP-12",
-      "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Graph sections and bounded loop nodes render; breadcrumbs/subworkflow views remain."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34655219461 (npm test; Playwright chromium, firefox, webkit; recorded-run regression; authenticated live-owner)",
+      "actual_source_heads": {
+        "studio": "604c179"
+      },
+      "evidence": "Merged PR #48 browser test authors a two-graph definition and verifies explicit graph navigation and breadcrumbs, navigates into a loop body graph and back, edits max_iterations with the raw candidate updated, renders pinned subworkflow version/digest badges with the fork/new-version note, and asserts no parallel-execution framing. Studio CI run 34655219461 passed all six jobs.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "apps/studio/src/styles.css",
+        "tests/browser/studio.spec.ts"
+      ]
     },
     {
       "id": "AT-038",

@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 51,
-    "partial": 26,
+    "implemented": 52,
+    "partial": 25,
     "not_started": 10
   },
   "requirements": [
@@ -372,8 +372,8 @@
       "id": "P2-037",
       "mandatory": true,
       "work_package": "WP-12",
-      "status": "partial",
-      "evidence": "Graph sections and bounded loop nodes render; breadcrumbs/subworkflow views remain.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #48 (commit 604c179; merge c02d512) renders one focused graph at a time behind an explicit graph navigator with a breadcrumb trail and per-graph viewport retention. Selecting a node focuses its owning graph; bounded loop nodes expose an Open body graph action that pushes a breadcrumb and breadcrumbs navigate back; subworkflow nodes show pinned id/version/digest badges and an inspect-reference note. Studio CI run 34655219461 passed all six jobs.",
       "acceptance_cases": [
         "AT-037"
       ]
