@@ -3,10 +3,10 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 39,
+    "evidenced": 40,
     "partial": 31,
     "implemented": 6,
-    "not_run": 10
+    "not_run": 9
   },
   "cases": [
     {
@@ -603,10 +603,19 @@
         "P2-048"
       ],
       "work_package": "WP-15",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "evidenced",
+      "actual_command": "cargo test --locked --test management_compiler_identity (sts2-harness 44a4c2f); GitHub Actions Studio validation run 34657583347 (live-owner browser on harness 5863c62)",
+      "actual_source_heads": {
+        "studio": "155b96b",
+        "harness": "44a4c2f"
+      },
+      "evidence": "The harness management test validates through the synthetic store and asserts the reported compiler identity equals WORKFLOW_COMPILER_ID, differs from the definition digest, and is unchanged by a semantic edit while the digest changes. The Studio live-owner browser test asserts the compiler identity shown is sts2-harness.workflow-compiler.v1, a layout-only auto-layout leaves the definition digest and compiler identity unchanged, a semantic edit changes the definition digest while the compiler identity stays fixed, and the layout/definition digests are never presented as the compiler identity.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "packages/contracts/src/index.ts",
+        "tests/browser/live-owner.spec.ts",
+        ".github/workflows/validate.yml"
+      ]
     },
     {
       "id": "AT-049",

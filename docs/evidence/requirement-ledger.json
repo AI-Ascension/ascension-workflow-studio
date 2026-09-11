@@ -3,9 +3,9 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 52,
+    "implemented": 53,
     "partial": 25,
-    "not_started": 10
+    "not_started": 9
   },
   "requirements": [
     {
@@ -482,8 +482,8 @@
       "id": "P2-048",
       "mandatory": true,
       "work_package": "WP-15",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "Owner: merged sts2-harness PR #88 (commit 44a4c2f; merge 5863c62) adds WORKFLOW_COMPILER_ID and reports it through the definition port and management validate response separately from the definition digest. Studio: merged PR #50 (commit 155b96b; merge bd6576d) consumes the optional compiler field and shows draft revision, definition digest, layout digest, and compiler identity as independent values. Studio live-owner CI run 34657583347 pins harness 5863c62 and passed all six jobs.",
       "acceptance_cases": [
         "AT-048"
       ]
