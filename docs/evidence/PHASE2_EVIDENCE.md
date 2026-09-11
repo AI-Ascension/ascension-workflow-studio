@@ -4,6 +4,12 @@ This packet separates product evidence from package integrity and unresolved own
 
 ## Product evidence currently available
 
+### Continuation — 2026-09-11
+
+- Merged Studio commit `8db49dc2bb8a76f42c5b7baa225117c09ee76200` preserves exact unsupported-workflow import text in a read-only archival panel. The text is excluded from draft persistence, validation, and publication.
+- `npm test -- --run --pool=threads --maxWorkers=1` passed: 4 files, 99 tests. `npm run build` also passed at the merged source head.
+- Against the built local preview, the three Studio browser journeys passed in Chromium and Firefox: fixture designer, run/replay navigation, and unsupported-import archival retention. Firefox required a user-local dependency/font root and a test-only content-sandbox workaround. WebKit remains unverified because this headless VM cannot create its required EGL display.
+
 - `npm ci` passed with the pinned lockfile, including `@playwright/test` 1.63.0.
 - `npm run typecheck` and `npm run lint` passed for the strict app and Vite configuration projects.
 - `npm test -- --run --pool=threads --maxWorkers=1` passed: 3 files, 20 tests. Coverage includes semantic identity and layout binding, bounded history, digest-bound bundles, secret-like field rejection, hostile JSON input rejection, future-schema archival classification, copy/paste ID remapping, guarded reconnection, alignment, three-way merge, owner event projection recovery, bounded SSE framing, same-origin enforcement, runtime owner decoding, owner capability forwarding, safe commands, and the rendered library/designer/list-editor shell.
@@ -29,7 +35,7 @@ The live adapter is real code against the merged owner routes, including draft p
 
 The runtime did not expose callable D0→D1→D2→D3 Luna Max child sessions. No subprocess chain or false attestation was substituted. The exact blocked and partial requirement entries are in `requirement-ledger.json`.
 
-The Chromium browser smoke covered the desktop fixture journeys. The full Firefox/WebKit launch matrix, 390px through desktop responsive matrix, 200/400 percent zoom, manual screen-reader review, production host CSP headers, live owner attachment, and browser permission/revocation states remain unverified. The production bundle contains a single minified JavaScript chunk of 553,475 bytes because React Flow is included in the initial route; Vite reports a chunk-size warning, and route-level code splitting remains a follow-up.
+The desktop fixture journeys now have Chromium and Firefox coverage. WebKit, the 390px-through-desktop responsive matrix, 200/400 percent zoom, manual screen-reader review, production host CSP headers, live owner attachment, and browser permission/revocation states remain unverified. The production bundle contains a single minified JavaScript chunk of 553,475 bytes because React Flow is included in the initial route; Vite reports a chunk-size warning, and route-level code splitting remains a follow-up.
 
 Phase 2 is merged. No release, deployment, live game session, or native hierarchy claim is made by this packet.
 
