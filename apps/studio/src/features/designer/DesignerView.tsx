@@ -124,6 +124,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
   const [saveRetry, setSaveRetry] = useState(0);
   const [publicationState, setPublicationState] = useState<"idle" | "publishing">("idle");
   const draftRef = useRef(draft);
+  const mergeBaseRef = useRef<SemanticDocument>(cloneDocument(initialDocument));
   const persistedKeyRef = useRef<string | undefined>(undefined);
   const mutationIdsRef = useRef(new Map<string, string>());
   const publicationIdsRef = useRef(new Map<string, string>());
@@ -143,6 +144,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
   useEffect(() => {
     const nextLayout = createLayout(initialDocument, "pending");
     history.current = new History<EditorSnapshot>({ document: initialDocument, layout: nextLayout }, copyEditorSnapshot);
+    mergeBaseRef.current = cloneDocument(initialDocument);
     setDocument(initialDocument);
     setLayout(nextLayout);
     setNodes(toFlowNodes(initialDocument, nextLayout));
@@ -169,6 +171,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
           const parsedLayout = LayoutSidecarSchema.safeParse(saved.layout);
           const nextLayout = parsedLayout.success ? parsedLayout.data : createLayout(saved.document, "pending");
           history.current = new History<EditorSnapshot>({ document: saved.document, layout: nextLayout }, copyEditorSnapshot);
+          mergeBaseRef.current = cloneDocument(saved.document);
           setDocument(saved.document);
           setLayout(nextLayout);
           setNodes(toFlowNodes(saved.document, nextLayout));
@@ -211,6 +214,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
       }).then((saved) => {
         if (generation !== saveGenerationRef.current) return;
         persistedKeyRef.current = currentKey;
+        if (!saved.conflict) mergeBaseRef.current = cloneDocument(document);
         setDraft({ revision: saved.revision, etag: saved.etag, state: saved.conflict ? "conflict" : "saved", message: saved.conflict ? "The owner reported a revision conflict." : "Autosaved to the active adapter.", server: saved.conflict ? saved : undefined });
       }).catch((error: unknown) => {
         if (generation !== saveGenerationRef.current) return;
@@ -567,6 +571,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     const remoteLayoutResult = LayoutSidecarSchema.safeParse(draft.server.conflict?.serverLayout ?? draft.server.layout);
     const remoteLayout = remoteLayoutResult.success ? remoteLayoutResult.data : createLayout(remote, "pending");
     history.current = new History<EditorSnapshot>({ document: remote, layout: remoteLayout }, copyEditorSnapshot);
+    mergeBaseRef.current = cloneDocument(remote);
     setDocument(remote);
     setLayout(remoteLayout);
     setNodes(toFlowNodes(remote, remoteLayout));
@@ -587,7 +592,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
   const mergeConflict = (): void => {
     const remote = draft.server?.conflict?.serverDocument;
     if (!remote) return;
-    const result = mergeDocuments(initialDocument, document, remote);
+    const result = mergeDocuments(mergeBaseRef.current, document, remote);
     if (result.conflicts.length > 0 || !result.document) {
       setValidationState("error");
       setValidationMessage(`Merge needs review at ${result.conflicts.map((conflict) => conflict.path).join(", ")}.`);
@@ -595,6 +600,10 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     }
     commit(result.document);
     setDraft({ revision: draft.server?.revision ?? draft.revision, etag: draft.server?.etag ?? draft.etag, state: "saved", message: "Non-overlapping semantic changes were merged; validation is required again." });
+  };
+
+  const cancelConflictResolution = (): void => {
+    setDraft((current) => ({ ...current, state: "conflict", message: "Conflict resolution cancelled; local and remote candidates remain available for review." }));
   };
 
   const selectedConfigText = selected ? JSON.stringify(selected.node.config, null, 2) : "";
@@ -622,7 +631,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
       {validationMessage ? <span className={`validation-label validation-${validationState}`}>{validationMessage}</span> : null}
     </div>
     {draft.state === "conflict" ? <Notice tone="danger" title="Draft conflict">The server revision changed while this editor was saving. Review the conflict before publishing.</Notice> : null}
-    {draft.state === "conflict" && draft.server ? <ConflictPanel base={initialDocument} local={document} remote={draft.server.conflict?.serverDocument ?? draft.server.document} onKeepRemote={keepRemoteConflict} onKeepLocal={saveLocalAsNew} onMerge={mergeConflict} /> : null}
+    {draft.state === "conflict" && draft.server ? <ConflictPanel base={initialDocument} local={document} remote={draft.server.conflict?.serverDocument ?? draft.server.document} onKeepRemote={keepRemoteConflict} onKeepLocal={saveLocalAsNew} onMerge={mergeConflict} onCancel={cancelConflictResolution} /> : null}
     <div className="designer-toolbar" role="toolbar" aria-label="Designer tools">
       <div className="segmented-control" role="tablist" aria-label="Editor surface">
         <button className={tab === "canvas" ? "active" : ""} onClick={() => setTab("canvas")} role="tab" aria-selected={tab === "canvas"}>Canvas</button>
@@ -897,11 +906,11 @@ function ArchivalImportPanel({ archival }: { archival: ArchivalImport }): JSX.El
   </section>;
 }
 
-function ConflictPanel({ base, local, remote, onKeepRemote, onKeepLocal, onMerge }: { base: SemanticDocument; local: SemanticDocument; remote: SemanticDocument; onKeepRemote: () => void; onKeepLocal: () => Promise<void>; onMerge: () => void }): JSX.Element {
+function ConflictPanel({ base, local, remote, onKeepRemote, onKeepLocal, onMerge, onCancel }: { base: SemanticDocument; local: SemanticDocument; remote: SemanticDocument; onKeepRemote: () => void; onKeepLocal: () => Promise<void>; onMerge: () => void; onCancel: () => void }): JSX.Element {
   const localPaths = diffDocuments(base, local).map((change) => change.path);
   const remotePaths = diffDocuments(base, remote).map((change) => change.path);
   const merge = mergeDocuments(base, local, remote);
-  return <section className="conflict-panel panel-card" aria-labelledby="conflict-title"><div className="panel-title"><div><p className="eyebrow">Three-way review</p><h2 id="conflict-title">Local and remote drafts diverged</h2></div><StatusBadge tone={merge.conflicts.length ? "danger" : "success"}>{merge.conflicts.length ? `${merge.conflicts.length} conflicts` : "mergeable"}</StatusBadge></div><p className="muted">The base candidate, local edits, and owner revision stay visible until an explicit resolution. Layout movement is reviewed separately from semantic changes.</p><div className="conflict-columns"><div><strong>Local paths</strong><code>{localPaths.slice(0, 8).join("\n") || "none"}</code></div><div><strong>Remote paths</strong><code>{remotePaths.slice(0, 8).join("\n") || "none"}</code></div></div><div className="control-grid"><button className="button button-secondary" onClick={onMerge} disabled={merge.conflicts.length > 0}>Apply non-overlapping merge</button><button className="button button-quiet" onClick={() => void onKeepLocal()}>Save local as new draft</button><button className="button button-danger-outline" onClick={onKeepRemote}>Reload remote</button></div></section>;
+  return <section className="conflict-panel panel-card" aria-labelledby="conflict-title"><div className="panel-title"><div><p className="eyebrow">Three-way review</p><h2 id="conflict-title">Local and remote drafts diverged</h2></div><StatusBadge tone={merge.conflicts.length ? "danger" : "success"}>{merge.conflicts.length ? `${merge.conflicts.length} conflicts` : "mergeable"}</StatusBadge></div><p className="muted">The base candidate, local edits, and owner revision stay visible until an explicit resolution. Layout movement is reviewed separately from semantic changes.</p><div className="conflict-columns"><div><strong>Local paths</strong><code>{localPaths.slice(0, 8).join("\n") || "none"}</code></div><div><strong>Remote paths</strong><code>{remotePaths.slice(0, 8).join("\n") || "none"}</code></div></div><div className="control-grid"><button className="button button-secondary" onClick={onMerge} disabled={merge.conflicts.length > 0}>Apply non-overlapping merge</button><button className="button button-quiet" onClick={() => void onKeepLocal()}>Save local as new draft</button><button className="button button-danger-outline" onClick={onKeepRemote}>Reload remote</button><button className="button button-quiet" onClick={onCancel}>Cancel resolution</button></div></section>;
 }
 
 function EdgeInspector({ document, selectedEdge, onReconnect }: { document: SemanticDocument; selectedEdge: { graphId: string; edgeIndex: number }; onReconnect: (from: string, to: string) => void }): JSX.Element {
