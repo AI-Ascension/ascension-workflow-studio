@@ -36,4 +36,36 @@ test.describe("Studio fixture workbench", () => {
     await expect(archived).toHaveAttribute("readonly", "");
     await expect(page.getByText(/not applied to this draft, autosaved, validated, or published/i)).toBeVisible();
   });
+
+  test("retains malformed JSON locally and only persists a repaired atomic candidate", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Clone draft" }).first().click();
+    await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+    await page.getByRole("button", { name: "JSON mode" }).click();
+    const editor = page.getByRole("textbox", { name: "Raw workflow definition JSON" });
+    const baseline = await editor.inputValue();
+    const malformed = '{"schema_version":';
+    await editor.fill(malformed);
+    await page.getByRole("button", { name: "Apply candidate" }).click();
+    await expect(editor).toHaveValue(malformed);
+    await expect(page.getByRole("alert")).toBeVisible();
+
+    await page.getByRole("button", { name: "Library", exact: true }).click();
+    await page.getByRole("button", { name: "Open designer" }).first().click();
+    await page.getByRole("button", { name: "JSON mode" }).click();
+    const reopened = page.getByRole("textbox", { name: "Raw workflow definition JSON" });
+    await expect(reopened).toHaveValue(malformed);
+
+    const repaired = JSON.parse(baseline) as { annotations: { summary: string } };
+    repaired.annotations.summary = "Repaired browser candidate";
+    await reopened.fill(JSON.stringify(repaired, null, 2));
+    await page.getByRole("button", { name: "Apply candidate" }).click();
+    await expect(page.locator(".validation-label")).toHaveText("Applied the bounded canonical JSON definition as a new semantic candidate.");
+    await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Library", exact: true }).click();
+    await page.getByRole("button", { name: "Open designer" }).first().click();
+    await page.getByRole("button", { name: "JSON mode" }).click();
+    await expect(page.getByRole("textbox", { name: "Raw workflow definition JSON" })).toHaveValue(/Repaired browser candidate/);
+  });
 });
