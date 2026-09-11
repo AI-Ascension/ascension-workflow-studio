@@ -342,8 +342,8 @@
       "id": "P2-034",
       "mandatory": true,
       "work_package": "WP-11",
-      "status": "partial",
-      "evidence": "Merged Studio commit cfb0e71 stores semantic documents and layout sidecars together in each bounded history snapshot. Semantic edits, alignment, and completed node drags now undo and redo atomically without leaving a partial layout state. The required multi-edit and auto-layout browser journey remains unverified.",
+      "status": "implemented",
+      "evidence": "Merged Studio commits cfb0e71 and 858417f store semantic documents and layout sidecars together in bounded history snapshots. The designer now supplies deterministic semantic-preserving auto-layout. Studio CI run 34643811605 verifies multi-select, alignment, auto-layout, and compound undo/redo across Chromium, Firefox, and WebKit.",
       "acceptance_cases": [
         "AT-034"
       ]

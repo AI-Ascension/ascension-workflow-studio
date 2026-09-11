@@ -408,12 +408,12 @@
         "P2-034"
       ],
       "work_package": "WP-11",
-      "status": "partial",
-      "actual_command": "npm test -- --run --pool=threads --maxWorkers=1; npm run build; GitHub Actions Studio validation run 34642217208",
+      "status": "implemented",
+      "actual_command": "npm test -- --run --pool=threads --maxWorkers=1; npm run lint; npm run build; GitHub Actions Studio validation run 34643811605",
       "actual_source_heads": {
-        "studio": "cfb0e71"
+        "studio": "858417f"
       },
-      "evidence": "Studio CI run 34642217208 passed after compound history began snapshotting semantic and layout state together. The required multi-edit and auto-layout browser journey remains unverified."
+      "evidence": "Studio CI run 34643811605 passed unit, type, build, Chromium, Firefox, WebKit, recorded-run, and authenticated live-owner validation. Its browser journey multi-selects two nodes, aligns them, auto-arranges the graph, and confirms undo and redo restore the exact layout state."
     },
     {
       "id": "AT-035",
