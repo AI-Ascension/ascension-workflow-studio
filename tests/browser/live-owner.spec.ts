@@ -9,6 +9,7 @@ test("pairs with the authenticated owner through the same-origin adapter", async
   await expect(page.locator(".connection-message")).toContainText("Owner reports ok.");
   await page.getByRole("button", { name: /Live owner API/ }).click();
   await expect(page.getByRole("complementary").getByText("Live owner API", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Library" }).click();
   await page.getByRole("button", { name: /New draft/ }).click();
   await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
 });
