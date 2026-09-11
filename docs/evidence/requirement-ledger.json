@@ -463,7 +463,7 @@
       "mandatory": true,
       "work_package": "WP-15",
       "status": "partial",
-      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the synthetic live process completed draft create and reload. Studio CI run 34635353603 verified an authenticated Chromium user creates a draft, observes the owner-backed autosave, reopens the definition from Library, and hydrates the persisted owner draft. Browser conflict handling remains unverified.",
+      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the synthetic live process completed draft create and reload. Studio CI run 34636278029 verified an authenticated Chromium user creates a draft, hydrates it from the owner, receives a stale-revision draft-save conflict after a separate authenticated owner write, and sees the conflict review UI. Browser retry and resolution actions remain unverified.",
       "acceptance_cases": [
         "AT-046"
       ]
@@ -473,7 +473,7 @@
       "mandatory": true,
       "work_package": "WP-15",
       "status": "partial",
-      "evidence": "Merged owner PR #57 supplies conditional revision/etag writes and client mutation IDs with focused tests; the synthetic live process completed a conditional save. Studio CI run 34630449100 verified an authenticated Chromium draft autosave through the same-origin adapter. Browser conflict and retry handling remain unverified.",
+      "evidence": "Merged owner PR #57 supplies conditional revision/etag writes and client mutation IDs with focused tests; the synthetic live process completed a conditional save. Studio CI run 34636278029 verified authenticated Chromium receives and presents the owner conflict record after a stale revision/etag save. Browser retry handling remains unverified.",
       "acceptance_cases": [
         "AT-047"
       ]
