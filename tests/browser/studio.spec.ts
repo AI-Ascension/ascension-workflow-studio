@@ -77,9 +77,10 @@ test.describe("Studio fixture workbench", () => {
     const initialCount = await rows.count();
     await page.getByRole("button", { name: "＋ Node" }).click();
     await expect(rows).toHaveCount(initialCount + 1);
-    await page.locator("body").press("Control+z");
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press("Control+z");
     await expect(rows).toHaveCount(initialCount);
-    await page.locator("body").press("Control+Shift+z");
+    await page.keyboard.press("Control+Shift+z");
     await expect(rows).toHaveCount(initialCount + 1);
 
     await page.getByRole("button", { name: "JSON mode" }).click();
