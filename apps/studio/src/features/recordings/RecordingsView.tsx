@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { JsonObject } from "@studio/contracts";
 import type { ImportDiagnostic, InspectionRecord, RecordingInspection } from "../../../../../packages/recording/src/model";
 import { Notice } from "../../components/Notice";
+import type { RecordingCatalogEntry } from "./catalog";
 
 export interface RecordingsProps {
   recording?: RecordingInspection;
@@ -9,13 +10,16 @@ export interface RecordingsProps {
   diagnostic?: ImportDiagnostic;
   importing: boolean;
   message?: string;
-  onImport: (file: File) => void;
+  onImport: (file: Blob) => void;
+  catalog: RecordingCatalogEntry[];
+  catalogMessage?: string;
+  onOpenCatalog: (entry: RecordingCatalogEntry) => Promise<void>;
   onCancel: () => void;
   onClear: () => void;
   onReplace: () => void;
   onDiscard: () => void;
 }
-export function RecordingsView({ recording, pending, diagnostic, importing, message, onImport, onCancel, onClear, onReplace, onDiscard }: RecordingsProps): JSX.Element {
+export function RecordingsView({ recording, pending, diagnostic, importing, message, catalog, catalogMessage, onImport, onOpenCatalog, onCancel, onClear, onReplace, onDiscard }: RecordingsProps): JSX.Element {
   return <div className="recorded-workspace">
     <div className="page-heading"><div><p className="eyebrow">Imported recording · inspection only</p><h1>Recorded runs</h1><p>Inspect an exported recording locally. Imported evidence grants no execution or recovery capability.</p></div></div>
     <section className="panel-card recording-import" aria-label="Import recording">
@@ -28,6 +32,10 @@ export function RecordingsView({ recording, pending, diagnostic, importing, mess
       {importing ? <p role="status">Validating recording…</p> : null}
       {message ? <p role="status">{message}</p> : null}
       {pending ? <div className="recording-replacement"><h2>Validated replacement</h2><p className="recording-identity">{pending.bundleIdentity}<br /><code>{pending.digest}</code></p><p>Replacing discards the current in-tab inspection. No evidence or identities are merged.</p><div className="control-grid"><button className="button button-secondary" onClick={onReplace}>Replace recording</button><button className="button button-quiet" onClick={onDiscard}>Keep current recording</button></div></div> : null}
+    </section>
+    <section className="panel-card recording-catalog" aria-label="Shared recording catalog"><h2>Shared Train recordings</h2><p>Sanitized exports hosted on this private LAN service. Opening one validates its catalog digest before inspection; it grants no execution capability.</p>
+      {catalogMessage ? <p role="status">{catalogMessage}</p> : null}
+      {catalog.length ? <ul>{catalog.map(entry => <li key={entry.semantic_digest}><div><strong>{entry.id}</strong><span>{entry.event_records} timeline records · {entry.accounting_records} accounting record{entry.accounting_records === 1 ? "" : "s"}</span><code>{entry.semantic_digest}</code></div><button className="button button-secondary" disabled={importing} onClick={() => void onOpenCatalog(entry)}>Open inspection</button></li>)}</ul> : <p>Loading shared recordings…</p>}
     </section>
     {diagnostic ? <Notice tone="danger" title="Recording import failed">{`${diagnostic.code} — ${diagnostic.message}${recording ? " The previous validated recording is still displayed." : " No records were admitted."}`}</Notice> : null}
     {recording ? <RecordingDetails key={recording.digest} recording={recording} /> : <section className="panel-card"><h2>No recording imported</h2><p>Select a portable bundle from the harness exporter. Workflow definition files belong in the designer.</p></section>}

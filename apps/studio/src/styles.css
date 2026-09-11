@@ -147,6 +147,11 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 .recorded-workspace h1 { margin: 0 0 10px; }
 .recorded-workspace p { line-height: 1.6; color: var(--muted); }
 .recording-import input { padding: 12px; width: 100%; }
+.recording-catalog ul { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 10px; }
+.recording-catalog li { align-items: center; border: 1px solid var(--line); border-radius: 8px; display: flex; gap: 16px; justify-content: space-between; padding: 12px; }
+.recording-catalog li div { display: grid; gap: 4px; min-width: 0; }
+.recording-catalog li span, .recording-catalog li code { color: var(--muted); font-size: .82rem; overflow-wrap: anywhere; }
+@media (max-width: 700px) { .recording-catalog li { align-items: flex-start; flex-direction: column; } }
 .recording-identity { overflow-wrap: anywhere; }
 .recording-rows { list-style: none; padding: 0; display: grid; gap: 6px; }
 .recording-row { display: grid; gap: 7px; text-align: left; padding: 14px; width: 100%; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; color: var(--text); overflow-wrap: anywhere; }
