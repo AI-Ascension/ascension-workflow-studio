@@ -303,7 +303,7 @@
       "mandatory": true,
       "work_package": "WP-09",
       "status": "partial",
-      "evidence": "apps/studio/src/features/runs/RunsView.tsx; docs/evidence/phase1-live-api.json; owner process snapshot/event evidence is real synthetic API, browser rendering remains unverified.",
+      "evidence": "apps/studio/src/features/runs/RunsView.tsx; docs/evidence/phase1-live-api.json; Studio CI run 34637722684 verified authenticated Chromium submits an owner run and renders its live status plus retained-event projection. Native-gameplay and owner-artifact inspection remain unverified.",
       "acceptance_cases": [
         "AT-030"
       ]
