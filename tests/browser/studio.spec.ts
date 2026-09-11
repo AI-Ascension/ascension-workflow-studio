@@ -59,6 +59,57 @@ test.describe("Studio fixture workbench", () => {
     await expect(page.getByLabel("outcome.present observation field")).toHaveValue("");
   });
 
+  test("navigates nested graphs with breadcrumbs, edits bounded loop limits, and shows pinned subworkflows", async ({ page }) => {
+    const definition = {
+      schema_version: "ascension.workflow/v1", workflow_id: "nested.test", version: "1.0.0", mode: "strict", game_profile: "test", policy_ref: "test.policy",
+      capabilities: { required: [], optional: [] }, limits: { max_steps: 8, max_subworkflow_depth: 2, max_provider_calls: 0, max_parallel_analyses: 1, max_output_tokens: 128 }, entry_graph: "main",
+      graphs: [
+        { id: "main", entry_node: "start", nodes: [
+          { id: "start", kind: "observe", config: { projection_ref: "approved.state" } },
+          { id: "iterate", kind: "loop", config: { body_graph: "main.iteration", max_iterations: 4, exit_guard_ref: "guard.stop" } },
+          { id: "call_library", kind: "subworkflow", config: { artifact_ref: { id: "sts2.shared.reward", version: "2.1.0", digest: "abc123def456abc123def456abc123def456abc123def456abc123def456abcd" } } },
+          { id: "done", kind: "terminal", config: { outcome: "completed" } },
+        ], edges: [
+          { from: "start", to: "iterate", on: "ok", priority: 0 },
+          { from: "iterate", to: "call_library", on: "true", priority: 0 },
+          { from: "call_library", to: "done", on: "ok", priority: 0 },
+        ], guards: [] },
+        { id: "main.iteration", entry_node: "step", nodes: [
+          { id: "step", kind: "observe", config: { projection_ref: "approved.iteration" } },
+          { id: "again", kind: "route", config: { selector_ref: "approved.iteration.done" } },
+        ], edges: [{ from: "step", to: "again", on: "ok", priority: 0 }], guards: [] },
+      ],
+    };
+    await page.goto("/");
+    await page.getByRole("button", { name: "Open designer" }).first().click();
+    await page.getByRole("button", { name: "JSON mode" }).click();
+    await page.getByRole("textbox", { name: "Raw workflow definition JSON" }).fill(JSON.stringify(definition));
+    await page.getByRole("button", { name: "Apply candidate" }).click();
+    const nav = page.getByRole("navigation", { name: "Workflow graph navigation" });
+    await expect(nav).toBeVisible();
+    await expect(nav).toContainText("not execution ordering or parallelism");
+    await expect(page.locator(".react-flow__node")).toHaveCount(4);
+    await page.locator(".react-flow__node", { hasText: "iterate" }).click();
+    await page.getByRole("button", { name: "Open body graph: main.iteration" }).click();
+    await expect(nav.locator(".graph-crumb-current")).toHaveText("main.iteration");
+    await expect(page.locator(".react-flow__node")).toHaveCount(2);
+    await expect(page.locator(".react-flow__node", { hasText: "step" })).toBeVisible();
+    await nav.locator(".graph-crumb").first().click();
+    await expect(nav.locator(".graph-crumb-current")).toHaveText("main");
+    await expect(page.locator(".react-flow__node")).toHaveCount(4);
+    const iterations = page.locator("label.field-label", { hasText: "Maximum iterations" }).locator("input");
+    await iterations.fill("9");
+    await iterations.blur();
+    await expect(page.getByLabel("Raw workflow definition JSON")).toHaveValue(/"max_iterations": 9/);
+    await page.locator(".react-flow__node", { hasText: "call_library" }).click();
+    const pinned = page.getByLabel("Pinned subworkflow reference");
+    await expect(pinned).toContainText("v2.1.0");
+    await expect(pinned).toContainText("abc123def456");
+    await page.getByRole("button", { name: "Inspect reference" }).click();
+    await expect(page.getByText(/intentional fork or a new version/)).toBeVisible();
+    await expect(page.getByText(/parallel execution/)).toHaveCount(0);
+  });
+
   test("shows safe run controls and replay compare without leaving the app", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Runs", exact: true }).click();
