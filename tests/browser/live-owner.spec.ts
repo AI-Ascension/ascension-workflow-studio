@@ -347,3 +347,34 @@ test("flags reordered branches against a remote edge change for review", async (
   await expect(page.getByRole("button", { name: "Apply non-overlapping merge" })).toBeDisabled();
   await expect(page.getByLabel("Raw workflow definition JSON")).toHaveValue(/"priority":/);
 });
+
+test("keeps draft, definition, layout, and compiler identities independent", async ({ page }) => {
+  await connectLiveOwner(page);
+  await openOwnedDraft(page);
+  await page.getByRole("button", { name: /Validate/ }).click();
+  await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
+  const compiler = page.getByTestId("identity-compiler");
+  await expect(compiler).toHaveText("sts2-harness.workflow-compiler.v1");
+  const definitionDigest = page.getByTestId("identity-definition-digest");
+  const layoutDigest = page.getByTestId("identity-layout-digest");
+  const definitionBefore = await definitionDigest.textContent();
+  expect(definitionBefore).not.toBeNull();
+  expect(definitionBefore).not.toBe("not validated");
+  await expect(definitionDigest).not.toHaveText("sts2-harness.workflow-compiler.v1");
+  await expect(layoutDigest).not.toHaveText("sts2-harness.workflow-compiler.v1");
+
+  await page.getByRole("button", { name: "Auto-layout" }).click();
+  await expect(definitionDigest).toHaveText(definitionBefore ?? "");
+  await expect(compiler).toHaveText("sts2-harness.workflow-compiler.v1");
+
+  await page.getByRole("button", { name: "JSON mode" }).click();
+  const raw = page.getByLabel("Raw workflow definition JSON");
+  const local = JSON.parse(await raw.inputValue()) as { limits: { max_steps: number } };
+  local.limits.max_steps += 1;
+  await raw.fill(JSON.stringify(local, null, 2));
+  await page.getByRole("button", { name: "Apply candidate" }).click();
+  await page.getByRole("button", { name: /Validate/ }).click();
+  await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
+  await expect(definitionDigest).not.toHaveText(definitionBefore ?? "");
+  await expect(compiler).toHaveText("sts2-harness.workflow-compiler.v1");
+});

@@ -208,3 +208,10 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 .subworkflow-reference .panel-title { align-items: center; }
 .ref-badges { display: inline-flex; gap: 6px; }
 .ref-badge { border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; color: #b9d8ff; font-family: monospace; font-size: .68rem; }
+
+.identity-strip { display: flex; flex-wrap: wrap; gap: 14px; border: 1px solid var(--line); border-radius: 9px; background: #0e1a2b; padding: 8px 12px; }
+.identity-strip > span { color: var(--muted); font-size: .71rem; }
+.identity-strip code { margin-left: 4px; color: #b9d8ff; font-size: .71rem; }
+.identity-note { margin: -2px 0 4px; font-size: .68rem; }
+.validation-identity { display: inline-flex; gap: 8px; align-items: center; }
+.compile-identity { border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; color: var(--teal); font-family: monospace; font-size: .68rem; }
