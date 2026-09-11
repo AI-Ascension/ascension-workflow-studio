@@ -1,0 +1,46 @@
+{
+  "release_digest": "796c3f607f04e659292b5672f92ba14d0ef5b08fff283bab11558d930c3a82a6",
+  "archive_sha256": "93377bbac99186ce68607d42bebbeaf66f14b9529d7bfe3fe73d4fee22ae97be",
+  "files": {
+    "assets/import.worker-C1Ts0v9U.js": {
+      "bytes": 268961,
+      "sha256": "4f044cc6a7dad567fed3abf44e87c74dd6736c44f1ee35807bed3522442a9ee7"
+    },
+    "assets/index-BOKTAULa.js": {
+      "bytes": 567405,
+      "sha256": "ddf9555be86292cf91f67be34d294f2a00307f83d04354ee1984e976cfe5056d"
+    },
+    "assets/index-Dzb6mKLd.css": {
+      "bytes": 38229,
+      "sha256": "888023c61148e44994e6d5afed6c0444cbcf8e11c5638234b8fb382daa54a2d7"
+    },
+    "index.html": {
+      "bytes": 700,
+      "sha256": "bc6ecb550c9d79e1509402d8241d792ff228454f90c075f4b83d4b1f187c371c"
+    },
+    "recordings/index.json": {
+      "bytes": 2067,
+      "sha256": "34482cbc310832240627e72aac7c405a35daa983d8f22fe2b777b258f020e658"
+    },
+    "recordings/linux-0fe208b7478a16e173a2204b15f90555.zip": {
+      "bytes": 10288,
+      "sha256": "0be99128547f2fd4d6a4004dd1ca0a0261f7c376c2a64755d209365055d2a06a"
+    },
+    "recordings/linux-7e420ab7ad6f996a2d86443b6f6fb5f9.zip": {
+      "bytes": 10285,
+      "sha256": "1d1d6ce62627fc3f55cbaf34399f46987020f15b672782b6c96f577360c46d72"
+    },
+    "recordings/linux-961f049712786b3c22a32caf7977d297.zip": {
+      "bytes": 11506,
+      "sha256": "fe10fe2d9674493469f17a51f59d2b01f07b4cbd1c5179e061148e97bf476317"
+    },
+    "recordings/linux-970c039dffd4140f132e93837327466b.zip": {
+      "bytes": 10285,
+      "sha256": "8bcc461f14aed170d9a14d04431e8fcc1037ca4d9d03b0be76d5ed9f2427a537"
+    },
+    "recordings/linux-9f518571a3ea696b9a72a6daadd42ce9.zip": {
+      "bytes": 10288,
+      "sha256": "dfbb8a6526fe26378068891fd23f06f64db373f75dbbc23a665f3c244e7a2b30"
+    }
+  }
+}

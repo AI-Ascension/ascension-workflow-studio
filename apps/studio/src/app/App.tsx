@@ -12,11 +12,14 @@ import { DesignerView } from "../features/designer/DesignerView";
 import { LibraryView } from "../features/library/LibraryView";
 import { ReplayView } from "../features/replay/ReplayView";
 import { RunsView } from "../features/runs/RunsView";
+import { RecordingsView } from "../features/recordings/RecordingsView";
+import { useRecording } from "../features/recordings/useRecording";
 import { fixtureDefinitions } from "../fixtures/catalog";
 
-type View = "library" | "designer" | "runs" | "replay" | "compatibility";
+type View = "library" | "designer" | "runs" | "replay" | "compatibility" | "recordings";
 
 export function App(): JSX.Element {
+  const recording = useRecording();
   const fixtureClient = useMemo(() => new FixtureClient(fixtureDefinitions), []);
   const liveClient = useMemo(() => new LiveOwnerApiClient(), []);
   const [mode, setMode] = useState<ClientMode>("fixture");
@@ -89,10 +92,11 @@ export function App(): JSX.Element {
   return <div className="app-shell">
     <aside className="sidebar">
       <div className="brand-block"><div className="brand-mark" aria-hidden="true">A</div><div><strong>Ascension</strong><span>Workflow Studio</span></div></div>
-      <div className="mode-card"><StatusBadge tone={mode === "fixture" ? "fixture" : "live"}>{mode === "fixture" ? "Fixture mode" : "Live owner API"}</StatusBadge><p>{mode === "fixture" ? "Deterministic local projection" : "Same-origin authenticated adapter"}</p></div>
+      <div className="mode-card"><StatusBadge tone={view === "recordings" ? "muted" : mode === "fixture" ? "fixture" : "live"}>{view === "recordings" ? "Recorded inspection" : mode === "fixture" ? "Fixture mode" : "Live owner API"}</StatusBadge><p>{view === "recordings" ? "Local file · no execution capability" : mode === "fixture" ? "Deterministic local projection" : "Same-origin authenticated adapter"}</p></div>
       <nav className="primary-nav" aria-label="Studio workspaces">
         <NavButton active={view === "library" || view === "designer"} icon="▦" label="Library" onClick={() => setView("library")} />
         <NavButton active={view === "runs"} icon="◌" label="Runs" onClick={() => setView("runs")} />
+        <NavButton active={view === "recordings"} icon="≡" label="Recorded runs" onClick={() => setView("recordings")} />
         <NavButton active={view === "replay"} icon="↺" label="Replay / Compare" onClick={() => setView("replay")} />
       </nav>
       <div className="nav-divider" />
@@ -100,9 +104,10 @@ export function App(): JSX.Element {
       <div className="sidebar-footer"><span className="version-label">Studio phase 2</span><span className="muted">Harness remains execution authority.</span></div>
     </aside>
     <main className="main-shell">
-      <header className="topbar"><div className="breadcrumbs"><span>AI-Ascension</span><span aria-hidden="true">/</span><strong>{view === "compatibility" ? "Compatibility" : view === "designer" ? selectedDefinition.title : view === "runs" ? "Runs" : view === "replay" ? "Replay" : "Library"}</strong></div><div className="topbar-actions"><span className="secure-label"><span aria-hidden="true">⌁</span> Owner-authoritative</span><button className="avatar-button" aria-label="Open settings" onClick={() => setView("compatibility")}>TW</button></div></header>
+      <header className="topbar"><div className="breadcrumbs"><span>AI-Ascension</span><span aria-hidden="true">/</span><strong>{view === "recordings" ? "Recorded runs" : view === "compatibility" ? "Compatibility" : view === "designer" ? selectedDefinition.title : view === "runs" ? "Runs" : view === "replay" ? "Replay" : "Library"}</strong></div><div className="topbar-actions"><span className="secure-label"><span aria-hidden="true">⌁</span> {view === "recordings" ? "Read-only inspection" : "Owner-authoritative"}</span><button className="avatar-button" aria-label="Open settings" onClick={() => setView("compatibility")}>TW</button></div></header>
       {appMessage ? <div className="app-message" role="status"><span>{appMessage}</span><button aria-label="Dismiss message" onClick={() => setAppMessage(undefined)}>×</button></div> : null}
       <div className="content-shell">
+        {view === "recordings" ? <RecordingsView {...recording} /> : null}
         {view === "library" ? <LibraryView definitions={definitions} loading={loadingDefinitions} catalogNotice={catalogNotice} onOpen={openDefinition} onCreate={createDraft} /> : null}
         {view === "designer" ? <DesignerView client={client} definition={selectedDefinition} initialDocument={activeDocument} mode={mode} onBack={() => setView("library")} onRun={(document) => void runDocument(document)} /> : null}
         {view === "runs" ? <RunsView client={client} mode={mode} initialRunId={runId} onRunIdChange={setRunId} /> : null}

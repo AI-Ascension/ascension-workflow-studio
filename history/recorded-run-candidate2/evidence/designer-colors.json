@@ -1,0 +1,30 @@
+{
+  "scope": "local production build dark designer",
+  "colors": [
+    {
+      "text": "rgb(16, 34, 56)",
+      "background": "rgb(219, 234, 254)"
+    },
+    {
+      "text": "rgb(16, 34, 56)",
+      "background": "rgb(219, 234, 254)"
+    },
+    {
+      "text": "rgb(16, 34, 56)",
+      "background": "rgb(219, 234, 254)"
+    },
+    {
+      "text": "rgb(16, 34, 56)",
+      "background": "rgb(219, 234, 254)"
+    },
+    {
+      "text": "rgb(16, 34, 56)",
+      "background": "rgb(219, 234, 254)"
+    },
+    {
+      "text": "rgb(16, 34, 56)",
+      "background": "rgb(219, 234, 254)"
+    }
+  ],
+  "nodes": 6
+}

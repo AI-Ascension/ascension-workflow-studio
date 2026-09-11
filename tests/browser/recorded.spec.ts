@@ -1,0 +1,119 @@
+import { expect, test } from "@playwright/test";
+import { mkdir, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
+const fixtures = resolve("contracts/recorded-run-candidate");
+const evidence = resolve("docs/evidence/recorded-run-local");
+test.beforeEach(async ({ page }) => {
+  await page.goto("/"); await page.getByRole("button", { name: "Recorded runs", exact: true }).click();
+});
+test("imports, diagnoses failures, reimports and requires explicit replacement", async ({ page }) => {
+  const errors: string[] = [], outgoing: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("request", request => { if (request.method() !== "GET" || new URL(request.url()).origin !== "http://127.0.0.1:4181") outgoing.push(request.url()); });
+  const picker = page.getByLabel("Choose recorded-run bundle");
+  await picker.setInputFiles(resolve(fixtures, "seed-readiness-deflate.zip"));
+  await expect(page.getByText("Recording validated and imported.", { exact: true })).toBeVisible();
+  await expect(page.getByText("episode failed", { exact: true })).toBeVisible();
+  await expect(page.getByText("Action outcome: unknown", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("1789090000123456789 ns", { exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^(Pause|Resume|Step|Cancel run|Replay & compare)$/ })).toHaveCount(0);
+  await page.getByRole("button", { name: /accounting provider-accounting/ }).click();
+  await expect(page.getByRole("table")).toContainText("unknown");
+  await expect(page.getByRole("table")).toContainText("reported");
+  await mkdir(evidence, { recursive: true });
+  await page.screenshot({ path: resolve(evidence, "recording.png"), fullPage: true });
+  await picker.setInputFiles(resolve(fixtures, "seed-readiness.zip"));
+  await expect(page.getByText(/already imported; no records were duplicated/)).toBeVisible();
+  await expect(page.locator(".recording-row")).toHaveCount(9);
+  await picker.setInputFiles(resolve(fixtures, "invalid/unknown-action-as-settled.zip"));
+  await expect(page.getByRole("alert")).toContainText("evidence_mismatch");
+  await expect(page.getByRole("alert")).toContainText("previous validated recording");
+  await expect(page.locator(".recording-row")).toHaveCount(9);
+  await page.screenshot({ path: resolve(evidence, "failure.png"), fullPage: true });
+  await picker.setInputFiles(resolve(fixtures, "missing-accounting.zip"));
+  await expect(page.getByRole("button", { name: "Replace recording", exact: true })).toBeVisible();
+  await expect(page.locator(".recording-row")).toHaveCount(9);
+  await page.getByRole("button", { name: "Replace recording", exact: true }).click();
+  await expect(page.getByText(/No accounting records were supplied/)).toBeVisible();
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await page.getByRole("button", { name: "Recorded runs", exact: true }).click();
+  await expect(page.getByText(/No accounting records were supplied/)).toBeVisible();
+  await page.getByRole("button", { name: "Clear recording", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "No recording imported" })).toBeVisible();
+  expect(errors).toEqual([]); expect(outgoing).toEqual([]);
+  await writeFile(resolve(evidence, "import-browser.json"), JSON.stringify({ scope: "local Chromium production build; synthetic protocol fixtures", errors, outgoing, checks: ["file selection", "deflate", "unknown outcomes", "accounting statuses", "no live controls", "idempotent reimport", "failed import retained prior", "explicit replacement", "navigation retention", "clear"] }, null, 2));
+});
+test("preserves unsupported records without exposing content", async ({ page }) => {
+  await page.getByLabel("Choose recorded-run bundle").setInputFiles(resolve(fixtures, "golden/optional-unknown.zip"));
+  await expect(page.getByText(/Unsupported optional profile:/)).toBeVisible();
+  await page.getByRole("button", { name: /opaque · unsupported profile/ }).click();
+  await page.getByText("Unsupported payload (inert)", { exact: true }).click();
+  await expect(page.locator(".recording-detail")).toContainText("content_digest");
+  await expect(page.locator(".recording-detail a, .recording-detail iframe, .recording-detail script")).toHaveCount(0);
+});
+test("rejects manifest, gameplay and opaque identity privacy bypasses in the worker", async ({ page }) => {
+  const errors: string[] = [], outgoing: string[] = [], rejected: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("request", request => { if (request.method() !== "GET" || new URL(request.url()).origin !== "http://127.0.0.1:4181") outgoing.push(request.url()); });
+  const picker = page.getByLabel("Choose recorded-run bundle");
+  await picker.setInputFiles(resolve(fixtures, "seed-readiness.zip"));
+  await expect(page.getByText("Recording validated and imported.", { exact: true })).toBeVisible();
+  for (const placement of ["manifest", "common-gameplay", "opaque"]) {
+    for (const role of ["action", "provider_request"]) {
+      const name = `${placement}-${role}.zip`;
+      await picker.setInputFiles(resolve(fixtures, "studio-invalid", name));
+      await expect(page.getByRole("alert")).toContainText("evidence_mismatch");
+      await expect(page.getByRole("alert")).toContainText("previous validated recording");
+      await expect(page.locator(".recording-row")).toHaveCount(9);
+      await expect(page.getByRole("button", { name: "Replace recording", exact: true })).toHaveCount(0);
+      await expect(page.locator("body")).not.toContainText("secret");
+      rejected.push(name);
+    }
+  }
+  expect(errors).toEqual([]); expect(outgoing).toEqual([]);
+  await writeFile(resolve(evidence, "privacy-browser.json"), JSON.stringify({ scope: "local Chromium production worker; synthetic identities", rejected, previousRecordingRetained: true, rawIdentityRendered: false, errors, outgoing }, null, 2) + "\n");
+});
+test("bounds a 25,000-record import to 100 timeline DOM rows per page", async ({ page }) => {
+  const started = Date.now();
+  await page.getByLabel("Choose recorded-run bundle").setInputFiles(resolve(fixtures, "browser-25000-records.zip"));
+  await expect(page.getByText("Recording validated and imported.", { exact: true })).toBeVisible({ timeout: 45_000 });
+  const timeline = page.getByRole("region", { name: "Recorded timeline", exact: true });
+  await expect(timeline.locator(".recording-row")).toHaveCount(100);
+  await expect(timeline).toContainText("24999 records · Page 1 of 250");
+  await page.getByRole("button", { name: "Next timeline page", exact: true }).click();
+  await expect(timeline).toContainText("Page 2 of 250");
+  await expect(timeline.locator(".recording-row")).toHaveCount(100);
+  await page.getByLabel("Recorded timeline stream").selectOption("result");
+  await expect(timeline.locator(".recording-row")).toHaveCount(1);
+  await mkdir(evidence, { recursive: true });
+  const memory = await page.evaluate(() => {
+    const values = (performance as Performance & { memory?: { usedJSHeapSize: number; totalJSHeapSize: number } }).memory;
+    return values ? { usedJSHeapSize: values.usedJSHeapSize, totalJSHeapSize: values.totalJSHeapSize } : null;
+  });
+  await writeFile(resolve(evidence, "pagination-browser.json"), JSON.stringify({ scope: "local synthetic 25,000-record boundary; page-heap metrics exclude worker and native allocations", elapsedMs: Date.now() - started, maxTimelineRows: 100, filterRows: 1, memory }, null, 2));
+});
+test("renders admitted numeric observation fields", async ({ page }) => {
+  await page.getByLabel("Choose recorded-run bundle").setInputFiles(resolve(fixtures, "browser-observation.zip"));
+  await expect(page.getByText("Recording validated and imported.", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: /decision_summary trajectory · source ordinal 1/ }).click();
+  await expect(page.getByRole("heading", { name: "Observed player counters" })).toBeVisible();
+  const detail = page.locator(".recording-detail");
+  await expect(detail).toContainText("38"); await expect(detail).toContainText("70"); await expect(detail).toContainText("123");
+  await page.screenshot({ path: resolve(evidence, "observation.png"), fullPage: true });
+});
+test("preserves six dark-canvas nodes and authoring navigation", async ({ page }) => {
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await page.getByRole("button", { name: "Open designer", exact: true }).first().click();
+  const nodes = page.locator(".react-flow__node");
+  await expect(nodes).toHaveCount(6);
+  const colors = await nodes.evaluateAll(elements => elements.map(element => ({ text: getComputedStyle(element).color, background: getComputedStyle(element).backgroundColor })));
+  expect(colors.every(color => color.text === "rgb(16, 34, 56)" && color.background === "rgb(219, 234, 254)")).toBe(true);
+  await expect(page.locator(".react-flow__controls")).toBeVisible();
+  await expect(page.locator(".react-flow__minimap")).toBeVisible();
+  await mkdir(evidence, { recursive: true });
+  await page.screenshot({ path: resolve(evidence, "designer-dark.png"), fullPage: true });
+  await writeFile(resolve(evidence, "designer-colors.json"), JSON.stringify({ scope: "local production build dark designer", colors, nodes: colors.length }, null, 2));
+  await page.getByRole("tab", { name: "List editor" }).click();
+  await expect(page.getByText("Semantic node list", { exact: true })).toBeVisible();
+});

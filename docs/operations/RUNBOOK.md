@@ -9,3 +9,9 @@ Publish only after owner validation reports no error diagnostics and the draft s
 Before operating a run, confirm the displayed run ID, definition digest, revision, recovery admission, and actor scope. Pause/resume/step/cancel requests are sent only with the displayed expected revision. Replay and export use offline/redacted owner routes. No run control is issued for a historical or unsupported state.
 
 Rollback is a static bundle replacement after a reviewed build. No deployment, database migration, harness startup, or provider/game action is performed by this repository.
+
+Recorded-run ZIP import is local, read-only inspection under **Recorded runs**.
+See [import and CLI validation](../architecture/recorded-run-import.md) and the
+[prepared LAN preview procedure](RECORDED_RUN_PREVIEW.md). The reviewed packaging,
+static server and user-service assets live under `tools/deploy/`; their inclusion
+does not install or activate a host service. Coordinator owns deployment and rollback.

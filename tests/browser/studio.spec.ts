@@ -16,7 +16,7 @@ test.describe("Studio fixture workbench", () => {
 
   test("shows safe run controls and replay compare without leaving the app", async ({ page }) => {
     await page.goto("/");
-    await page.getByRole("button", { name: "Runs" }).click();
+    await page.getByRole("button", { name: "Runs", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Pause" })).toBeVisible();
     await page.getByRole("button", { name: "Replay / Compare" }).click();

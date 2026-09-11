@@ -1,0 +1,47 @@
+{
+  "scope": "synthetic independent-review reproductions; three valid baselines accepted by both decoders",
+  "results": [
+    {
+      "name": "manifest-action.zip",
+      "studio": "evidence_mismatch",
+      "oracle": "action_privacy",
+      "sha256": "012e712d1f26a4865a6c4bb8694e7ad4a5dc9b09f12b98e034f08e615bd8c203",
+      "format_version": "1.0.0-candidate.3"
+    },
+    {
+      "name": "manifest-provider_request.zip",
+      "studio": "evidence_mismatch",
+      "oracle": "provider_request_privacy",
+      "sha256": "90d4e814ab3f47a021d17e5fe84e40854dca8779912051c75a0e2ce3e8c926e8",
+      "format_version": "1.0.0-candidate.3"
+    },
+    {
+      "name": "common-gameplay-action.zip",
+      "studio": "evidence_mismatch",
+      "oracle": "action_privacy",
+      "sha256": "26e3dd20be3f0e6316e649407fd843fd81890a6c0f237bd73a112169ac0f8755",
+      "format_version": "1.0.0-candidate.3"
+    },
+    {
+      "name": "common-gameplay-provider_request.zip",
+      "studio": "evidence_mismatch",
+      "oracle": "provider_request_privacy",
+      "sha256": "329f93adfc7f13918fe5c18b57dc4b35acdff30174160e747237b8c3705566a8",
+      "format_version": "1.0.0-candidate.3"
+    },
+    {
+      "name": "opaque-action.zip",
+      "studio": "evidence_mismatch",
+      "oracle": "action_privacy",
+      "sha256": "cec2d1114973b87a08e180e5eea686d950b2805c2567da11bfeb7627d5458119",
+      "format_version": "1.0.0-candidate.3"
+    },
+    {
+      "name": "opaque-provider_request.zip",
+      "studio": "evidence_mismatch",
+      "oracle": "provider_request_privacy",
+      "sha256": "2bfd786ca5d962326c8a2b01b85706ac96b732c79b2cacf806b92eca1eac9e36",
+      "format_version": "1.0.0-candidate.3"
+    }
+  ]
+}

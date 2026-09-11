@@ -9,6 +9,10 @@ The implementation branch is being built from the merged Phase 1 owner heads.
 See `docs/architecture/phase1-integration.md` and `docs/operations/DEVELOPMENT.md`
 for the current compatibility lock and local commands.
 
+Recorded-run candidate inspection is available through **Recorded runs** and its
+ZIP file picker. See [recorded-run import](docs/architecture/recorded-run-import.md)
+for the exact protocol pin, local validation CLI, limits and browser verification.
+
 The current product includes a checked-in catalog library, React Flow designer,
 keyboard list editor, semantic/layout separation, fixture and relative live
 adapters, owner validation, owner-backed draft and publication adapters,
