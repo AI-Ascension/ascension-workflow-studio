@@ -67,7 +67,6 @@ export function App(): JSX.Element {
   const createDraft = (template?: DefinitionRecord): void => {
     const base = template ?? definitions[0] ?? fixtureDefinitions[0];
     const draft = cloneDocument(base.definition);
-    draft.version = `${draft.version}-draft`;
     draft.annotations = {
       summary: `Studio draft cloned from ${base.id}@${base.definition.version}`,
       synthetic: true,
