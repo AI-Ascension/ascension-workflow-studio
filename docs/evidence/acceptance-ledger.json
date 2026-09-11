@@ -3,10 +3,10 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 41,
+    "evidenced": 42,
     "partial": 30,
     "implemented": 6,
-    "not_run": 9
+    "not_run": 8
   },
   "cases": [
     {
@@ -758,10 +758,18 @@
         "P2-059"
       ],
       "work_package": "WP-19",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "evidenced",
+      "actual_command": "npm test -- --run (reference resolver unit tests); GitHub Actions Studio validation run 34659385492 (browser chromium/firefox/webkit, recorded-run, live-owner)",
+      "actual_source_heads": {
+        "studio": "d27db4f"
+      },
+      "evidence": "Unit tests cover exact id/version/digest resolution, a missing reference, refusal of a floating latest in favor of an explicit version-mismatch, a digest mismatch, and a catalog that publishes no digest. A browser test authors a valid and a missing pinned subworkflow reference and asserts the resolved (digest unverified) and unavailable statuses with their catalog messages.",
+      "actual_evidence_refs": [
+        "packages/document/src/reference.ts",
+        "packages/document/src/reference.test.ts",
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "tests/browser/studio.spec.ts"
+      ]
     },
     {
       "id": "AT-060",

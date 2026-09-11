@@ -3,9 +3,9 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 54,
+    "implemented": 55,
     "partial": 24,
-    "not_started": 9
+    "not_started": 8
   },
   "requirements": [
     {
@@ -592,8 +592,8 @@
       "id": "P2-059",
       "mandatory": true,
       "work_package": "WP-19",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #54 (commit d27db4f; merge 9e2c46d) adds resolveSubworkflowReference, which matches a subworkflow artifact_ref by exact workflow id and version against the loaded catalog, compares the pinned digest when the catalog publishes one, and otherwise reports digest-unverified. Missing ids, missing versions, and digest mismatches are surfaced explicitly and fail closed; no floating latest or substituted consumer is used. Studio CI run 34659385492 passed all six jobs.",
       "acceptance_cases": [
         "AT-059"
       ]
