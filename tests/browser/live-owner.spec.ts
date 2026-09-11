@@ -15,6 +15,13 @@ test("pairs with the authenticated owner through the same-origin adapter", async
   await page.getByRole("button", { name: "Library", exact: true }).click();
   await page.getByRole("button", { name: "Open designer" }).first().click();
   await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
+  await page.getByRole("button", { name: "Run inspection" }).click();
+  await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
+  await expect(page.getByText("live API", { exact: true })).toBeVisible();
+  await expect(page.getByText(/Loaded \d+ retained event/)).toBeVisible();
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await page.getByRole("button", { name: "Open designer" }).first().click();
+  await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
   await page.getByRole("button", { name: /Validate/ }).click();
   await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
   await page.getByRole("button", { name: "Publish revision" }).click();
