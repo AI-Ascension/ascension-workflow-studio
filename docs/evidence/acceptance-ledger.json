@@ -671,7 +671,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Merged owner PR #57 supplies a typed publication response with published, already-published, and conflict outcomes; the synthetic live process observed the published outcome. Studio CI run 34632504542 verified the browser handles published or already-published outcomes. Browser conflict presentation remains unverified."
+      "evidence": "Merged owner PR #57 supplies a typed publication response with published, already-published, and conflict outcomes; the synthetic live process observed the published outcome. Studio CI run 34632504542 verified published or already-published browser outcomes, and run 34638586490 verified authenticated browser presentation of a stale-revision publication conflict. Lost-response resolution by querying the original publication identity remains unverified."
     },
     {
       "id": "AT-057",
