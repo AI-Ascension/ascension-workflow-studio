@@ -6,7 +6,7 @@ test("pairs with the authenticated owner through the same-origin adapter", async
   await page.getByLabel("Bearer token").fill("studio-live-ci-token");
   await page.getByLabel("Authenticated actor subject").fill("profile:studio-live");
   await page.getByRole("button", { name: "Check owner connection" }).click();
-  await expect(page.getByText("Owner reports ok.")).toBeVisible();
+  await expect(page.locator(".connection-message")).toContainText("Owner reports ok.");
   await page.getByRole("button", { name: /Live owner API/ }).click();
   await expect(page.getByText("Live owner API")).toBeVisible();
 });
