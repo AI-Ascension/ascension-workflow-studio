@@ -1,0 +1,46 @@
+{
+  "release_digest": "38451cb937ff09f592df32dd1e34847c82984eb579213f80ca22f4e36919b814",
+  "archive_sha256": "07659a85bf45c9293a0d4e65f3c19f199247eb638aa3838050decf4b5f9ae3df",
+  "files": {
+    "assets/import.worker-C1Ts0v9U.js": {
+      "bytes": 268961,
+      "sha256": "4f044cc6a7dad567fed3abf44e87c74dd6736c44f1ee35807bed3522442a9ee7"
+    },
+    "assets/index-B3ZS8feO.js": {
+      "bytes": 571940,
+      "sha256": "131a9c37a7d9a5273064e99c0d843a7d327d88184000aab38da9c0646cbcf689"
+    },
+    "assets/index-Dzb6mKLd.css": {
+      "bytes": 38229,
+      "sha256": "888023c61148e44994e6d5afed6c0444cbcf8e11c5638234b8fb382daa54a2d7"
+    },
+    "index.html": {
+      "bytes": 700,
+      "sha256": "4f8630322a4a260d902b937133a355d1e1c9b7c4ff8b6c6b7f45d8a568a7829e"
+    },
+    "recordings/index.json": {
+      "bytes": 2067,
+      "sha256": "34482cbc310832240627e72aac7c405a35daa983d8f22fe2b777b258f020e658"
+    },
+    "recordings/linux-0fe208b7478a16e173a2204b15f90555.zip": {
+      "bytes": 10288,
+      "sha256": "0be99128547f2fd4d6a4004dd1ca0a0261f7c376c2a64755d209365055d2a06a"
+    },
+    "recordings/linux-7e420ab7ad6f996a2d86443b6f6fb5f9.zip": {
+      "bytes": 10285,
+      "sha256": "1d1d6ce62627fc3f55cbaf34399f46987020f15b672782b6c96f577360c46d72"
+    },
+    "recordings/linux-961f049712786b3c22a32caf7977d297.zip": {
+      "bytes": 11506,
+      "sha256": "fe10fe2d9674493469f17a51f59d2b01f07b4cbd1c5179e061148e97bf476317"
+    },
+    "recordings/linux-970c039dffd4140f132e93837327466b.zip": {
+      "bytes": 10285,
+      "sha256": "8bcc461f14aed170d9a14d04431e8fcc1037ca4d9d03b0be76d5ed9f2427a537"
+    },
+    "recordings/linux-9f518571a3ea696b9a72a6daadd42ce9.zip": {
+      "bytes": 10288,
+      "sha256": "dfbb8a6526fe26378068891fd23f06f64db373f75dbbc23a665f3c244e7a2b30"
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { ImportDiagnostic, RecordingInspection } from "../../../../../packages/recording/src/model";
-import { limits } from "../../../../../packages/recording/src/primitives";
+import { digest, limits } from "../../../../../packages/recording/src/primitives";
 import { catalogEntries, catalogUrl, type RecordingCatalogEntry } from "./catalog";
 
 export function useRecording() {
@@ -54,8 +54,7 @@ export function useRecording() {
       const blob = await response.blob();
       if (blob.size > limits.archive) throw new Error("The selected recording exceeds the browser limit.");
       const bytes = await blob.arrayBuffer();
-      const digest = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", bytes)), byte => byte.toString(16).padStart(2, "0")).join("");
-      if (digest !== entry.bundle_sha256) throw new Error("The selected recording failed its catalog digest check.");
+      if (digest(new Uint8Array(bytes)) !== entry.bundle_sha256) throw new Error("The selected recording failed its catalog digest check.");
       onImport(new File([bytes], entry.file, { type: "application/zip" }));
     } catch (error) {
       setCatalogMessage(error instanceof Error ? error.message : "The selected recording could not be opened.");
