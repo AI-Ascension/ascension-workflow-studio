@@ -5,8 +5,8 @@
     "blocked": 34,
     "evidenced": 38,
     "partial": 32,
-    "implemented": 4,
-    "not_run": 12
+    "implemented": 6,
+    "not_run": 10
   },
   "cases": [
     {
@@ -640,10 +640,16 @@
         "P2-052"
       ],
       "work_package": "WP-17",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "partial",
+      "actual_command": "GitHub Actions Studio validation run 34653747050 (live-owner browser against the real harness owner)",
+      "actual_source_heads": {
+        "studio": "d9affcc"
+      },
+      "evidence": "Merged PR #46 live-owner coverage races an independent authenticated owner write against local delete-versus-edit and branch-reordering edits; both are classified as review conflicts with the merge control disabled and both candidates retained. Remaining: dedicated pinned-ref case and a true second-browser-tab client.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "tests/browser/live-owner.spec.ts"
+      ]
     },
     {
       "id": "AT-053",
@@ -651,10 +657,16 @@
         "P2-053"
       ],
       "work_package": "WP-17",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "implemented",
+      "actual_command": "GitHub Actions Studio validation run 34653747050 (live-owner browser against the real harness owner)",
+      "actual_source_heads": {
+        "studio": "d9affcc"
+      },
+      "evidence": "Merged PR #46 live-owner coverage verifies cancel preserves local content and reopens review, save-as-new succeeds with local content intact, and remote reload requires an explicit discard confirmation with a keep-local escape, so no unsaved work is discarded after a failed resolution.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "tests/browser/live-owner.spec.ts"
+      ]
     },
     {
       "id": "AT-054",
@@ -662,10 +674,16 @@
         "P2-054"
       ],
       "work_package": "WP-17",
-      "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Layout is excluded from semantic identity; conflict merge tooling remains."
+      "status": "implemented",
+      "actual_command": "GitHub Actions Studio validation run 34653747050 (live-owner browser against the real harness owner)",
+      "actual_source_heads": {
+        "studio": "d9affcc"
+      },
+      "evidence": "Merged PR #46 live-owner coverage merges a remote layout-only change with a local semantic edit, verifies the semantic and layout paths are distinguished, and asserts the merged candidate is revalidated (fresh message and digest) rather than inheriting stale validation.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "tests/browser/live-owner.spec.ts"
+      ]
     },
     {
       "id": "AT-055",

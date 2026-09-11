@@ -3,9 +3,9 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 49,
+    "implemented": 51,
     "partial": 26,
-    "not_started": 12
+    "not_started": 10
   },
   "requirements": [
     {
@@ -522,8 +522,8 @@
       "id": "P2-052",
       "mandatory": true,
       "work_package": "WP-17",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "partial",
+      "evidence": "Merged Studio PR #46 (commit d9affcc; merge f52a4e1) tracks the owner-acknowledged semantic document and layout as the true merge base instead of the stale designer prop. The conflict panel shows base/local/remote semantic and layout paths separately and refuses to auto-merge concurrent array changes (delete-versus-edit, reordered branches, conflicting scalars): the merge control is disabled and a conflict count is shown. Remaining: the second client is a direct authenticated owner write rather than a second browser tab, and pinned-ref changes are not yet a dedicated browser case.",
       "acceptance_cases": [
         "AT-052"
       ]
@@ -532,8 +532,8 @@
       "id": "P2-053",
       "mandatory": true,
       "work_package": "WP-17",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #46 (commit d9affcc; merge f52a4e1) implements cancel resolution (panel hides, local content preserved, Review divergence reopens), save-as-new on a fresh draft id, review-merge, and protected remote reload behind an explicit discard confirmation with a keep-local escape. Studio CI run 34653747050 passed all six jobs including the live-owner browser suite on commit d9affcc.",
       "acceptance_cases": [
         "AT-053"
       ]
@@ -542,8 +542,8 @@
       "id": "P2-054",
       "mandatory": true,
       "work_package": "WP-17",
-      "status": "partial",
-      "evidence": "Layout is excluded from semantic identity; conflict merge tooling remains.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #46 (commit d9affcc; merge f52a4e1) displays semantic and layout paths separately, merges layout movement independently via mergeLayoutSidecars with a neutralized derived digest, and revalidates the merged candidate through the owner while clearing stale diagnostics and refreshing the semantic digest. Studio CI run 34653747050 passed all six jobs including the live-owner browser suite.",
       "acceptance_cases": [
         "AT-054"
       ]
