@@ -12,13 +12,16 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: "off",
-    launchOptions: {
-      // The shared-memory mount is read-only in the verification container.
-      args: ["--disable-dev-shm-usage"],
-    },
   },
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
+    {
+      name: "chromium",
+      use: {
+        ...devices["Desktop Chrome"],
+        // The shared-memory mount is read-only in the verification container.
+        launchOptions: { args: ["--disable-dev-shm-usage"] },
+      },
+    },
     { name: "firefox", use: { ...devices["Desktop Firefox"] } },
     { name: "webkit", use: { ...devices["Desktop Safari"] } },
   ],
