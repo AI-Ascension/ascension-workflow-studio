@@ -190,3 +190,6 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 @media (max-width: 720px) {
   .guard-literal, .guard-preview-row { grid-template-columns: 1fr; }
 }
+
+.conflict-dismissed { display: grid; gap: 10px; justify-items: start; border-color: #7b5a30; }
+.conflict-dismissed p { margin: 0; color: var(--muted); font-size: .76rem; }

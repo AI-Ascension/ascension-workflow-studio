@@ -45,6 +45,7 @@ import {
   diffDocuments,
   layoutIsValid,
   mergeDocuments,
+  mergeLayoutSidecars,
   parseBoundedJson,
   parseDefinitionImport,
   removeNode,
@@ -132,6 +133,9 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
   const [saveRetry, setSaveRetry] = useState(0);
   const [publicationState, setPublicationState] = useState<"idle" | "publishing">("idle");
   const draftRef = useRef(draft);
+  const [conflictOpen, setConflictOpen] = useState(true);
+  const mergeBaseRef = useRef<SemanticDocument>(cloneDocument(initialDocument));
+  const mergeBaseLayoutRef = useRef<LayoutSidecar>(createLayout(initialDocument, "pending"));
   const persistedKeyRef = useRef<string | undefined>(undefined);
   const mutationIdsRef = useRef(new Map<string, string>());
   const publicationIdsRef = useRef(new Map<string, string>());
@@ -164,6 +168,9 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     setValidationState("idle");
     setDraftHydrated(false);
     persistedKeyRef.current = undefined;
+    mergeBaseRef.current = cloneDocument(initialDocument);
+    mergeBaseLayoutRef.current = nextLayout;
+    setConflictOpen(true);
     setDraft({ revision: 0, etag: "fixture-0", state: "saved", message: "Draft changes are local until autosave completes." });
   }, [initialDocument]);
 
@@ -177,6 +184,9 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
           const parsedLayout = LayoutSidecarSchema.safeParse(saved.layout);
           const nextLayout = parsedLayout.success ? parsedLayout.data : createLayout(saved.document, "pending");
           history.current = new History<EditorSnapshot>({ document: saved.document, layout: nextLayout }, copyEditorSnapshot);
+          mergeBaseRef.current = cloneDocument(saved.document);
+          mergeBaseLayoutRef.current = nextLayout;
+          if (saved.conflict) setConflictOpen(true);
           setDocument(saved.document);
           setLayout(nextLayout);
           setNodes(toFlowNodes(saved.document, nextLayout));
@@ -218,7 +228,14 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
         clientMutationId,
       }).then((saved) => {
         if (generation !== saveGenerationRef.current) return;
-        persistedKeyRef.current = currentKey;
+        if (!saved.conflict) {
+          persistedKeyRef.current = currentKey;
+          mergeBaseRef.current = cloneDocument(document);
+          mergeBaseLayoutRef.current = layout;
+        } else {
+          persistedKeyRef.current = undefined;
+          setConflictOpen(true);
+        }
         setDraft({ revision: saved.revision, etag: saved.etag, state: saved.conflict ? "conflict" : "saved", message: saved.conflict ? "The owner reported a revision conflict." : "Autosaved to the active adapter.", server: saved.conflict ? saved : undefined });
       }).catch((error: unknown) => {
         if (generation !== saveGenerationRef.current) return;
@@ -247,12 +264,12 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     return { ...currentLayout, positions: next };
   }, []);
 
-  const commit = useCallback((nextDocument: SemanticDocument): void => {
-    const nextLayout = { ...ensureLayout(nextDocument, layout), semanticDigest: "pending" } as LayoutSidecar;
-    history.current.commit({ document: nextDocument, layout: nextLayout });
+  const commitSnapshot = useCallback((nextDocument: SemanticDocument, nextLayout: LayoutSidecar): void => {
+    const boundLayout = { ...ensureLayout(nextDocument, nextLayout), semanticDigest: "pending" } as LayoutSidecar;
+    history.current.commit({ document: nextDocument, layout: boundLayout });
     setDocument(nextDocument);
-    setLayout(nextLayout);
-    setNodes(toFlowNodes(nextDocument, nextLayout));
+    setLayout(boundLayout);
+    setNodes(toFlowNodes(nextDocument, boundLayout));
     const nextRawText = JSON.stringify(nextDocument, null, 2);
     setRawText(nextRawText);
     onRawTextChange(definition.id, nextRawText);
@@ -260,7 +277,11 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     setArchivalImport(undefined);
     setDiagnostics(undefined);
     setValidationState("idle");
-  }, [definition.id, ensureLayout, layout, onRawTextChange]);
+  }, [definition.id, ensureLayout, onRawTextChange]);
+
+  const commit = useCallback((nextDocument: SemanticDocument): void => {
+    commitSnapshot(nextDocument, layout);
+  }, [commitSnapshot, layout]);
 
   const undo = (): void => {
     const next = history.current.undo();
@@ -569,44 +590,80 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     }
   };
 
-  const keepRemoteConflict = (): void => {
+  const reloadRemoteConflict = (): void => {
     const remote = draft.server?.conflict?.serverDocument;
     if (!remote || !draft.server) return;
     const remoteLayoutResult = LayoutSidecarSchema.safeParse(draft.server.conflict?.serverLayout ?? draft.server.layout);
     const remoteLayout = remoteLayoutResult.success ? remoteLayoutResult.data : createLayout(remote, "pending");
     history.current = new History<EditorSnapshot>({ document: remote, layout: remoteLayout }, copyEditorSnapshot);
+    mergeBaseRef.current = cloneDocument(remote);
+    mergeBaseLayoutRef.current = remoteLayout;
     setDocument(remote);
     setLayout(remoteLayout);
     setNodes(toFlowNodes(remote, remoteLayout));
     setRawText(JSON.stringify(remote, null, 2));
     persistedKeyRef.current = valueKey(remote, remoteLayout);
+    setConflictOpen(true);
     setDraft({ revision: draft.server.revision, etag: draft.server.etag, state: "saved", message: "Remote revision loaded; local conflict was discarded." });
   };
 
   const saveLocalAsNew = async (): Promise<void> => {
     try {
       const saved = await client.saveDraft({ draftId: `draft.${definition.id}.copy.${Date.now()}`, definitionId: definition.id, revision: 0, etag: "fixture-0", document, layout, clientMutationId: `studio.copy.${Date.now()}` });
+      mergeBaseRef.current = cloneDocument(saved.document);
+      const parsedLayout = LayoutSidecarSchema.safeParse(saved.layout);
+      mergeBaseLayoutRef.current = parsedLayout.success ? parsedLayout.data : createLayout(saved.document, "pending");
       setDraft({ revision: saved.revision, etag: saved.etag, state: "saved", message: "Local candidate was saved as a new draft." });
     } catch (error: unknown) {
-      setDraft((current) => ({ ...current, state: "offline", message: error instanceof Error ? error.message : "Could not save a new draft." }));
+      setDraft((current) => ({ ...current, state: "conflict", message: error instanceof Error ? error.message : "Could not save a new draft; the local candidate is preserved." }));
     }
   };
 
-  const mergeConflict = (): void => {
-    const remote = draft.server?.conflict?.serverDocument;
-    if (!remote) return;
-    const result = mergeDocuments(initialDocument, document, remote);
-    if (result.conflicts.length > 0 || !result.document) {
+  const cancelConflictResolution = (): void => {
+    setConflictOpen(false);
+  };
+
+  const mergeConflict = async (): Promise<void> => {
+    const server = draft.server;
+    const remote = server?.conflict?.serverDocument;
+    if (!remote || !server) return;
+    const remoteLayoutResult = LayoutSidecarSchema.safeParse(server.conflict?.serverLayout ?? server.layout);
+    const remoteLayout = remoteLayoutResult.success ? remoteLayoutResult.data : createLayout(remote, "pending");
+    const semantic = mergeDocuments(mergeBaseRef.current, document, remote);
+    if (semantic.conflicts.length > 0 || !semantic.document) {
       setValidationState("error");
-      setValidationMessage(`Merge needs review at ${result.conflicts.map((conflict) => conflict.path).join(", ")}.`);
+      setValidationMessage(`Merge needs review at ${semantic.conflicts.map((conflict) => conflict.path).join(", ")}.`);
       return;
     }
-    commit(result.document);
-    setDraft({ revision: draft.server?.revision ?? draft.revision, etag: draft.server?.etag ?? draft.etag, state: "saved", message: "Non-overlapping semantic changes were merged; validation is required again." });
+    const neutral = (side: LayoutSidecar): LayoutSidecar => ({ ...side, semanticDigest: "merge" });
+    const layoutMerge = mergeLayoutSidecars(neutral(mergeBaseLayoutRef.current), neutral(layout), neutral(remoteLayout));
+    const nextLayout = layoutMerge.layout ?? layout;
+    commitSnapshot(semantic.document, nextLayout);
+    setConflictOpen(true);
+    setDraft({ revision: server.revision, etag: server.etag, state: "saving", message: "Saving the reviewed merge against the owner revision…" });
+    setValidationState("running");
+    setValidationMessage("Merged candidate requires fresh validation.");
+    setDiagnostics(undefined);
+    try {
+      const result = await client.validate(semantic.document);
+      setDiagnostics(result);
+      setValidationState(result.valid ? "valid" : "invalid");
+      setValidationMessage(result.valid
+        ? `Merged semantic and layout candidates revalidated at ${result.definition_digest.slice(0, 12)}…`
+        : `${result.diagnostics.length} diagnostic${result.diagnostics.length === 1 ? "" : "s"} reported for the merged candidate.`);
+      setLayout((current) => ({ ...current, semanticDigest: result.definition_digest }));
+    } catch (error: unknown) {
+      setValidationState("error");
+      setValidationMessage(error instanceof Error ? error.message : "Merged candidate validation failed.");
+    }
   };
 
   const selectedConfigText = selected ? JSON.stringify(selected.node.config, null, 2) : "";
   const layoutState = layoutIsValid(document, layout) ? "bound" : "repair needed";
+  const conflictRemoteDocument = draft.server ? (draft.server.conflict?.serverDocument ?? draft.server.document) : undefined;
+  const conflictRemoteLayout = conflictRemoteDocument
+    ? (() => { const parsed = LayoutSidecarSchema.safeParse(draft.server?.conflict?.serverLayout ?? draft.server?.layout); return parsed.success ? parsed.data : createLayout(conflictRemoteDocument, "pending"); })()
+    : undefined;
 
   return <section className="view-stack designer-view" aria-labelledby="designer-title">
     <div className="view-heading compact-heading">
@@ -629,8 +686,9 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
       <span className="muted">{draft.message}</span>
       {validationMessage ? <span className={`validation-label validation-${validationState}`}>{validationMessage}</span> : null}
     </div>
-    {draft.state === "conflict" ? <Notice tone="danger" title="Draft conflict">The server revision changed while this editor was saving. Review the conflict before publishing.</Notice> : null}
-    {draft.state === "conflict" && draft.server ? <ConflictPanel base={initialDocument} local={document} remote={draft.server.conflict?.serverDocument ?? draft.server.document} onKeepRemote={keepRemoteConflict} onKeepLocal={saveLocalAsNew} onMerge={mergeConflict} /> : null}
+    {draft.state === "conflict" ? <Notice tone="danger" title="Draft conflict">The server revision changed while this editor was saving. Local edits are preserved until an explicit resolution.</Notice> : null}
+    {draft.state === "conflict" && conflictRemoteDocument && conflictRemoteLayout && conflictOpen ? <ConflictPanel base={mergeBaseRef.current} baseLayout={mergeBaseLayoutRef.current} local={document} localLayout={layout} remote={conflictRemoteDocument} remoteLayout={conflictRemoteLayout} onKeepRemote={reloadRemoteConflict} onKeepLocal={saveLocalAsNew} onMerge={mergeConflict} onCancel={cancelConflictResolution} /> : null}
+    {draft.state === "conflict" && !conflictOpen ? <section className="panel-card conflict-dismissed" aria-label="Pending conflict review"><p>Conflict resolution cancelled; local and remote candidates remain available for review.</p><button className="button button-secondary" onClick={() => setConflictOpen(true)}>Review divergence</button></section> : null}
     <div className="designer-toolbar" role="toolbar" aria-label="Designer tools">
       <div className="segmented-control" role="tablist" aria-label="Editor surface">
         <button className={tab === "canvas" ? "active" : ""} onClick={() => setTab("canvas")} role="tab" aria-selected={tab === "canvas"}>Canvas</button>
@@ -1080,11 +1138,28 @@ function ArchivalImportPanel({ archival }: { archival: ArchivalImport }): JSX.El
   </section>;
 }
 
-function ConflictPanel({ base, local, remote, onKeepRemote, onKeepLocal, onMerge }: { base: SemanticDocument; local: SemanticDocument; remote: SemanticDocument; onKeepRemote: () => void; onKeepLocal: () => Promise<void>; onMerge: () => void }): JSX.Element {
+function ConflictPanel({ base, baseLayout, local, localLayout, remote, remoteLayout, onKeepRemote, onKeepLocal, onMerge, onCancel }: { base: SemanticDocument; baseLayout: LayoutSidecar; local: SemanticDocument; localLayout: LayoutSidecar; remote: SemanticDocument; remoteLayout: LayoutSidecar; onKeepRemote: () => void; onKeepLocal: () => Promise<void>; onMerge: () => Promise<void>; onCancel: () => void }): JSX.Element {
+  const [reloadArmed, setReloadArmed] = useState(false);
   const localPaths = diffDocuments(base, local).map((change) => change.path);
   const remotePaths = diffDocuments(base, remote).map((change) => change.path);
+  const layoutLocalPaths = diffDocuments(baseLayout, localLayout).map((change) => change.path);
+  const layoutRemotePaths = diffDocuments(baseLayout, remoteLayout).map((change) => change.path);
   const merge = mergeDocuments(base, local, remote);
-  return <section className="conflict-panel panel-card" aria-labelledby="conflict-title"><div className="panel-title"><div><p className="eyebrow">Three-way review</p><h2 id="conflict-title">Local and remote drafts diverged</h2></div><StatusBadge tone={merge.conflicts.length ? "danger" : "success"}>{merge.conflicts.length ? `${merge.conflicts.length} conflicts` : "mergeable"}</StatusBadge></div><p className="muted">The base candidate, local edits, and owner revision stay visible until an explicit resolution. Layout movement is reviewed separately from semantic changes.</p><div className="conflict-columns"><div><strong>Local paths</strong><code>{localPaths.slice(0, 8).join("\n") || "none"}</code></div><div><strong>Remote paths</strong><code>{remotePaths.slice(0, 8).join("\n") || "none"}</code></div></div><div className="control-grid"><button className="button button-secondary" onClick={onMerge} disabled={merge.conflicts.length > 0}>Apply non-overlapping merge</button><button className="button button-quiet" onClick={() => void onKeepLocal()}>Save local as new draft</button><button className="button button-danger-outline" onClick={onKeepRemote}>Reload remote</button></div></section>;
+  const layoutMerge = mergeLayoutSidecars({ ...baseLayout, semanticDigest: "merge" }, { ...localLayout, semanticDigest: "merge" }, { ...remoteLayout, semanticDigest: "merge" });
+  return <section className="conflict-panel panel-card" aria-labelledby="conflict-title">
+    <div className="panel-title"><div><p className="eyebrow">Three-way review</p><h2 id="conflict-title">Local and remote drafts diverged</h2></div><StatusBadge tone={merge.conflicts.length ? "danger" : "success"}>{merge.conflicts.length ? `${merge.conflicts.length} conflicts` : "mergeable"}</StatusBadge></div>
+    <p className="muted">The loaded base, local edits, and owner revision stay visible until an explicit resolution. Local content is never discarded without a protected confirmation.</p>
+    <div className="conflict-columns"><div><strong>Local paths</strong><code>{localPaths.slice(0, 8).join("\n") || "none"}</code></div><div><strong>Remote paths</strong><code>{remotePaths.slice(0, 8).join("\n") || "none"}</code></div></div>
+    <div className="conflict-columns"><div><strong>Local layout paths</strong><code>{layoutLocalPaths.slice(0, 8).join("\n") || "none"}</code></div><div><strong>Remote layout paths</strong><code>{layoutRemotePaths.slice(0, 8).join("\n") || "none"}</code></div></div>
+    <p className="muted">Semantic {merge.conflicts.length ? "conflicts require review" : "changes merge cleanly"}; layout {layoutMerge.conflicts.length ? "movement also conflicts and local layout is kept" : "movement merges independently"}.</p>
+    <div className="control-grid">
+      <button className="button button-secondary" onClick={() => void onMerge()} disabled={merge.conflicts.length > 0}>Apply non-overlapping merge</button>
+      <button className="button button-quiet" onClick={() => void onKeepLocal()}>Save local as new draft</button>
+      {reloadArmed ? <><button className="button button-danger-outline" onClick={onKeepRemote}>Discard local and reload remote</button><button className="button button-quiet" onClick={() => setReloadArmed(false)}>Keep local edits</button></> : <button className="button button-danger-outline" onClick={() => setReloadArmed(true)}>Reload remote…</button>}
+      <button className="button button-quiet" onClick={onCancel}>Cancel resolution</button>
+    </div>
+    {reloadArmed ? <p className="field-error" role="alert">Reloading replaces the local candidate with the owner revision and cannot be undone.</p> : null}
+  </section>;
 }
 
 function EdgeInspector({ document, selectedEdge, onReconnect }: { document: SemanticDocument; selectedEdge: { graphId: string; edgeIndex: number }; onReconnect: (from: string, to: string) => void }): JSX.Element {
