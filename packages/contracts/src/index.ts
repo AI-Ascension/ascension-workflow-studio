@@ -186,6 +186,7 @@ export const ValidateResponseSchema = z.object({
   schema_version: z.string(),
   valid: z.boolean(),
   definition_digest: z.string(),
+  compiler: z.string().optional(),
   diagnostics: z.array(z.object({
     code: z.string(),
     severity: z.enum(["error", "warning", "info"]),

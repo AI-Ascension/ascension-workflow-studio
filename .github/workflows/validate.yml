@@ -89,7 +89,7 @@ jobs:
       - uses: actions/checkout@v5
         with:
           repository: AI-Ascension/sts2-harness
-          ref: e70fce12afebb38503a450c8bd242bd8ad532817
+          ref: 5863c629ead8de50ac4ebe4f3888095223dbf5be
           path: harness
       - uses: actions/setup-node@v6
         with:
