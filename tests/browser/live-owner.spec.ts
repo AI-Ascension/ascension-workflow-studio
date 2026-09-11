@@ -9,11 +9,14 @@ test("pairs with the authenticated owner through the same-origin adapter", async
   await expect(page.locator(".connection-message")).toContainText("Owner reports ok.");
   await page.getByRole("button", { name: /Live owner API/ }).click();
   await expect(page.getByRole("complementary").getByText("Live owner API", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Library" }).click();
+  await page.getByRole("button", { name: "Library", exact: true }).click();
   await page.getByRole("button", { name: /New draft/ }).click();
   await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
   await page.getByRole("button", { name: /Validate/ }).click();
   await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
   await page.getByRole("button", { name: "Publish revision" }).click();
   await expect(page.locator(".validation-label")).toHaveText(/Published an immutable owner revision\.|This exact semantic digest is already published\./);
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await page.getByRole("button", { name: "Refresh library" }).click();
+  await expect(page.getByText("published", { exact: true })).toBeVisible();
 });
