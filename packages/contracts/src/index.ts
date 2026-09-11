@@ -59,7 +59,7 @@ export const WorkflowDefinitionSchema = z.object({
     max_subworkflow_depth: z.number().int().nonnegative(),
     max_provider_calls: z.number().int().nonnegative(),
     max_parallel_analyses: z.number().int().positive(),
-    max_output_tokens: z.number().int().positive(),
+    max_output_tokens: z.number().int().nonnegative(),
   }).strict(),
   entry_graph: z.string().min(1).max(128),
   graphs: z.array(WorkflowGraphSchema).min(1).max(128),

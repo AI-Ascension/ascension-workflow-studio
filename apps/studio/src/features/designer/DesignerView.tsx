@@ -819,7 +819,7 @@ function DefinitionControls({ document, onCommit }: { document: SemanticDocument
       <BoundedNumberField label="Subworkflow depth" value={document.limits.max_subworkflow_depth} min={0} onCommit={(value) => update((next) => { next.limits.max_subworkflow_depth = value; })} />
       <BoundedNumberField label="Provider calls" value={document.limits.max_provider_calls} min={0} onCommit={(value) => update((next) => { next.limits.max_provider_calls = value; })} />
       <BoundedNumberField label="Parallel analyses" value={document.limits.max_parallel_analyses} min={1} onCommit={(value) => update((next) => { next.limits.max_parallel_analyses = value; })} />
-      <BoundedNumberField label="Output tokens" value={document.limits.max_output_tokens} min={1} onCommit={(value) => update((next) => { next.limits.max_output_tokens = value; })} />
+      <BoundedNumberField label="Output tokens" value={document.limits.max_output_tokens} min={0} onCommit={(value) => update((next) => { next.limits.max_output_tokens = value; })} />
     </div>
     <div className="guard-editor">
       <div className="panel-title"><div><p className="eyebrow">Typed guards</p><h3>Ordered guard expressions</h3></div><span className="muted">unknown values remain explicit</span></div>
@@ -827,6 +827,11 @@ function DefinitionControls({ document, onCommit }: { document: SemanticDocument
         <strong>{graph.id}</strong>
         {(graph.guards ?? []).map((guard, guardIndex) => <GuardField key={guard.id} guard={guard} onCommit={(nextGuard) => update((next) => { const nextGraph = next.graphs[graphIndex]; nextGraph.guards = [...(nextGraph.guards ?? [])]; nextGraph.guards[guardIndex] = nextGuard; })} />)}
         <button className="button button-quiet" onClick={() => update((next) => { const nextGraph = next.graphs[graphIndex]; nextGraph.guards = [...(nextGraph.guards ?? []), { id: `guard_${(nextGraph.guards?.length ?? 0) + 1}`, expression: { kind: "exists", value: "" } }]; })}>＋ Guard</button>
+        <GuardBranches graph={graph} onCommit={(source, branches) => update((next) => {
+          const nextGraph = next.graphs[graphIndex];
+          const branchIndexes = nextGraph.edges.map((edge, index) => ({ edge, index })).filter(({ edge }) => edge.from === source && isThreeValuedBranch(edge.on)).sort((left, right) => left.edge.priority - right.edge.priority);
+          branchIndexes.forEach(({ index }, branchIndex) => { nextGraph.edges[index] = branches[branchIndex]; });
+        })} />
       </div>)}
     </div>
   </section>;
@@ -862,11 +867,28 @@ function DefinitionTextField({ label, value, maxLength, onCommit }: { label: str
 }
 
 type WorkflowGuard = NonNullable<SemanticDocument["graphs"][number]["guards"]>[number];
+type WorkflowBranch = SemanticDocument["graphs"][number]["edges"][number];
+
+const guardOutcomes = ["true", "false", "unknown"] as const;
+
+function isThreeValuedBranch(outcome: string): outcome is typeof guardOutcomes[number] {
+  return guardOutcomes.includes(outcome as typeof guardOutcomes[number]);
+}
 
 function GuardField({ guard, onCommit }: { guard: WorkflowGuard; onCommit: (guard: WorkflowGuard) => void }): JSX.Element {
-  const [text, setText] = useState(JSON.stringify(guard.expression, null, 2));
+  const existsValue = guard.expression.kind === "exists" && typeof guard.expression.value === "string" ? guard.expression.value : undefined;
+  const isExistsExpression = existsValue !== undefined;
+  const [text, setText] = useState(existsValue ?? JSON.stringify(guard.expression, null, 2));
   const [error, setError] = useState<string | undefined>();
-  useEffect(() => setText(JSON.stringify(guard.expression, null, 2)), [guard.expression]);
+  useEffect(() => setText(existsValue ?? JSON.stringify(guard.expression, null, 2)), [guard.expression, existsValue]);
+  if (isExistsExpression) return <div className="guard-field"><label className="field-label">{guard.id}<span className="muted">exists · text observation</span><input aria-label={`${guard.id} observation field`} value={text} maxLength={128} onChange={(event) => { setText(event.target.value); setError(undefined); }} onBlur={() => {
+    if (!text.trim()) {
+      setError("Select an approved observation field; missing data must remain unknown.");
+      return;
+    }
+    setError(undefined);
+    onCommit({ ...guard, expression: { ...guard.expression, value: text } });
+  }} />{error ? <span className="field-error" role="alert">{error}</span> : null}</label></div>;
   return <div className="guard-field"><label className="field-label">{guard.id}<textarea rows={3} value={text} onChange={(event) => { setText(event.target.value); setError(undefined); }} onBlur={() => {
     try {
       const parsed = parseBoundedJson(text, { maxBytes: 16 * 1024, maxDepth: 12, maxNodes: 256 });
@@ -878,6 +900,31 @@ function GuardField({ guard, onCommit }: { guard: WorkflowGuard; onCommit: (guar
       setError(caught instanceof Error ? caught.message : "Guard expression is invalid.");
     }
   }} />{error ? <span className="field-error" role="alert">{error}</span> : null}</label></div>;
+}
+
+function GuardBranches({ graph, onCommit }: { graph: SemanticDocument["graphs"][number]; onCommit: (source: string, branches: WorkflowBranch[]) => void }): JSX.Element {
+  const branchSources = [...new Set(graph.edges.filter((edge) => isThreeValuedBranch(edge.on)).map((edge) => edge.from))];
+  if (branchSources.length === 0) return <p className="field-unknown">No true/false/unknown branches are defined in this graph.</p>;
+  return <div className="guard-branches" aria-label={`${graph.id} guard branches`}>
+    {branchSources.map((source) => {
+      const branches = graph.edges.filter((edge) => edge.from === source && isThreeValuedBranch(edge.on)).sort((left, right) => left.priority - right.priority);
+      const missing = guardOutcomes.filter((outcome) => !branches.some((branch) => branch.on === outcome));
+      return <section className="guard-branch-group" key={source} aria-label={`${source} branches`}>
+        <div><strong>{source}</strong><span className="muted">semantic order: lowest priority first</span></div>
+        {branches.map((branch, index) => <div className="guard-branch-row" key={`${branch.to}:${branch.on}:${branch.priority}`}>
+          <label className="field-label">Outcome<select aria-label={`${source} branch ${index + 1} outcome`} value={branch.on} onChange={(event) => {
+            const outcome = event.target.value;
+            if (!isThreeValuedBranch(outcome)) return;
+            onCommit(source, branches.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, on: outcome } : candidate));
+          }}>{guardOutcomes.map((outcome) => <option key={outcome} value={outcome} disabled={outcome !== branch.on && branches.some((candidate) => candidate.on === outcome)}>{outcome}</option>)}</select></label>
+          <label className="field-label">Target<select aria-label={`${source} ${branch.on} target`} value={branch.to} onChange={(event) => onCommit(source, branches.map((candidate, candidateIndex) => candidateIndex === index ? { ...candidate, to: event.target.value } : candidate))}>{graph.nodes.map((node) => <option key={node.id} value={node.id}>{node.id}</option>)}</select></label>
+          <span className="branch-priority">priority {branch.priority}</span>
+          <div className="branch-actions"><button className="button button-quiet" aria-label={`Move ${branch.on} branch earlier`} disabled={index === 0} onClick={() => onCommit(source, branches.map((candidate, candidateIndex) => candidateIndex === index ? { ...branches[index - 1], priority: candidate.priority } : candidateIndex === index - 1 ? { ...branch, priority: candidate.priority } : candidate))}>↑</button><button className="button button-quiet" aria-label={`Move ${branch.on} branch later`} disabled={index === branches.length - 1} onClick={() => onCommit(source, branches.map((candidate, candidateIndex) => candidateIndex === index ? { ...branches[index + 1], priority: candidate.priority } : candidateIndex === index + 1 ? { ...branch, priority: candidate.priority } : candidate))}>↓</button></div>
+        </div>)}
+        {missing.length ? <p className="field-error" role="alert">Missing explicit exits: {missing.join(", ")}. Unknown must route explicitly.</p> : null}
+      </section>;
+    })}
+  </div>;
 }
 
 function RawDefinitionPanel({ rawText, error, onChange, onApply }: { rawText: string; error: string | undefined; onChange: (value: string) => void; onApply: () => void }): JSX.Element {

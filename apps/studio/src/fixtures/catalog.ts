@@ -1,6 +1,7 @@
 import campaign from "../../../../contracts/accepted/phase1/workflows/campaign.strict.json";
 import combatDynamic from "../../../../contracts/accepted/phase1/workflows/combat.dynamic.json";
 import setup from "../../../../contracts/accepted/phase1/workflows/setup.strict.json";
+import terminal from "../../../../contracts/accepted/phase1/workflows/terminal.strict.json";
 import {
   DefinitionRecordSchema,
   WorkflowDefinitionSchema,
@@ -34,5 +35,14 @@ export const fixtureDefinitions: DefinitionRecord[] = [
     updatedAt: "2026-09-10T00:00:00.000Z",
     definition: WorkflowDefinitionSchema.parse(campaign as unknown),
     capabilities: ["observe.fair-play.v1", "actions.catalog.v1", "actions.settlement.v1", "actions.campaign.v1"],
+  }),
+  DefinitionRecordSchema.parse({
+    id: "sts2.terminal.strict",
+    title: "Terminal outcome",
+    description: "A strict route with explicit true, false, and unknown settlement outcomes.",
+    source: "catalog",
+    updatedAt: "2026-09-11T00:00:00.000Z",
+    definition: WorkflowDefinitionSchema.parse(terminal as unknown),
+    capabilities: ["observe.fair-play.v1", "actions.catalog.v1", "actions.settlement.v1"],
   }),
 ];
