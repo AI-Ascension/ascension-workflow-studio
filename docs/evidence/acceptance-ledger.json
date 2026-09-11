@@ -660,7 +660,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Merged owner PR #57 supplies an immutable publication route through the existing definition authority; the synthetic live process completed publication and reloaded the published definition. Browser integration remains unverified."
+      "evidence": "Merged owner PR #57 supplies an immutable publication route through the existing definition authority; the synthetic live process completed publication and reloaded the published definition. Studio CI run 34632504542 verified authenticated Chromium publication through the same-origin adapter. Browser published-definition reload remains unverified."
     },
     {
       "id": "AT-056",
@@ -671,7 +671,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Merged owner PR #57 supplies a typed publication response with published, already-published, and conflict outcomes; the synthetic live process observed the published outcome. Browser integration remains unverified."
+      "evidence": "Merged owner PR #57 supplies a typed publication response with published, already-published, and conflict outcomes; the synthetic live process observed the published outcome. Studio CI run 34632504542 verified the browser handles published or already-published outcomes. Browser conflict presentation remains unverified."
     },
     {
       "id": "AT-057",
