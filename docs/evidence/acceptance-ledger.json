@@ -436,10 +436,12 @@
         "P2-036"
       ],
       "work_package": "WP-11",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "implemented",
+      "actual_command": "npm test -- --run --pool=threads --maxWorkers=1; GitHub Actions Studio validation run 34641473566",
+      "actual_source_heads": {
+        "studio": "1a69a2a"
+      },
+      "evidence": "Studio CI run 34641473566 verified graph undo/redo works when no interactive control is focused, while native text undo and Delete in the raw JSON textarea leave the graph unchanged. Document unit coverage rejects oversized clipboard snapshots and verifies bounded history retention."
     },
     {
       "id": "AT-037",
