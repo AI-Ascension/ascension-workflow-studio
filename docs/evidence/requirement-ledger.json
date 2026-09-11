@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 53,
-    "partial": 25,
+    "implemented": 54,
+    "partial": 24,
     "not_started": 9
   },
   "requirements": [
@@ -522,8 +522,8 @@
       "id": "P2-052",
       "mandatory": true,
       "work_package": "WP-17",
-      "status": "partial",
-      "evidence": "Merged Studio PR #46 (commit d9affcc; merge f52a4e1) tracks the owner-acknowledged semantic document and layout as the true merge base instead of the stale designer prop. The conflict panel shows base/local/remote semantic and layout paths separately and refuses to auto-merge concurrent array changes (delete-versus-edit, reordered branches, conflicting scalars): the merge control is disabled and a conflict count is shown. Remaining: the second client is a direct authenticated owner write rather than a second browser tab, and pinned-ref changes are not yet a dedicated browser case.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #46 (commit d9affcc; merge f52a4e1) tracks the true merge base and refuses to auto-merge concurrent array and scalar changes. Merged Studio PR #52 (commit 2ccd397; merge 6514c57) adds a genuine two-tab owner client: both tabs hydrate the same draft revision, the first saves a pinned projection-reference change, and the second's conflicting pinned-reference change is held for review with base/local/remote retained, the merge control disabled, and both candidates preserved. Studio CI run 34658493721 passed all six jobs. Delete-versus-edit and reordered-branch races remain covered by the conflict-lifecycle tests.",
       "acceptance_cases": [
         "AT-052"
       ]

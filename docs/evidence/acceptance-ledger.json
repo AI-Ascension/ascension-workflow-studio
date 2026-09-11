@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 40,
-    "partial": 31,
+    "evidenced": 41,
+    "partial": 30,
     "implemented": 6,
     "not_run": 9
   },
@@ -656,15 +656,15 @@
         "P2-052"
       ],
       "work_package": "WP-17",
-      "status": "partial",
-      "actual_command": "GitHub Actions Studio validation run 34653747050 (live-owner browser against the real harness owner)",
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34658493721 (live-owner browser against the real harness owner)",
       "actual_source_heads": {
-        "studio": "d9affcc"
+        "studio": "2ccd397"
       },
-      "evidence": "Merged PR #46 live-owner coverage races an independent authenticated owner write against local delete-versus-edit and branch-reordering edits; both are classified as review conflicts with the merge control disabled and both candidates retained. Remaining: dedicated pinned-ref case and a true second-browser-tab client.",
+      "evidence": "Merged PR #52 live-owner coverage opens a real second browser tab against the same owner draft revision and races a pinned-reference change: the second tab receives a review conflict with Local paths and Remote paths shown, the merge control disabled, and both local candidates preserved. Delete-versus-edit and reordered-branch conflicts are covered by the same suite with no silent strategy merge.",
       "actual_evidence_refs": [
-        "apps/studio/src/features/designer/DesignerView.tsx",
-        "tests/browser/live-owner.spec.ts"
+        "tests/browser/live-owner.spec.ts",
+        "apps/studio/src/features/designer/DesignerView.tsx"
       ]
     },
     {
