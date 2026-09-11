@@ -76,4 +76,30 @@ test("renders an owner revision conflict after a stale browser save", async ({ p
   await page.getByRole("button", { name: "Reload remote" }).click();
   await expect(page.getByText("Remote revision loaded; local conflict was discarded.")).toBeVisible();
   await expect(page.getByText("saved", { exact: true })).toBeVisible();
+
+  const stalePublish = await page.evaluate(async (id) => {
+    const headers = { Authorization: "Bearer studio-live-ci-token", "Content-Type": "application/json" };
+    const draftPath = `/v1/studio/drafts/draft.${id}`;
+    const currentResponse = await fetch(draftPath, { headers });
+    const current = await currentResponse.json();
+    const response = await fetch(draftPath, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        schema_version: "ascension.studio-authoring/v1",
+        expected_revision: current.revision,
+        etag: current.etag,
+        client_mutation_id: "studio.live-browser.remote-publication-revision",
+        document: current.document,
+        layout: current.layout,
+      }),
+    });
+    return { status: response.status, body: await response.json() };
+  }, definitionId);
+  expect(stalePublish.status).toBe(200);
+  expect(stalePublish.body.revision).toBe(2);
+
+  await page.getByRole("button", { name: "Publish revision" }).click();
+  await expect(page.getByRole("heading", { name: "Local and remote drafts diverged" })).toBeVisible();
+  await expect(page.locator(".validation-label")).toHaveText("Publication needs conflict resolution before it can create an immutable revision.");
 });
