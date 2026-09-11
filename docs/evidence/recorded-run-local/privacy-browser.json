@@ -1,0 +1,15 @@
+{
+  "scope": "local Chromium production worker; synthetic identities",
+  "rejected": [
+    "manifest-action.zip",
+    "manifest-provider_request.zip",
+    "common-gameplay-action.zip",
+    "common-gameplay-provider_request.zip",
+    "opaque-action.zip",
+    "opaque-provider_request.zip"
+  ],
+  "previousRecordingRetained": true,
+  "rawIdentityRendered": false,
+  "errors": [],
+  "outgoing": []
+}

@@ -4,7 +4,7 @@ import type { JsonObject, JsonValue } from "@studio/contracts";
 import type { InspectionRecord, RecordingInspection } from "./model";
 import { canonicalDocument, digest, encode, jcs, limits, requireImport } from "./primitives";
 import { inspectZip, readEntry } from "./zip";
-import { validateEvidence, validateSummary } from "./evidence";
+import { validateEvidence, validateSummary, validateIdentityPrivacy } from "./evidence";
 
 export const schemaDigest = digest(encode(schemaText));
 const schema = JSON.parse(schemaText) as { $id: string };
@@ -16,11 +16,18 @@ const STS2 = "ai-ascension.sts2.seed-readiness.v1";
 const supported = new Set([COMMON, STS2]);
 const object = (value: JsonValue): JsonObject => value as JsonObject;
 function validate(kind: string, value: JsonValue): JsonObject {
+  function tokenStrings(item: JsonValue): void {
+    if (typeof item === "string") requireImport(!/[\u0000-\u0020\u007f-\u009f]/u.test(item), "schema_mismatch", "Recording tokens cannot contain whitespace or control characters.");
+    else if (item && typeof item === "object") Object.values(item).forEach(tokenStrings);
+  }
+  tokenStrings(value);
   requireImport(validators[kind](value), "schema_mismatch", `The ${kind} does not match the pinned recorded-run candidate schema.`);
   return object(value);
 }
 
 export async function importRecording(buffer: ArrayBuffer): Promise<RecordingInspection> {
+  requireImport(buffer instanceof ArrayBuffer, "invalid_input", "Recording input must be an ArrayBuffer.");
+  requireImport(buffer.byteLength <= limits.archive, "resource_limit", "Archive exceeds the 16 MiB browser limit.");
   const archive = new Uint8Array(buffer);
   const entries = inspectZip(archive);
   const manifestEntry = entries.find(entry => entry.path === "manifest.json");
@@ -29,6 +36,7 @@ export async function importRecording(buffer: ArrayBuffer): Promise<RecordingIns
   const header = object(rawManifest);
   requireImport(header?.format_version === "1.0.0-candidate.2", "unsupported_version", "Only recorded-run 1.0.0-candidate.2 is supported.");
   const manifest = validate("manifest", rawManifest);
+  validateIdentityPrivacy(object(object(manifest.recording).identities));
   requireImport(manifest.contract_schema_sha256 === schemaDigest, "contract_mismatch", "Bundle requires different contract bytes from this Studio build.");
   const required = manifest.required_profiles as string[], optional = manifest.optional_profiles as string[];
   const sorted = (values: string[]) => values.every((value, index) => index === 0 || values[index - 1] < value);
@@ -50,6 +58,8 @@ export async function importRecording(buffer: ArrayBuffer): Promise<RecordingIns
   let omissions: JsonObject | undefined;
   const keys = new Set<string>();
   const admitted: JsonObject[] = [];
+  const recordFiles = new Map<string, Uint8Array>();
+  let remaining = limits.records;
   for (const declaration of declared) {
     const entry = entries.find(candidate => candidate.path === declaration.path);
     requireImport(entry && entry.bytes === declaration.bytes, "integrity_mismatch", "Declared entry is missing or has an incorrect size.");
@@ -60,6 +70,18 @@ export async function importRecording(buffer: ArrayBuffer): Promise<RecordingIns
     requireImport(digest(bytes) === declaration.sha256, "integrity_mismatch", "An entry SHA-256 does not match the manifest.");
     if (isReport) { omissions = validate("omissions", canonicalDocument(bytes, limits.report)); continue; }
     requireImport(bytes.length === 0 || bytes.at(-1) === 10, "truncated_records", "Every NDJSON record must end with LF.");
+    let lineStart = 0;
+    for (let end = 0; end < bytes.length; end++) {
+      requireImport(end - lineStart <= limits.line, "resource_limit", "A record exceeds the 64 KiB limit.");
+      if (bytes[end] !== 10) continue;
+      requireImport(remaining > 0, "resource_limit", "Recording exceeds the 25,000-record limit.");
+      remaining--; lineStart = end + 1;
+    }
+    recordFiles.set(entry.path, bytes);
+  }
+  // Both files have passed a shared count/line preflight before any record JSON
+  // is materialized. Retain the parsing-time check as defense in depth.
+  for (const [path, bytes] of recordFiles) {
     let start = 0;
     let previous: [string, number, number] | undefined;
     const subrecords = new Map<string, number>();
@@ -81,7 +103,7 @@ export async function importRecording(buffer: ArrayBuffer): Promise<RecordingIns
       const key = `${source.stream}:${source.record_ordinal}:${source.subrecord_ordinal}`;
       requireImport(!keys.has(key), "duplicate_record", "Source stream, ordinal and subrecord identity is duplicated.");
       keys.add(key);
-      const isAccounting = entry.path === "records/accounting.ndjson";
+      const isAccounting = path === "records/accounting.ndjson";
       requireImport(isAccounting === (payload.kind === "accounting"), "invalid_accounting", "Accounting must appear only in the dedicated accounting entry.");
       const row: InspectionRecord = {
         key, kind: payload.kind as string, stream: source.stream as string,
@@ -130,7 +152,18 @@ function reconcile(omissions: JsonObject, records: InspectionRecord[]): void {
     const covered = new Set(ordinals);
     let lastDisposition = -1;
     for (const disposition of stream.dispositions as JsonObject[]) {
+      const dispositionClasses: Record<string, string> = {
+        raw_mcp_disallowed: "filtered", private_source_metadata: "filtered",
+        unsupported_source_event: "unsupported", unsupported_source_status: "unsupported",
+        invalid_source_record: "rejected", partial_final_record: "rejected",
+      };
+      requireImport(dispositionClasses[disposition.reason as string] === disposition.disposition, "invalid_reconciliation", "Source disposition reason and class disagree.");
+      if (disposition.reason === "raw_mcp_disallowed") requireImport(name === "mcp", "invalid_reconciliation", "Raw MCP disposition belongs only to the MCP stream.");
+      if (disposition.reason === "private_source_metadata") requireImport(name === "manifest", "invalid_reconciliation", "Private source metadata disposition belongs only to the manifest stream.");
+      if (disposition.reason === "unsupported_source_event") requireImport(name === "trajectory", "invalid_reconciliation", "Unsupported source events belong only to the trajectory stream.");
+      if (disposition.reason === "unsupported_source_status") requireImport(["trajectory", "provider-accounting"].includes(name), "invalid_reconciliation", "Unsupported source status belongs only to trajectory or accounting.");
       const first = disposition.first as number, last = disposition.last as number;
+      if (disposition.reason === "partial_final_record") requireImport(stream.state === "interrupted" && first === last && last === (stream.input_records as number) - 1, "invalid_reconciliation", "Partial source tail must be the interrupted stream's final singleton row.");
       requireImport(first <= last && first > lastDisposition && last < (stream.input_records as number), "invalid_reconciliation", "Invalid source disposition range.");
       lastDisposition = last;
       for (let ordinal = first; ordinal <= last; ordinal++) {

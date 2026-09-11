@@ -1,6 +1,10 @@
 # Train preview deployment
 
-Status: prepared; the new service and importer build have not been deployed.
+Status: coordinator reports the original candidate2 release is deployed. The local
+`candidate2-privacy-patch.zip` replacement is tested and prepared, not deployed by
+this lead. Its adjacent manifest binds the reviewed transport and served-file hashes.
+See `artifacts/recorded-run-preview/candidate2-privacy-patch.md` for the exact pin and
+local verification. Candidate3 repinning awaits the protocol owner's final inventory.
 
 The Studio lead reviewed and copied these coordinator-prepared assets into
 `tools/deploy/`. This repository's local test package is

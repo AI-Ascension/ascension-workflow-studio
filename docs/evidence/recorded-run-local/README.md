@@ -1,5 +1,44 @@
 # Local recorded-run verification
 
+## Review corrections, 2026-09-11
+
+Current evidence now describes the candidate2 privacy-patch build. The previous
+candidate2 package and manifest remain in `artifacts/recorded-run-preview/`, and
+its original test evidence is retained in commit `2959d09`.
+
+`npm test -- --reporter=dot` passed 90 tests across all four suites.
+`npm run test:recorded-browser` with the variables below passed 8 Chromium tests,
+including its production build and both TypeScript checks. The added worker test
+rejects six raw action/provider-request placements in manifest, common gameplay
+and opaque identities; every failed import retains the previous recording,
+renders no synthetic secret, offers no replacement, and causes no outgoing request
+or page error. `privacy-browser.json` records this result.
+
+`node tools/check-recorded-privacy.mjs
+../recorded-run-sts2-protocol/history/recorded-run-candidate2` passed all six negative
+probes and all three valid baselines. `privacy-comparison.json` binds their exact
+ZIP hashes and each decoder's error code. The generated `studio-invalid/` vectors
+are synthetic review derivatives, separate from the protocol artifact inventory.
+The same preserved oracle passed `tools/check-recorded-summary.mjs` on
+`contracts/recorded-run-candidate/golden/legacy-failed.zip`, still 8 events/1 accounting,
+process completed, gameplay episode_failed and actions unknown.
+
+Browser environment:
+
+```sh
+FONTCONFIG_FILE=/tmp/ascension-browser-audit/fonts.conf \
+LD_LIBRARY_PATH=/tmp/ascension-browser-libs/root-20260910/usr/lib/x86_64-linux-gnu:/tmp/ascension-browser-libs/root-20260910/lib/x86_64-linux-gnu \
+npm run test:recorded-browser
+```
+
+`node tools/record-build-evidence.mjs` records the browser-tested build.
+`python3 tools/deploy/package-preview.py dist artifacts/recorded-run-preview/candidate2-privacy-patch.zip`
+created four files totaling 868,850 bytes; release digest
+`f5722374a5de4e7bd3393b42a64479b43c78cd7a0889d71f629e8d0885f3ca35`.
+Local package is prepared only; coordinator owns deployment and served hashes.
+
+## Original candidate2 gate (historical)
+
 Evidence is from the isolated Studio worktree and synthetic protocol fixtures.
 It is not Train export or LAN deployment evidence. Candidate version is
 `1.0.0-candidate.2`, pinned by `contracts/recorded-run-candidate/studio-pin.json`.

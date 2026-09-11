@@ -1,11 +1,13 @@
 // @vitest-environment node
 import { readFileSync } from "node:fs";
 import { deflateRawSync } from "node:zlib";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { JsonObject } from "@studio/contracts";
 import { importRecording } from "./import";
 import { canonicalDocument, digest, encode, jcs, limits } from "./primitives";
 import { crc32, inspectZip } from "./zip";
+import { importRecordingFile } from "./file";
+import { validateEvidence } from "./evidence";
 
 const base = new URL("../../../contracts/recorded-run-candidate/", import.meta.url);
 const buffer = (bytes: Uint8Array): ArrayBuffer => Uint8Array.from(bytes).buffer;
@@ -118,9 +120,95 @@ describe("protocol candidate import", () => {
       template.source = { stream: "trajectory", record_ordinal: ordinal, subrecord_ordinal: 0 };
       lines.push(jcs(template) + "\n");
     }
+    // The over-budget record must never reach JSON parsing: otherwise this invalid
+    // final object would report invalid_json rather than the shared resource limit.
+    lines[lines.length - 1] = "{\n";
     values["records/events.ndjson"] = lines.join(""); reseal(values);
     await expect(importRecording(pack(values, true))).rejects.toMatchObject({ code: "resource_limit" });
   }, 20_000);
+  it("rejects a process result relabeled as a decision with the result stream absent", async () => {
+    const values = entries();
+    const rows = values["records/events.ndjson"].trimEnd().split("\n").map(text => JSON.parse(text) as JsonObject);
+    const result = rows.find(row => (row.payload as JsonObject).kind === "process_result")!;
+    rows[0].payload = result.payload; rows[0].evidence = result.evidence;
+    values["records/events.ndjson"] = rows.filter(row => (row.source as JsonObject).stream !== "result").map(row => jcs(row) + "\n").join("");
+    const report = JSON.parse(values["reports/omissions.json"]);
+    Object.assign(report.streams.find((stream: JsonObject) => stream.stream === "result"), { state: "absent", input_records: null, emitted_rows: 0, output_records: 0 });
+    values["reports/omissions.json"] = jcs(report); reseal(values);
+    await expect(importRecording(pack(values))).rejects.toMatchObject({ code: "evidence_mismatch" });
+  });
+  it.each(["unsupported_source_event", "unsupported_source_status"])("requires a digest for diagnostic %s", async code => {
+    const values = entries();
+    alterRecord(values, "records/events.ndjson", 6, row => { (row.payload as JsonObject).value = { code }; });
+    await expect(importRecording(pack(values))).rejects.toThrow();
+  });
+  it.each(["seed_start", "action_outcome", "decision_summary", "accounting", "process_result", "diagnostic"])("enforces the known source mapping for %s", kind => {
+    const values = entries();
+    const rows = [values["records/events.ndjson"], values["records/accounting.ndjson"]].flatMap(text => text.trimEnd().split("\n").map(line => JSON.parse(line) as JsonObject));
+    const row = rows.find(row => (row.payload as JsonObject).kind === kind)!;
+    if (kind === "diagnostic") (row.payload as JsonObject).value = { code: "episode_failed" };
+    row.source = { stream: "manifest", record_ordinal: 0, subrecord_ordinal: 0 };
+    expect(() => validateEvidence(row, JSON.parse(values["manifest.json"]))).toThrow();
+  });
+  it("rejects private source metadata counted as rejected instead of filtered", async () => {
+    const values = entries(), report = JSON.parse(values["reports/omissions.json"]), manifest = JSON.parse(values["manifest.json"]);
+    const source = report.streams.find((stream: JsonObject) => stream.stream === "manifest");
+    source.state = "present"; source.filtered_rows = 0; source.rejected_rows = 1;
+    source.dispositions[0].disposition = "rejected";
+    manifest.completeness.status = "partial";
+    values["manifest.json"] = jcs(manifest); values["reports/omissions.json"] = jcs(report); reseal(values);
+    await expect(importRecording(pack(values))).rejects.toMatchObject({ code: "invalid_reconciliation" });
+  });
+  it("enforces sensitive identity privacy in the manifest and unknown-profile records", async () => {
+    const values = entries(), manifest = JSON.parse(values["manifest.json"]);
+    manifest.recording.identities.provider_request = { namespace: "provider.raw", value: "SENTINEL_REQUEST" };
+    values["manifest.json"] = jcs(manifest); reseal(values);
+    await expect(importRecording(pack(values))).rejects.toMatchObject({ code: "evidence_mismatch" });
+    const optional = entries(), other = JSON.parse(optional["manifest.json"]);
+    other.optional_profiles = ["example.optional.v1"]; optional["manifest.json"] = jcs(other);
+    alterRecord(optional, "records/events.ndjson", 0, row => {
+      row.payload = { profile: "example.optional.v1", kind: "opaque", value: { content_digest: "a".repeat(64), bytes: 1, media_type: "application/json" } };
+      row.identities = { action: { namespace: "action.raw", value: "SENTINEL_ACTION" } };
+    });
+    await expect(importRecording(pack(optional))).rejects.toMatchObject({ code: "evidence_mismatch" });
+  });
+  it.each(["manifest-action", "manifest-provider_request", "common-gameplay-action", "common-gameplay-provider_request", "opaque-action", "opaque-provider_request"])("rejects independently resealed review reproducer %s", async name => {
+    await expect(importRecording(fixture(`studio-invalid/${name}.zip`))).rejects.toMatchObject({ code: "evidence_mismatch" });
+  });
+  it("rejects token end-anchor newline bypasses", async () => {
+    const values = entries(), manifest = JSON.parse(values["manifest.json"]);
+    manifest.recording.identities.session = { namespace: "example.session", value: "synthetic\n" };
+    values["manifest.json"] = jcs(manifest); reseal(values);
+    await expect(importRecording(pack(values))).rejects.toMatchObject({ code: "schema_mismatch" });
+  });
+  it("counts both files before parsing even their first record", async () => {
+    const values = entries();
+    values["records/accounting.ndjson"] = "{\n";
+    values["records/events.ndjson"] = "{}\n".repeat(limits.records);
+    reseal(values);
+    await expect(importRecording(pack(values, true))).rejects.toMatchObject({ code: "resource_limit" });
+  });
+  it("does not invent a blanket generic identity-inequality requirement", async () => {
+    const values = entries(), manifest = JSON.parse(values["manifest.json"]);
+    manifest.producer.source_format = "synthetic-generic-profile-v1";
+    manifest.recording.identity = { namespace: "example.recording", value: "shared-value" };
+    manifest.recording.identities.session = { ...manifest.recording.identity };
+    manifest.bundle_id = digest(encode(`ai-ascension.recorded-run.v1/bundle-id\0${jcs(manifest.recording.identity)}`));
+    values["manifest.json"] = jcs(manifest); reseal(values);
+    await expect(importRecording(pack(values))).resolves.toHaveProperty("bundleIdentity", "example.recording:shared-value");
+  });
+  it("caps public file input before arrayBuffer allocation and detects changed sizes", async () => {
+    const read = vi.fn(async () => fixture());
+    await expect(importRecordingFile({ size: limits.archive + 1, arrayBuffer: read })).rejects.toMatchObject({ code: "resource_limit" });
+    expect(read).not.toHaveBeenCalled();
+    await expect(importRecordingFile({ size: 1, arrayBuffer: read })).rejects.toMatchObject({ code: "invalid_input" });
+  });
+  it("caps parser input without reading or copying its backing storage", async () => {
+    const oversized = new Uint8Array(limits.archive + 1);
+    Object.defineProperty(oversized, "buffer", { get: () => { throw new Error("backing storage accessed before cap"); } });
+    expect(() => inspectZip(oversized)).toThrow("16 MiB browser limit");
+    await expect(importRecording(new ArrayBuffer(limits.archive + 1))).rejects.toMatchObject({ code: "resource_limit" });
+  });
 });
 describe("bounded RFC 8785 bytes", () => {
   it("orders integer-like keys, preserves annotations and rejects lost parser information", () => {

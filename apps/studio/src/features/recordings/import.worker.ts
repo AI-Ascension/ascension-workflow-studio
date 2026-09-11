@@ -1,9 +1,9 @@
-import { importRecording } from "../../../../../packages/recording/src/import";
+import { importRecordingFile } from "../../../../../packages/recording/src/file";
 import { ImportFailure } from "../../../../../packages/recording/src/primitives";
 
 self.onmessage = async (event: MessageEvent<File>): Promise<void> => {
   try {
-    const recording = await importRecording(await event.data.arrayBuffer());
+    const recording = await importRecordingFile(event.data);
     self.postMessage({ recording });
   } catch (error) {
     self.postMessage({ diagnostic: error instanceof ImportFailure

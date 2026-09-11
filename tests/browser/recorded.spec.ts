@@ -52,6 +52,28 @@ test("preserves unsupported records without exposing content", async ({ page }) 
   await expect(page.locator(".recording-detail")).toContainText("content_digest");
   await expect(page.locator(".recording-detail a, .recording-detail iframe, .recording-detail script")).toHaveCount(0);
 });
+test("rejects manifest, gameplay and opaque identity privacy bypasses in the worker", async ({ page }) => {
+  const errors: string[] = [], outgoing: string[] = [], rejected: string[] = [];
+  page.on("pageerror", error => errors.push(error.message));
+  page.on("request", request => { if (request.method() !== "GET" || new URL(request.url()).origin !== "http://127.0.0.1:4181") outgoing.push(request.url()); });
+  const picker = page.getByLabel("Choose recorded-run bundle");
+  await picker.setInputFiles(resolve(fixtures, "seed-readiness.zip"));
+  await expect(page.getByText("Recording validated and imported.", { exact: true })).toBeVisible();
+  for (const placement of ["manifest", "common-gameplay", "opaque"]) {
+    for (const role of ["action", "provider_request"]) {
+      const name = `${placement}-${role}.zip`;
+      await picker.setInputFiles(resolve(fixtures, "studio-invalid", name));
+      await expect(page.getByRole("alert")).toContainText("evidence_mismatch");
+      await expect(page.getByRole("alert")).toContainText("previous validated recording");
+      await expect(page.locator(".recording-row")).toHaveCount(9);
+      await expect(page.getByRole("button", { name: "Replace recording", exact: true })).toHaveCount(0);
+      await expect(page.locator("body")).not.toContainText("secret");
+      rejected.push(name);
+    }
+  }
+  expect(errors).toEqual([]); expect(outgoing).toEqual([]);
+  await writeFile(resolve(evidence, "privacy-browser.json"), JSON.stringify({ scope: "local Chromium production worker; synthetic identities", rejected, previousRecordingRetained: true, rawIdentityRendered: false, errors, outgoing }, null, 2) + "\n");
+});
 test("bounds a 25,000-record import to 100 timeline DOM rows per page", async ({ page }) => {
   const started = Date.now();
   await page.getByLabel("Choose recorded-run bundle").setInputFiles(resolve(fixtures, "browser-25000-records.zip"));
