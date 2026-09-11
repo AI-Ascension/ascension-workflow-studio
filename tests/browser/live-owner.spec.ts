@@ -12,4 +12,6 @@ test("pairs with the authenticated owner through the same-origin adapter", async
   await page.getByRole("button", { name: "Library" }).click();
   await page.getByRole("button", { name: /New draft/ }).click();
   await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+  await page.getByRole("button", { name: /Validate/ }).click();
+  await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
 });
