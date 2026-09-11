@@ -13,6 +13,7 @@
     "lint": "npm run typecheck",
     "test": "vitest run",
     "test:browser": "playwright test",
+    "test:live-owner-browser": "npm run build && playwright test --config playwright.live-owner.config.ts",
     "test:recorded-browser": "playwright test --config playwright.recorded.config.ts",
     "recording:inspect": "node tools/inspect-recording.mjs",
     "test:watch": "vitest",
