@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { deflateRawSync } from "node:zlib";
 import { describe, expect, it, vi } from "vitest";
 import type { JsonObject } from "@studio/contracts";
-import { importRecording } from "./import";
+import { importRecording, schemaDigest } from "./import";
 import { canonicalDocument, digest, encode, jcs, limits } from "./primitives";
 import { crc32, inspectZip } from "./zip";
 import { importRecordingFile } from "./file";
@@ -49,6 +49,22 @@ describe("protocol candidate import", () => {
     expect(digest(bytes)).toBe(vector.sha256);
     if (vector.valid) await expect(importRecording(bytes.buffer)).resolves.toHaveProperty("digest");
     else await expect(importRecording(bytes.buffer)).rejects.toThrow();
+  });
+  it("pins the owner inventory, schema and vector metadata to candidate3", () => {
+    const conformance = JSON.parse(readFileSync(new URL("conformance.json", base), "utf8"));
+    const manifest = JSON.parse(readFileSync(new URL("manifest.json", base), "utf8"));
+    const pin = JSON.parse(readFileSync(new URL("studio-pin.json", base), "utf8"));
+    expect(schemaDigest).toBe("a6c32127290f4d5e670d8863f97a74a7b8e3e411e735d81394b51fe1578b4eb6");
+    expect(digest(readFileSync(new URL("SHA256SUMS", base)))).toBe("580c1cf3be4bb3e4eb37b9acd9166808b7386b0eb84286cc0798a0d88e35bb35");
+    expect([conformance.version, manifest.version, pin.format_version]).toEqual(Array(3).fill("1.0.0-candidate.3"));
+    expect([conformance.schema_sha256, manifest.schema_sha256, pin.checksums["schema.json"]]).toEqual(Array(3).fill(schemaDigest));
+    expect(conformance.profile).toBe("recorded-run-bundle-v1");
+    expect(vectors.cases.filter(vector => vector.valid)).toHaveLength(8);
+    expect(vectors.cases.filter(vector => !vector.valid)).toHaveLength(25);
+  });
+  it("rejects candidate2 explicitly while preserving its historical bytes", async () => {
+    const old = new URL("../../../history/recorded-run-candidate2/contracts/seed-readiness.zip", import.meta.url);
+    await expect(importRecording(buffer(readFileSync(old)))).rejects.toMatchObject({ code: "unsupported_version" });
   });
   it.each(["seed-readiness.zip", "seed-readiness-deflate.zip"])("imports exact protocol fixture %s with truthful evidence", async name => {
     const imported = await importRecording(fixture(name));
@@ -157,7 +173,7 @@ describe("protocol candidate import", () => {
     source.dispositions[0].disposition = "rejected";
     manifest.completeness.status = "partial";
     values["manifest.json"] = jcs(manifest); values["reports/omissions.json"] = jcs(report); reseal(values);
-    await expect(importRecording(pack(values))).rejects.toMatchObject({ code: "invalid_reconciliation" });
+    await expect(importRecording(pack(values))).rejects.toMatchObject({ code: "schema_mismatch" });
   });
   it("enforces sensitive identity privacy in the manifest and unknown-profile records", async () => {
     const values = entries(), manifest = JSON.parse(values["manifest.json"]);

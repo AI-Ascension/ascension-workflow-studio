@@ -1,0 +1,28 @@
+{
+  "scope": "local tested production build for coordinator deployment; not LAN deployment evidence",
+  "contract_version": "1.0.0-candidate.2",
+  "schema_sha256": "d5098e5f969d99707d3ad1d97acdbc803285b93f1eb1dcfe5dc3f63c534192af",
+  "inventory_sha256": "41d760f8c41064c4e6b49a48dbe6e1a6c8f2a9958afbc50374986a54858fd598",
+  "assets": [
+    {
+      "path": "assets/import.worker-CqCFfTad.js",
+      "bytes": 266067,
+      "sha256": "187aa6503ba43f7d7b05eff8b807ce9b4c050690863f1bdf607c447b42b81e62"
+    },
+    {
+      "path": "assets/index-Ckc_P-jb.js",
+      "bytes": 564358,
+      "sha256": "ca989367614ed521d4084c7f582e981e9a820e20bddc2556211393ade81c65eb"
+    },
+    {
+      "path": "assets/index-DqRSN1mq.css",
+      "bytes": 37725,
+      "sha256": "3d9a0bb16f24cedcba9cbac379767af02ed4793aa877fa17f67c421c2aa76413"
+    },
+    {
+      "path": "index.html",
+      "bytes": 700,
+      "sha256": "ed00bc2e03dab3b54a21e699d3bc99f2ca731f4118f38464433f302bd475cd6b"
+    }
+  ]
+}

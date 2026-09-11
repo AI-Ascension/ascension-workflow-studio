@@ -1,17 +1,17 @@
 {
   "status": "candidate-under-review",
   "owner": "AI-Ascension/sts2-protocol",
-  "format_version": "1.0.0-candidate.2",
+  "format_version": "1.0.0-candidate.3",
   "provenance": "Protocol synthetic fixtures; no Train source bytes",
   "checksums": {
-    "SHA256SUMS": "41d760f8c41064c4e6b49a48dbe6e1a6c8f2a9958afbc50374986a54858fd598",
-    "schema.json": "d5098e5f969d99707d3ad1d97acdbc803285b93f1eb1dcfe5dc3f63c534192af",
-    "README.md": "9802dccdc498b6cedcb778925a017f85b41a07cf6fcb0b66c20da295151e8e68",
-    "seed-readiness.zip": "a4f7b97df3ee55c35bb42c97ef57518e7a634c700c332025e08db4a3af785c1c",
-    "seed-readiness-deflate.zip": "2feaa1bb1e37ff9e56ba456d1f4f03433d53ca84bad0d6218360726846eb7416",
-    "missing-accounting.zip": "598d50ab8cd60c6bbda2ee81eac67e2f4c2c0401928d5323386eadb7ed3ffcce",
-    "completed-gameplay.zip": "a1c7e0c4a9cd38d25803cd796e69192fa365586fca0ffdb1149e39b8622502af",
-    "browser-25000-records.zip": "e5016e507f935b85004d99f22937d7f1d468f07dc16656624f10d0275c5f9a92",
-    "browser-observation.zip": "19194ba249a9ac77c98a244102a160877cb913ebe59e7a7156b693c9bd4aa7ca"
+    "SHA256SUMS": "580c1cf3be4bb3e4eb37b9acd9166808b7386b0eb84286cc0798a0d88e35bb35",
+    "schema.json": "a6c32127290f4d5e670d8863f97a74a7b8e3e411e735d81394b51fe1578b4eb6",
+    "README.md": "86f4e482d2749a6352719bf340ae28e391af7e845b96222b5d060c10270f20e7",
+    "seed-readiness.zip": "5fe3184847f46edf93c661e4b7327c81e50299b71a0787dcf20292c5b1df3a6d",
+    "seed-readiness-deflate.zip": "8a2454078b1151603a45d24912f598e24d6f35e4a2215d7c574692e0cda7f15d",
+    "missing-accounting.zip": "d1155e0807cc4d7a34f8b57e2cf0bafbe9618ae7eac3b7f5211e4572796e82c6",
+    "completed-gameplay.zip": "b15518d01aede945cbb291e45660be9c222287e8600b0c66394eb31ffe2b42c4",
+    "browser-25000-records.zip": "34cf7094cfa0c3861e613223fceddba7d42ecbfade53767211e5a6206374f02c",
+    "browser-observation.zip": "c950a43ca9cb13625806e9cefdcf1fbf63bf889314c19507dfec848c4fea568f"
   }
 }

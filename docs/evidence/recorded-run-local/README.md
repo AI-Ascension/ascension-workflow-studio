@@ -1,8 +1,47 @@
 # Local recorded-run verification
 
-## Review corrections, 2026-09-11
+## Candidate3 gate, 2026-09-11 — current evidence
 
-Current evidence now describes the candidate2 privacy-patch build. The previous
+Current evidence uses `1.0.0-candidate.3`, schema
+`a6c32127290f4d5e670d8863f97a74a7b8e3e411e735d81394b51fe1578b4eb6` and inventory
+`580c1cf3be4bb3e4eb37b9acd9166808b7386b0eb84286cc0798a0d88e35bb35`.
+All inventoried bytes match the protocol candidate3 artifact; declared tooling hashes
+also match its source worktree. Candidate2 contract and privacy-patch evidence now
+live under `history/recorded-run-candidate2/`, exactly matching commit `f18b735`.
+
+Checks passed:
+
+- `npm test -- --reporter=dot`: 98 tests, 4 suites; includes 8 valid/25 invalid
+  protocol ZIPs, metadata/hash assertions, explicit candidate2 rejection and privacy,
+  source, diagnostic, reconciliation and preallocation regressions.
+- `npm run test:recorded-browser` using the documented font/library environment:
+  8 tests, production build and TypeScript checks pass. The privacy worker rejects
+  all six placements, retains the previous recording and exposes no supplied value.
+- `node tools/check-recorded-privacy.mjs ../recorded-run-sts2-protocol`: three valid
+  baselines accept, six independent probes reject with matching acceptance outcomes.
+- `node tools/check-recorded-summary.mjs ../recorded-run-sts2-protocol contracts/recorded-run-candidate/golden/legacy-failed.zip`:
+  equal summaries; artifact `5fe3184847f46edf93c661e4b7327c81e50299b71a0787dcf20292c5b1df3a6d`,
+  semantic digest `6c325b24886169c04fe2b08c72997d281e39b4ded6833c22ebfd32d5892ac1f9`.
+- `node tools/record-build-evidence.mjs` followed by
+  `python3 tools/deploy/package-preview.py dist artifacts/recorded-run-preview/candidate3.zip`:
+  four files, 871,744 bytes; package reread matches exact tested dist/inventory.
+- `git diff --check`: passed.
+
+The browser tests still verify 100 timeline rows per page at 25,000 total records,
+filtering, exact decimals, unknown actions, observation counters, explicit replacement,
+failed import retention and six readable dark nodes. Separate model namespaces are
+verified by the importer tests. The pagination sample is 6,723 ms, post-import page
+heap 29.4 MB, excluding worker, native and peak allocations. No page errors or
+imported outgoing requests. Only Chromium was exercised. The existing Vite
+application chunk warning remains.
+
+Candidate3 deployment package and hashes are described in
+`artifacts/recorded-run-preview/candidate3.md`. Fresh actual Train export and LAN
+activation are coordinator gates; these local synthetic tests do not claim them.
+
+## Candidate2 review corrections, 2026-09-11 — historical
+
+The following describes the preserved candidate2 privacy-patch build. The previous
 candidate2 package and manifest remain in `artifacts/recorded-run-preview/`, and
 its original test evidence is retained in commit `2959d09`.
 

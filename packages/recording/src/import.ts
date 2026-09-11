@@ -34,7 +34,7 @@ export async function importRecording(buffer: ArrayBuffer): Promise<RecordingIns
   requireImport(manifestEntry && manifestEntry.bytes <= limits.manifest, "invalid_manifest", "A bounded root manifest.json is required.");
   const rawManifest = canonicalDocument(await readEntry(archive, manifestEntry), limits.manifest);
   const header = object(rawManifest);
-  requireImport(header?.format_version === "1.0.0-candidate.2", "unsupported_version", "Only recorded-run 1.0.0-candidate.2 is supported.");
+  requireImport(header?.format_version === "1.0.0-candidate.3", "unsupported_version", "Only recorded-run 1.0.0-candidate.3 is supported.");
   const manifest = validate("manifest", rawManifest);
   validateIdentityPrivacy(object(object(manifest.recording).identities));
   requireImport(manifest.contract_schema_sha256 === schemaDigest, "contract_mismatch", "Bundle requires different contract bytes from this Studio build.");

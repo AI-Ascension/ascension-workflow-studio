@@ -1,0 +1,22 @@
+{
+  "release_digest": "52891bfb9614672cba058e1527b5c653b55e0c321f7a5aef6f8461569c77a821",
+  "archive_sha256": "459dd4d34807f7d6e4fc05e54643e044f126132cf083d44a6e215627b61bed32",
+  "files": {
+    "assets/import.worker-C1Ts0v9U.js": {
+      "bytes": 268961,
+      "sha256": "4f044cc6a7dad567fed3abf44e87c74dd6736c44f1ee35807bed3522442a9ee7"
+    },
+    "assets/index-BDK0Of3H.js": {
+      "bytes": 564358,
+      "sha256": "37ad0e1fcbc847afea4480b42b6ba3dc9c215f861497a4e2292858ae6dac5575"
+    },
+    "assets/index-DqRSN1mq.css": {
+      "bytes": 37725,
+      "sha256": "3d9a0bb16f24cedcba9cbac379767af02ed4793aa877fa17f67c421c2aa76413"
+    },
+    "index.html": {
+      "bytes": 700,
+      "sha256": "3bd01b48aa9ce4884fceec90747bb1521b6c112013f789d282fac70b41f37e28"
+    }
+  }
+}

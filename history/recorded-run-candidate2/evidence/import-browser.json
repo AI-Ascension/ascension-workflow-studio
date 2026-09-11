@@ -1,0 +1,17 @@
+{
+  "scope": "local Chromium production build; synthetic protocol fixtures",
+  "errors": [],
+  "outgoing": [],
+  "checks": [
+    "file selection",
+    "deflate",
+    "unknown outcomes",
+    "accounting statuses",
+    "no live controls",
+    "idempotent reimport",
+    "failed import retained prior",
+    "explicit replacement",
+    "navigation retention",
+    "clear"
+  ]
+}

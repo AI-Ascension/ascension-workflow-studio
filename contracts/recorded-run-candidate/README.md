@@ -1,11 +1,11 @@
-# Recorded-run bundle v1 candidate 2
+# Recorded-run bundle v1 candidate 3
 
 Status: proposed, not admitted or released. Owner: sts2-protocol. Producer:
 sts2-harness. Review consumers: ascension-workflow-studio and ai-agent-observability.
 MIT; original schema, profile and synthetic fixtures. No host bytes are included.
 
 The normative structural source is
-[the schema](../../schemas/recorded-run-bundle-v1.schema.json); this directory
+[the schema](../../schemas/recorded-run-bundle-v1-candidate3.schema.json); this directory
 contains its byte-identical copy. This document owns semantic/package rules that
 JSON Schema cannot express. The executable conformance oracle is
 [validate.mjs](../../tools/recorded-run/validate.mjs), Node 24, no npm dependencies.
@@ -33,7 +33,7 @@ Pin schema bytes by manifest.contract_schema_sha256. Pin the entire candidate
 artifact by its SHA256SUMS digest; verify that inventory and exact schema copy.
 tooling.json binds the exact validator/test source files by repository-relative
 paths and hashes; it does not create cross-repository implementation dependencies.
-Candidate 2 wire format_version is 1.0.0-candidate.2. It is intentionally rejected
+Candidate 3 wire format_version is 1.0.0-candidate.3. It is intentionally rejected
 by any other version. A release or wire change must get a fresh version/pin;
 no published artifact may be silently rewritten. This initial candidate is
 under review until the coordinator records producer/two-consumer agreement.
@@ -118,7 +118,10 @@ seed-readiness.trajectory.model-execution. Accounting harness_model_execution_id
 keeps its string in seed-readiness.accounting.model-execution. The actual probe
 found them unequal; never invent a join, even if later strings happen to match.
 Namespaces for source-owned identities are adapter-declared and stable; the
-logical recording identity is separate from every runtime/session identity.
+logical recording identity has a separate field and role from runtime/session identities.
+Tuple equality alone is not forbidden: an owner can use a single identifier for coincident
+lifetimes. Neither equality nor unequal spelling proves a join. Consumers retain the
+role and namespace and only derive relationships from an explicit source-owner mapping.
 
 Evidence dimensions are process_exit (unknown/completed/failed), request
 (unknown/accepted/rejected), action (unknown/accepted/settled/rejected/cancelled),
@@ -204,7 +207,7 @@ no arbitrary message. Field mapping for seed-readiness-controller-release-v2:
 
 Unknown source status/event becomes a diagnostic with kind=unsupported-value digest.
 Source spelling Unknown maps only to normalized unknown. No other action status
-has an admitted source mapping in candidate 2. Observation summaries carry
+has an admitted source mapping in candidate 3. Observation summaries carry
 generation, state/observation digests, legal-action count, and optional player:
 {hp, max_hp, energy, gold}. Each present player counter is a nonnegative decimal
 string of at most 20 digits. Missing counters remain absent; no zero defaults.
@@ -223,3 +226,47 @@ Missing token field means not supplied, never zero. Current source reported maps
 reported, not measured. completed execution and valid decision do not imply gameplay.
 Optional public provider/model labels require adapter review; lexical schema admission
 alone does not make a private string safe. Unprobed status fields are omitted or unknown.
+
+## Candidate 3 review corrections
+
+Candidate 2 remains immutable at ../recorded-run-bundle-v1/; its pinned inventory
+is 41d760f8c41064c4e6b49a48dbe6e1a6c8f2a9958afbc50374986a54858fd598.
+A runnable original tooling snapshot is in ../../history/recorded-run-candidate2/.
+Do not use the new validator to attest candidate 2; candidate 3 is a new wire pin.
+
+For the STS2 payload profile, enforce source-stream mapping: seed_start,
+observation_summary and action_outcome come from trajectory; decision_summary
+comes from trajectory or decisions; accounting comes from provider-accounting;
+process_result comes only from result. A process_result in decisions cannot
+supply process completion. Common gameplay_result and optional unknown profiles
+retain their own source streams; these STS2 restrictions do not generalize to them.
+
+STS2 diagnostic codes operation_wait_completed, episode_failed and
+unsupported_source_event come only from trajectory. unsupported_source_status
+comes from trajectory or provider-accounting. invalid_source_record,
+partial_final_record and unsupported_profile may describe any of the six known
+STS2 streams subject to their reconciliation rules. unsupported_source_event and
+unsupported_source_status require value_digest; its source hash domain is
+unsupported-value. Source-free diagnostics may omit value_digest. A validator
+checks digest representation; only the producer can verify the omitted source value.
+
+Manifest declarations and opaque payloads share the same profile-name grammar:
+^[a-zA-Z0-9][a-zA-Z0-9_.:+-]*$, length 1–128. This preserves already-valid
+manifest names including uppercase, colon and plus instead of narrowing them.
+
+Disposition pairs are closed: raw_mcp_disallowed => filtered (mcp only),
+private_source_metadata => filtered (manifest only), unsupported_source_event =>
+unsupported (trajectory), unsupported_source_status => unsupported (trajectory or
+provider-accounting), invalid_source_record => rejected (any source), and
+partial_final_record => rejected (any source, interrupted state, singleton last row).
+optional_stream_absent is not a row disposition: absent streams use null input and
+zero counts with no ranges. Per-field redactions remain independent of row counts.
+
+The public byte API accepts Buffer/Uint8Array, checks byteLength before creating a
+Buffer view, rejects shared backing buffers, and uses a bounded zero-copy view with
+its byteOffset/byteLength. Callers must keep the input stable for the synchronous
+validation call. Rejected oversized input triggers no Buffer.from call. The CLI
+also retains its pre-read bound. For NDJSON, scan both files' LF-delimited records
+with one 25,000-record budget before parsing ANY record JSON. Check each line's
+64-KiB cap during that scan, then retain a shared parsing budget as defense in depth.
+Thus two individually small streams cannot materialize 25,001 record objects.

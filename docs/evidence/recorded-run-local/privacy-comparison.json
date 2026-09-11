@@ -5,43 +5,43 @@
       "name": "manifest-action.zip",
       "studio": "evidence_mismatch",
       "oracle": "action_privacy",
-      "sha256": "dc5deca155af45f4c189de4c5d61c640f101ae6224126f93184fc45f1a0aaa54",
-      "format_version": "1.0.0-candidate.2"
+      "sha256": "012e712d1f26a4865a6c4bb8694e7ad4a5dc9b09f12b98e034f08e615bd8c203",
+      "format_version": "1.0.0-candidate.3"
     },
     {
       "name": "manifest-provider_request.zip",
       "studio": "evidence_mismatch",
       "oracle": "provider_request_privacy",
-      "sha256": "af5714637c2b690667a1ef388e2a8a140ecbf0656ceaa2caac5fc9556de99e71",
-      "format_version": "1.0.0-candidate.2"
+      "sha256": "90d4e814ab3f47a021d17e5fe84e40854dca8779912051c75a0e2ce3e8c926e8",
+      "format_version": "1.0.0-candidate.3"
     },
     {
       "name": "common-gameplay-action.zip",
       "studio": "evidence_mismatch",
       "oracle": "action_privacy",
-      "sha256": "8180c40584e00a2866f6210d08f26180cc3588e47f4cfb12ba58fed739bc7963",
-      "format_version": "1.0.0-candidate.2"
+      "sha256": "26e3dd20be3f0e6316e649407fd843fd81890a6c0f237bd73a112169ac0f8755",
+      "format_version": "1.0.0-candidate.3"
     },
     {
       "name": "common-gameplay-provider_request.zip",
       "studio": "evidence_mismatch",
       "oracle": "provider_request_privacy",
-      "sha256": "70242d746e876e712d0259064ac8e588cdfc18a985aa3254a502c08d5d98791d",
-      "format_version": "1.0.0-candidate.2"
+      "sha256": "329f93adfc7f13918fe5c18b57dc4b35acdff30174160e747237b8c3705566a8",
+      "format_version": "1.0.0-candidate.3"
     },
     {
       "name": "opaque-action.zip",
       "studio": "evidence_mismatch",
       "oracle": "action_privacy",
-      "sha256": "fe5e1f64c21b1e07f4dc84f63ddaedc8c4beb857044f22786dfc463ff0ed77c4",
-      "format_version": "1.0.0-candidate.2"
+      "sha256": "cec2d1114973b87a08e180e5eea686d950b2805c2567da11bfeb7627d5458119",
+      "format_version": "1.0.0-candidate.3"
     },
     {
       "name": "opaque-provider_request.zip",
       "studio": "evidence_mismatch",
       "oracle": "provider_request_privacy",
-      "sha256": "16b2a092a4e4fbd2f49102eb54c6aa5549521d14a05b355f5104ffdf75e3fc75",
-      "format_version": "1.0.0-candidate.2"
+      "sha256": "2bfd786ca5d962326c8a2b01b85706ac96b732c79b2cacf806b92eca1eac9e36",
+      "format_version": "1.0.0-candidate.3"
     }
   ]
 }

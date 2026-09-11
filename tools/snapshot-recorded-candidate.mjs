@@ -4,24 +4,34 @@ import { resolve, dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 const source = resolve(process.argv[2]);
+const artifactDirectory = process.argv[3];
+if (!/^recorded-run-bundle-v1(?:-candidate[0-9]+)?$/.test(artifactDirectory ?? "")) throw new Error("Supply the protocol artifact directory name explicitly");
+const artifactSource = resolve(source, "artifacts", artifactDirectory);
 const destination = new URL("../contracts/recorded-run-candidate/", import.meta.url);
-await mkdir(destination, { recursive: true });
 const checksums = {};
-const inventory = await readFile(resolve(source, "artifacts/recorded-run-bundle-v1/SHA256SUMS"));
+const hash = bytes => createHash("sha256").update(bytes).digest("hex");
+const inventory = await readFile(resolve(artifactSource, "SHA256SUMS"));
+if (hash(inventory) !== process.argv[4]) throw new Error("Artifact inventory does not match the owner-supplied pin");
+const verified = new Map();
 for (const line of inventory.toString("utf8").trim().split("\n")) {
   const match = /^([a-f0-9]{64})  ([a-zA-Z0-9_.\/-]+)$/.exec(line);
   if (!match || match[2].split("/").includes("..") || match[2].startsWith("/")) throw new Error("Unsafe artifact inventory");
-  const bytes = await readFile(resolve(source, "artifacts/recorded-run-bundle-v1", match[2]));
+  const bytes = await readFile(resolve(artifactSource, match[2]));
   if (createHash("sha256").update(bytes).digest("hex") !== match[1]) throw new Error("Protocol artifact changed while snapshotting");
-  await mkdir(dirname(new URL(match[2], destination).pathname), { recursive: true });
-  await writeFile(new URL(match[2], destination), bytes);
+  if (verified.has(match[2])) throw new Error("Duplicate artifact entry");
+  verified.set(match[2], bytes);
+}
+if (!verified.has("schema.json") || hash(verified.get("schema.json")) !== process.argv[5]) throw new Error("Schema does not match the owner-supplied pin");
+await mkdir(destination, { recursive: true });
+for (const [name, bytes] of verified) {
+  await mkdir(dirname(new URL(name, destination).pathname), { recursive: true });
+  await writeFile(new URL(name, destination), bytes);
 }
 await writeFile(new URL("SHA256SUMS", destination), inventory);
 checksums.SHA256SUMS = createHash("sha256").update(inventory).digest("hex");
 for (const file of ["schema.json", "README.md"]) {
-  const bytes = await readFile(resolve(source, "artifacts/recorded-run-bundle-v1", file));
+  const bytes = verified.get(file);
   checksums[file] = createHash("sha256").update(bytes).digest("hex");
-  await writeFile(new URL(file, destination), bytes);
 }
 const { fixture, entriesFor, bundleFor, missingAccounting, completedGameplay } = await import(pathToFileURL(resolve(source, "tools/recorded-run/fixtures.mjs")));
 for (const [name, value, compressed] of [["seed-readiness", fixture(), false], ["seed-readiness-deflate", fixture(), true], ["missing-accounting", missingAccounting(), false], ["completed-gameplay", completedGameplay(), false]]) {

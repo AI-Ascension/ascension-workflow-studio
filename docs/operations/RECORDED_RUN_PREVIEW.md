@@ -1,14 +1,19 @@
 # Train preview deployment
 
-Status: coordinator reports the original candidate2 release is deployed. The local
-`candidate2-privacy-patch.zip` replacement is tested and prepared, not deployed by
-this lead. Its adjacent manifest binds the reviewed transport and served-file hashes.
+Status: coordinator reports the candidate2 privacy patch is active on Train at
+release `f5722374a5de4e7bd3393b42a64479b43c78cd7a0889d71f629e8d0885f3ca35`,
+service PID 4101067, with activation evidence in its `preview-privacy-stage/activation.json`.
+The Studio lead did not access or activate the host; LAN browser verification is
+coordinator-owned. The unchanged package's adjacent manifest binds transport and
+served-file hashes.
 See `artifacts/recorded-run-preview/candidate2-privacy-patch.md` for the exact pin and
-local verification. Candidate3 repinning awaits the protocol owner's final inventory.
+local verification. Candidate3 is pinned to the protocol owner's final inventory;
+its separate `candidate3.zip` package requires a fresh candidate3 Train export and
+coordinator verification before activation. Candidate2 bundles are rejected by it.
 
 The Studio lead reviewed and copied these coordinator-prepared assets into
 `tools/deploy/`. This repository's local test package is
-`artifacts/recorded-run-preview/candidate2.zip` with an adjacent exact inventory.
+`artifacts/recorded-run-preview/candidate3.zip` with an adjacent exact inventory.
 UFW, linger and Train unit validation below are coordinator-supplied evidence;
 the Studio lead did not access the host. Coordinator must reverify at activation.
 

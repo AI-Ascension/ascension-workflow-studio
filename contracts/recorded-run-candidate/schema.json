@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:ai-ascension:recorded-run-bundle:v1:candidate:2",
+  "$id": "urn:ai-ascension:recorded-run-bundle:v1:candidate:3",
   "title": "Recorded-run candidate 1 documents",
   "oneOf": [
     {
@@ -941,30 +941,54 @@
               "const": "diagnostic"
             },
             "value": {
-              "type": "object",
-              "properties": {
-                "code": {
-                  "enum": [
-                    "unsupported_source_event",
-                    "unsupported_source_status",
-                    "invalid_source_record",
-                    "partial_final_record",
-                    "operation_wait_completed",
-                    "episode_failed",
-                    "unsupported_profile"
-                  ]
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "unsupported_source_event",
+                        "unsupported_source_status"
+                      ]
+                    },
+                    "value_digest": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[a-f0-9]{64}$"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "value_digest"
+                  ],
+                  "additionalProperties": false
                 },
-                "value_digest": {
-                  "type": "string",
-                  "minLength": 1,
-                  "maxLength": 64,
-                  "pattern": "^[a-f0-9]{64}$"
+                {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "enum": [
+                        "invalid_source_record",
+                        "partial_final_record",
+                        "operation_wait_completed",
+                        "episode_failed",
+                        "unsupported_profile"
+                      ]
+                    },
+                    "value_digest": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64,
+                      "pattern": "^[a-f0-9]{64}$"
+                    }
+                  },
+                  "required": [
+                    "code"
+                  ],
+                  "additionalProperties": false
                 }
-              },
-              "required": [
-                "code"
-              ],
-              "additionalProperties": false
+              ]
             }
           },
           "required": [
@@ -1043,7 +1067,7 @@
               "type": "string",
               "minLength": 1,
               "maxLength": 128,
-              "pattern": "^[a-z0-9][a-z0-9_.-]*$"
+              "pattern": "^[a-zA-Z0-9][a-zA-Z0-9_.:+-]*$"
             },
             "kind": {
               "const": "opaque"
@@ -1090,7 +1114,7 @@
           "const": "ai-ascension.recorded-run-bundle"
         },
         "format_version": {
-          "const": "1.0.0-candidate.2"
+          "const": "1.0.0-candidate.3"
         },
         "contract_schema_sha256": {
           "type": "string",
@@ -1496,44 +1520,101 @@
               "dispositions": {
                 "type": "array",
                 "items": {
-                  "type": "object",
-                  "properties": {
-                    "first": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 25000
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "first": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 25000
+                        },
+                        "last": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 25000
+                        },
+                        "disposition": {
+                          "const": "filtered"
+                        },
+                        "reason": {
+                          "enum": [
+                            "raw_mcp_disallowed",
+                            "private_source_metadata"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "first",
+                        "last",
+                        "disposition",
+                        "reason"
+                      ],
+                      "additionalProperties": false
                     },
-                    "last": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 25000
+                    {
+                      "type": "object",
+                      "properties": {
+                        "first": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 25000
+                        },
+                        "last": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 25000
+                        },
+                        "disposition": {
+                          "const": "unsupported"
+                        },
+                        "reason": {
+                          "enum": [
+                            "unsupported_source_event",
+                            "unsupported_source_status"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "first",
+                        "last",
+                        "disposition",
+                        "reason"
+                      ],
+                      "additionalProperties": false
                     },
-                    "disposition": {
-                      "enum": [
-                        "filtered",
-                        "unsupported",
-                        "rejected"
-                      ]
-                    },
-                    "reason": {
-                      "enum": [
-                        "raw_mcp_disallowed",
-                        "private_source_metadata",
-                        "unsupported_source_event",
-                        "unsupported_source_status",
-                        "invalid_source_record",
-                        "partial_final_record",
-                        "optional_stream_absent"
-                      ]
+                    {
+                      "type": "object",
+                      "properties": {
+                        "first": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 25000
+                        },
+                        "last": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 25000
+                        },
+                        "disposition": {
+                          "const": "rejected"
+                        },
+                        "reason": {
+                          "enum": [
+                            "invalid_source_record",
+                            "partial_final_record"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "first",
+                        "last",
+                        "disposition",
+                        "reason"
+                      ],
+                      "additionalProperties": false
                     }
-                  },
-                  "required": [
-                    "first",
-                    "last",
-                    "disposition",
-                    "reason"
-                  ],
-                  "additionalProperties": false
+                  ]
                 },
                 "maxItems": 25000
               },
