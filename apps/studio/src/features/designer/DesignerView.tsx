@@ -169,7 +169,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     };
     void loadDraft();
     return () => { active = false; };
-  }, [client, draftId, initialRawText]);
+  }, [client, draftId]);
 
   useEffect(() => {
     if (!draftHydrated || draftRef.current.state === "conflict") return;
