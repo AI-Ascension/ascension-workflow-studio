@@ -10,6 +10,7 @@ import {
 } from "@studio/contracts";
 
 export * from "./guard";
+export * from "./reference";
 
 export type SemanticDocument = WorkflowDefinition;
 

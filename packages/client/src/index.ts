@@ -366,6 +366,7 @@ function ownerDefinitionToRecord(owner: import("@studio/contracts").StudioOwnerD
     updatedAt: `revision-${owner.published_revision}`,
     definition,
     capabilities: definition.capabilities.required,
+    definitionDigest: owner.definition_digest,
   });
 }
 

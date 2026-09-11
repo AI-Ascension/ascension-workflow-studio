@@ -59,6 +59,39 @@ test.describe("Studio fixture workbench", () => {
     await expect(page.getByLabel("outcome.present observation field")).toHaveValue("");
   });
 
+  test("resolves pinned subworkflow references and surfaces unavailable ones", async ({ page }) => {
+    const definition = {
+      schema_version: "ascension.workflow/v1", workflow_id: "reference.test", version: "1.0.0", mode: "strict", game_profile: "test", policy_ref: "test.policy",
+      capabilities: { required: [], optional: [] }, limits: { max_steps: 4, max_subworkflow_depth: 2, max_provider_calls: 0, max_parallel_analyses: 1, max_output_tokens: 128 }, entry_graph: "main",
+      graphs: [{ id: "main", entry_node: "start", nodes: [
+        { id: "start", kind: "observe", config: { projection_ref: "approved.state" } },
+        { id: "ref_ok", kind: "subworkflow", config: { artifact_ref: { id: "sts2.setup.strict", version: "0.1.0", digest: "not-published" } } },
+        { id: "ref_missing", kind: "subworkflow", config: { artifact_ref: { id: "sts2.missing.workflow", version: "9.9.9", digest: "none" } } },
+        { id: "done", kind: "terminal", config: { outcome: "completed" } },
+      ], edges: [
+        { from: "start", to: "ref_ok", on: "ok", priority: 0 },
+        { from: "ref_ok", to: "ref_missing", on: "ok", priority: 0 },
+        { from: "ref_missing", to: "done", on: "ok", priority: 0 },
+      ], guards: [] }],
+    };
+    await page.goto("/");
+    await page.getByRole("button", { name: "Open designer" }).first().click();
+    await page.getByRole("button", { name: "JSON mode" }).click();
+    await page.getByRole("textbox", { name: "Raw workflow definition JSON" }).fill(JSON.stringify(definition));
+    await page.getByRole("button", { name: "Apply candidate" }).click();
+    await page.locator(".react-flow__node", { hasText: "ref_ok" }).click();
+    const resolved = page.getByLabel("Pinned reference resolution");
+    await expect(resolved).toHaveAttribute("data-status", "resolved");
+    await expect(resolved).toContainText("0.1.0");
+    await expect(resolved).toContainText("does not publish a digest");
+    await page.locator(".react-flow__node", { hasText: "ref_missing" }).click();
+    const unavailable = page.getByLabel("Pinned reference resolution");
+    await expect(unavailable).toHaveAttribute("data-status", "unavailable");
+    await expect(unavailable).toContainText("sts2.missing.workflow");
+    await expect(unavailable).toContainText("not present in the loaded catalog");
+    await expect(page.getByText("typed input/output bindings are not yet supported", { exact: false })).toBeVisible();
+  });
+
   test("navigates nested graphs with breadcrumbs, edits bounded loop limits, and shows pinned subworkflows", async ({ page }) => {
     const definition = {
       schema_version: "ascension.workflow/v1", workflow_id: "nested.test", version: "1.0.0", mode: "strict", game_profile: "test", policy_ref: "test.policy",
