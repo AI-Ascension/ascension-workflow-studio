@@ -119,6 +119,27 @@ describe("workflow document identity", () => {
     expect(pasted.document.graphs[0].nodes.find((node) => node.id === "start_copy")?.config).toEqual({ target: "done_copy", external_ref: "owner.registry" });
   });
 
+  it("bounds clipboard snapshots and history entries", () => {
+    const largeSelection = definition();
+    largeSelection.graphs[0].entry_node = "node_0";
+    largeSelection.graphs[0].nodes = Array.from({ length: 129 }, (_, index) => ({ id: `node_${index}`, kind: "observe" as const, config: { projection_ref: "test" } }));
+    largeSelection.graphs[0].edges = [];
+    expect(() => copyNodes(largeSelection, largeSelection.graphs[0].nodes.map((node) => `main:${node.id}`))).toThrow("128-node clipboard bound");
+
+    const oversized = definition();
+    oversized.graphs[0].nodes[0].config = { projection_ref: "x".repeat(256 * 1024) };
+    expect(() => copyNodes(oversized, ["main:start"])).toThrow("256 KiB");
+
+    const history = new History(0, (value) => value, 2);
+    history.commit(1);
+    history.commit(2);
+    history.commit(3);
+    expect(history.undo()).toBe(2);
+    expect(history.undo()).toBe(1);
+    expect(history.undo()).toBe(1);
+    expect(() => new History(0, (value) => value, 0)).toThrow("positive safe integer");
+  });
+
   it("supports guarded reconnection, alignment, and non-overlapping three-way merge", async () => {
     const original = definition();
     const reconnected = reconnectEdge(original, "main", 0, "done", "start");

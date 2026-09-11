@@ -98,6 +98,10 @@ export interface PasteResult {
   idMap: Record<string, string>;
 }
 
+export const MAX_CLIPBOARD_NODES = 128;
+export const MAX_CLIPBOARD_EDGES = 512;
+export const MAX_CLIPBOARD_BYTES = 256 * 1024;
+
 export interface DocumentChange {
   path: string;
   before: JsonValue | undefined;
@@ -622,6 +626,9 @@ export function copyNodes(document: SemanticDocument, qualifiedIds: string[]): N
   if (qualifiedIds.length === 0) {
     throw new Error("select at least one node before copying");
   }
+  if (qualifiedIds.length > MAX_CLIPBOARD_NODES) {
+    throw new Error(`copy selection exceeds the ${MAX_CLIPBOARD_NODES}-node clipboard bound`);
+  }
   const parsed = qualifiedIds.map(parseQualifiedId);
   const graphIds = new Set(parsed.map((value) => value.graphId));
   if (graphIds.size !== 1) {
@@ -638,7 +645,14 @@ export function copyNodes(document: SemanticDocument, qualifiedIds: string[]): N
     throw new Error("copy selection contains an unknown node");
   }
   const edges = graph.edges.filter((edge) => ids.has(edge.from) && ids.has(edge.to)).map((edge) => cloneJson(edge));
-  return { sourceGraphId, nodes, edges };
+  if (edges.length > MAX_CLIPBOARD_EDGES) {
+    throw new Error(`copy selection exceeds the ${MAX_CLIPBOARD_EDGES}-edge clipboard bound`);
+  }
+  const clipboard = { sourceGraphId, nodes, edges };
+  if (new TextEncoder().encode(JSON.stringify(clipboard)).byteLength > MAX_CLIPBOARD_BYTES) {
+    throw new Error(`copy selection exceeds the ${MAX_CLIPBOARD_BYTES / 1024} KiB clipboard bound`);
+  }
+  return clipboard;
 }
 
 export function pasteNodes(
@@ -814,8 +828,14 @@ function sameJson(first: unknown, second: unknown): boolean {
 export class History<T> {
   private readonly past: T[] = [];
   private readonly future: T[] = [];
+  private readonly maxEntries: number;
 
-  public constructor(private current: T, private readonly copy: (value: T) => T, private readonly maxEntries = 128) {}
+  public constructor(private current: T, private readonly copy: (value: T) => T, maxEntries = 128) {
+    if (!Number.isSafeInteger(maxEntries) || maxEntries < 1) {
+      throw new Error("history maxEntries must be a positive safe integer");
+    }
+    this.maxEntries = maxEntries;
+  }
 
   public present(): T {
     return this.copy(this.current);
@@ -835,6 +855,7 @@ export class History<T> {
       return this.present();
     }
     this.future.push(this.copy(this.current));
+    if (this.future.length > this.maxEntries) this.future.shift();
     this.current = this.copy(previous);
     return this.present();
   }
@@ -845,6 +866,7 @@ export class History<T> {
       return this.present();
     }
     this.past.push(this.copy(this.current));
+    if (this.past.length > this.maxEntries) this.past.shift();
     this.current = this.copy(next);
     return this.present();
   }

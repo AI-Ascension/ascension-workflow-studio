@@ -68,4 +68,30 @@ test.describe("Studio fixture workbench", () => {
     await page.getByRole("button", { name: "JSON mode" }).click();
     await expect(page.getByRole("textbox", { name: "Raw workflow definition JSON" })).toHaveValue(/Repaired browser candidate/);
   });
+
+  test("keeps graph shortcuts out of focused text fields and supports bounded history shortcuts", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Clone draft" }).first().click();
+    await page.getByRole("tab", { name: "List editor" }).click();
+    const rows = page.locator(".node-list-row");
+    const initialCount = await rows.count();
+    await page.getByRole("button", { name: "＋ Node" }).click();
+    await expect(rows).toHaveCount(initialCount + 1);
+    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+    await page.keyboard.press("Control+z");
+    await expect(rows).toHaveCount(initialCount);
+    await page.keyboard.press("Control+Shift+z");
+    await expect(rows).toHaveCount(initialCount + 1);
+
+    await page.getByRole("button", { name: "JSON mode" }).click();
+    const editor = page.getByRole("textbox", { name: "Raw workflow definition JSON" });
+    const baseline = await editor.inputValue();
+    await editor.press("End");
+    await editor.pressSequentially(" ");
+    expect(await editor.inputValue()).not.toBe(baseline);
+    await editor.press("Control+z");
+    await expect(editor).toHaveValue(baseline);
+    await editor.press("Delete");
+    await expect(rows).toHaveCount(initialCount + 1);
+  });
 });
