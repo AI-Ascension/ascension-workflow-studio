@@ -37,6 +37,20 @@ test.describe("Studio fixture workbench", () => {
     await expect(page.getByText(/not applied to this draft, autosaved, validated, or published/i)).toBeVisible();
   });
 
+  test("rejects duplicate-key JSON without mutating the draft", async ({ page }) => {
+    const duplicateKeys = '{"schema_version":"ascension.workflow/v1","schema_version":"ascension.workflow/v1"}';
+    await page.goto("/");
+    await page.getByRole("button", { name: "Clone draft" }).first().click();
+    await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+    await page.getByRole("button", { name: "JSON mode" }).click();
+    const editor = page.getByRole("textbox", { name: "Raw workflow definition JSON" });
+    await editor.fill(duplicateKeys);
+    await page.getByRole("button", { name: "Apply candidate" }).click();
+    await expect(editor).toHaveValue(duplicateKeys);
+    await expect(page.getByRole("alert")).toContainText("duplicate key");
+    await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+  });
+
   test("retains malformed JSON locally and only persists a repaired atomic candidate", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Clone draft" }).first().click();
