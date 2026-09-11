@@ -121,6 +121,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
   const [validationMessage, setValidationMessage] = useState("");
   const [draft, setDraft] = useState<DraftState>({ revision: 0, etag: "fixture-0", state: "saved", message: "Draft changes are local until autosave completes." });
   const [draftHydrated, setDraftHydrated] = useState(false);
+  const [saveRetry, setSaveRetry] = useState(0);
   const [publicationState, setPublicationState] = useState<"idle" | "publishing">("idle");
   const draftRef = useRef(draft);
   const persistedKeyRef = useRef<string | undefined>(undefined);
@@ -221,7 +222,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
       });
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [client, definition.id, draftHydrated, document, layout, draftId]);
+  }, [client, definition.id, draftHydrated, document, layout, draftId, saveRetry]);
 
   const selected = useMemo(() => findSelectedNode(document, selectedId), [document, selectedId]);
   const flowEdges = useMemo(() => toFlowEdges(document), [document]);
@@ -260,6 +261,12 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     setNodes(toFlowNodes(next.document, next.layout));
     setRawText(JSON.stringify(next.document, null, 2));
     setRawError(undefined);
+  };
+
+  const retrySave = (): void => {
+    if (draft.state !== "offline") return;
+    setDraft((current) => ({ ...current, state: "saving", message: "Retrying the same draft save identity…" }));
+    setSaveRetry((current) => current + 1);
   };
 
   const redo = (): void => {
@@ -603,6 +610,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
       </div>
       <div className="heading-actions">
         <StatusBadge tone={draft.state === "saved" ? "success" : draft.state === "conflict" ? "danger" : "warning"}>{draft.state}</StatusBadge>
+        {draft.state === "offline" ? <button className="button button-secondary" onClick={retrySave}>Retry save</button> : null}
         <button className="button button-secondary" onClick={() => void validate()} disabled={validationState === "running" || publicationState === "publishing"}>◈ Validate</button>
         <button className="button button-primary" onClick={() => void publish()} disabled={publicationState === "publishing" || draft.state !== "saved"}>{publicationState === "publishing" ? "Publishing…" : "Publish revision"}</button>
         <button className="button button-primary" onClick={() => onRun(document)}>Run inspection</button>
