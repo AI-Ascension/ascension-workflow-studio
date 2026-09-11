@@ -1,0 +1,15 @@
+[Unit]
+Description=Ascension Workflow Studio LAN preview
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/.local/share/ascension-workflow-studio/preview-server.py %h/.local/share/ascension-workflow-studio/current --bind 192.168.1.146 --port 4173
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+UMask=0077
+
+[Install]
+WantedBy=default.target

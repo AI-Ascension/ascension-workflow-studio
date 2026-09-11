@@ -13,11 +13,15 @@
     "lint": "npm run typecheck",
     "test": "vitest run",
     "test:browser": "playwright test",
+    "test:recorded-browser": "playwright test --config playwright.recorded.config.ts",
+    "recording:inspect": "node tools/inspect-recording.mjs",
     "test:watch": "vitest",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@noble/hashes": "2.0.1",
     "@xyflow/react": "12.11.6",
+    "ajv": "8.17.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "zod": "4.1.12"

@@ -1,0 +1,122 @@
+{
+  "scope": "local independent Studio decoder versus protocol oracle on the identical artifact; source provenance is in the bundle",
+  "artifact_sha256": "a4f7b97df3ee55c35bb42c97ef57518e7a634c700c332025e08db4a3af785c1c",
+  "schema_sha256": "d5098e5f969d99707d3ad1d97acdbc803285b93f1eb1dcfe5dc3f63c534192af",
+  "summary": {
+    "valid": true,
+    "semantic_digest": "de818d975e78dc7ac9bc235a7192abbfeef9859308bffb0dc34a54d12b198bc9",
+    "recording_identity": {
+      "namespace": "seed-readiness.recording.sha256",
+      "value": "07dc52a6baea1245c5492724089a3115a201650d1362fba68d0c5813a5bc7d8b"
+    },
+    "evidence": {
+      "action": "unknown",
+      "gameplay": "episode_failed",
+      "outcome": "unknown",
+      "process_exit": "completed",
+      "request": "unknown"
+    },
+    "completeness": {
+      "source_snapshot": "stable",
+      "status": "complete"
+    },
+    "streams": [
+      {
+        "dispositions": [],
+        "emitted_rows": 1,
+        "field_omissions": [
+          {
+            "affected_rows": 1,
+            "rule": "raw_decision_text_disallowed"
+          }
+        ],
+        "filtered_rows": 0,
+        "input_records": 1,
+        "output_records": 1,
+        "rejected_rows": 0,
+        "state": "present",
+        "stream": "decisions",
+        "unsupported_rows": 0
+      },
+      {
+        "dispositions": [
+          {
+            "disposition": "filtered",
+            "first": 0,
+            "last": 0,
+            "reason": "private_source_metadata"
+          }
+        ],
+        "emitted_rows": 0,
+        "field_omissions": [],
+        "filtered_rows": 1,
+        "input_records": 1,
+        "output_records": 0,
+        "rejected_rows": 0,
+        "state": "omitted",
+        "stream": "manifest",
+        "unsupported_rows": 0
+      },
+      {
+        "dispositions": [
+          {
+            "disposition": "filtered",
+            "first": 0,
+            "last": 229,
+            "reason": "raw_mcp_disallowed"
+          }
+        ],
+        "emitted_rows": 0,
+        "field_omissions": [],
+        "filtered_rows": 230,
+        "input_records": 230,
+        "mcp_redacted_path_count": 0,
+        "output_records": 0,
+        "rejected_rows": 0,
+        "state": "omitted",
+        "stream": "mcp",
+        "unsupported_rows": 0
+      },
+      {
+        "dispositions": [],
+        "emitted_rows": 1,
+        "field_omissions": [],
+        "filtered_rows": 0,
+        "input_records": 1,
+        "output_records": 1,
+        "rejected_rows": 0,
+        "state": "present",
+        "stream": "provider-accounting",
+        "unsupported_rows": 0
+      },
+      {
+        "dispositions": [],
+        "emitted_rows": 1,
+        "field_omissions": [],
+        "filtered_rows": 0,
+        "input_records": 1,
+        "output_records": 1,
+        "rejected_rows": 0,
+        "state": "present",
+        "stream": "result",
+        "unsupported_rows": 0
+      },
+      {
+        "dispositions": [],
+        "emitted_rows": 6,
+        "field_omissions": [],
+        "filtered_rows": 0,
+        "input_records": 6,
+        "output_records": 6,
+        "rejected_rows": 0,
+        "state": "present",
+        "stream": "trajectory",
+        "unsupported_rows": 0
+      }
+    ],
+    "event_records": 8,
+    "accounting_records": 1,
+    "unsupported_records": 0
+  },
+  "equal": true
+}

@@ -1,0 +1,22 @@
+{
+  "release_digest": "4984edd81b7562bc561a2b592c95f8202f8e0cdbe59d708ae8b0307af3a68231",
+  "archive_sha256": "292647c36c202970f255c643b06278ad7e13618e2236af11d998e3cffabe5eb9",
+  "files": {
+    "assets/import.worker-DfIcyr04.js": {
+      "bytes": 263058,
+      "sha256": "46d1afb0c4f44015707657866847e9a50ce0886dcf007511e9cc4cba407ac70a"
+    },
+    "assets/index-CH-lmpfA.js": {
+      "bytes": 564358,
+      "sha256": "644a6b90f1f326400a02c0fabf41dccae1bd11c731fd20a885914ea9888720c2"
+    },
+    "assets/index-DqRSN1mq.css": {
+      "bytes": 37725,
+      "sha256": "3d9a0bb16f24cedcba9cbac379767af02ed4793aa877fa17f67c421c2aa76413"
+    },
+    "index.html": {
+      "bytes": 700,
+      "sha256": "d36bef2e9e42ff0d15de722fb7d531a48e54609d17e4870790bf95c2dca4b997"
+    }
+  }
+}

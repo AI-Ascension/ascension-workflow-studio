@@ -1,0 +1,10 @@
+{
+  "scope": "local synthetic 25,000-record boundary; page-heap metrics exclude worker and native allocations",
+  "elapsedMs": 6213,
+  "maxTimelineRows": 100,
+  "filterRows": 1,
+  "memory": {
+    "usedJSHeapSize": 29400000,
+    "totalJSHeapSize": 44700000
+  }
+}
