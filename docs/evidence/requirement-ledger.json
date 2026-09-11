@@ -403,7 +403,7 @@
       "mandatory": true,
       "work_package": "WP-13",
       "status": "partial",
-      "evidence": "Raw JSON and typed fields retain invalid draft text and apply only validated candidates; a complete browser repair/save journey remains unverified.",
+      "evidence": "Merged Studio commit 3a63498 retains raw candidate text across in-app navigation without persisting malformed input. Studio CI run 34639729580 verified malformed JSON remains visible after navigation, the saved draft remains intact, and a repaired JSON candidate applies atomically and is then autosaved. The complete malicious/future-schema browser matrix remains partial.",
       "acceptance_cases": [
         "AT-040"
       ]
