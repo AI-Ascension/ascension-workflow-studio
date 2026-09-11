@@ -725,6 +725,40 @@ export function alignLayout(
   return LayoutSidecarSchema.parse({ ...layout, positions: next });
 }
 
+/**
+ * Arrange every graph deterministically for a readable left-to-right flow.
+ * The layout remains a sidecar: no execution semantics are changed.
+ */
+export function autoLayout(layout: LayoutSidecar, document: SemanticDocument): LayoutSidecar {
+  const positions: LayoutSidecar["positions"] = {};
+  for (const [graphIndex, graph] of document.graphs.entries()) {
+    const ranks = new Map(graph.nodes.map((node) => [node.id, 0]));
+    for (let pass = 0; pass < graph.nodes.length; pass += 1) {
+      let changed = false;
+      for (const edge of graph.edges) {
+        const sourceRank = ranks.get(edge.from) ?? 0;
+        const targetRank = ranks.get(edge.to) ?? 0;
+        if (edge.from !== edge.to && targetRank <= sourceRank) {
+          ranks.set(edge.to, sourceRank + 1);
+          changed = true;
+        }
+      }
+      if (!changed) break;
+    }
+    const rowsByRank = new Map<number, number>();
+    for (const node of graph.nodes) {
+      const rank = ranks.get(node.id) ?? 0;
+      const row = rowsByRank.get(rank) ?? 0;
+      rowsByRank.set(rank, row + 1);
+      positions[qualifiedNodeId(graph.id, node.id)] = {
+        x: 72 + rank * 264,
+        y: 84 + graphIndex * 360 + row * 148,
+      };
+    }
+  }
+  return LayoutSidecarSchema.parse({ ...layout, positions });
+}
+
 export function mergeDocuments(
   base: SemanticDocument,
   local: SemanticDocument,
