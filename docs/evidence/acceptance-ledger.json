@@ -207,9 +207,9 @@
       ],
       "work_package": "WP-05",
       "status": "partial",
-      "actual_command": "npm test -- --run",
+      "actual_command": "npm test -- --run --pool=threads --maxWorkers=1; GitHub Actions Studio validation run 34639729580",
       "actual_source_heads": {
-        "studio": "4b4788c"
+        "studio": "3a63498"
       },
       "evidence": "Source and component evidence: unsupported schemas are classified read-only; exact original-byte retention and publish blocking need a browser journey.",
       "actual_evidence_refs": [
@@ -485,10 +485,11 @@
       "actual_source_heads": {
         "studio": "4b4788c"
       },
-      "evidence": "Invalid text is retained and valid candidates apply atomically in source; the required browser repair/save sequence remains unverified.",
+      "evidence": "Studio CI run 34639729580 verified malformed JSON remains visible after Library navigation, does not replace the saved draft, and can be repaired, atomically applied, autosaved, and reopened. The complete malicious/future-schema browser matrix remains partial.",
       "actual_evidence_refs": [
         "apps/studio/src/features/designer/DesignerView.tsx",
-        "packages/document/src/index.ts"
+    "packages/document/src/index.ts",
+    "tests/browser/studio.spec.ts"
       ]
     },
     {
