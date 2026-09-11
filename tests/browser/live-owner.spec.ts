@@ -14,4 +14,6 @@ test("pairs with the authenticated owner through the same-origin adapter", async
   await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
   await page.getByRole("button", { name: /Validate/ }).click();
   await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
+  await page.getByRole("button", { name: "Publish revision" }).click();
+  await expect(page.locator(".validation-label")).toHaveText(/Published an immutable owner revision\.|This exact semantic digest is already published\./);
 });
