@@ -295,6 +295,28 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     }
   };
 
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent): void => {
+      if (event.defaultPrevented || !(event.ctrlKey || event.metaKey) || isEditableShortcutTarget(event.target)) return;
+      const key = event.key.toLowerCase();
+      if (key === "z") {
+        event.preventDefault();
+        if (event.shiftKey) redo(); else undo();
+      } else if (key === "y") {
+        event.preventDefault();
+        redo();
+      } else if (key === "c") {
+        event.preventDefault();
+        copySelection();
+      } else if (key === "v") {
+        event.preventDefault();
+        pasteSelection();
+      }
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  });
+
   const alignSelection = (): void => {
     try {
       setLayout((current) => alignLayout(current, selectedIds, "x"));
@@ -817,6 +839,11 @@ function GuardField({ guard, onCommit }: { guard: WorkflowGuard; onCommit: (guar
 
 function RawDefinitionPanel({ rawText, error, onChange, onApply }: { rawText: string; error: string | undefined; onChange: (value: string) => void; onApply: () => void }): JSX.Element {
   return <section className="raw-definition-panel panel-card" aria-label="Raw definition editor"><div className="panel-title"><div><p className="eyebrow">Bounded JSON mode</p><h2>Owner definition candidate</h2></div><button className="button button-primary" onClick={onApply}>Apply candidate</button></div><p className="muted">Duplicate keys, unsafe numbers, excessive depth, and unsupported schemas are rejected or retained read-only before admission.</p><textarea value={rawText} rows={18} spellCheck={false} onChange={(event) => onChange(event.target.value)} aria-label="Raw workflow definition JSON" />{error ? <p className="field-error" role="alert">{error}</p> : null}</section>;
+}
+
+function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.isContentEditable || Boolean(target.closest("input, textarea, select, button, [role=\"textbox\"], [contenteditable=\"true\"]"));
 }
 
 function ArchivalImportPanel({ archival }: { archival: ArchivalImport }): JSX.Element {
