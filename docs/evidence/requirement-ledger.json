@@ -362,8 +362,8 @@
       "id": "P2-036",
       "mandatory": true,
       "work_package": "WP-11",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "Merged Studio commit 1a69a2a bounds clipboard snapshots to 128 nodes, 512 edges, and 256 KiB, and bounds undo/redo history to 128 entries. Studio CI run 34641473566 verified graph undo/redo shortcuts outside controls, while native text undo and Delete in the raw editor leave the graph unchanged; document unit tests verify the resource limits.",
       "acceptance_cases": [
         "AT-036"
       ]
