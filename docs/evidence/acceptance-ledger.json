@@ -409,9 +409,11 @@
       ],
       "work_package": "WP-11",
       "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Undo/redo exists; compound semantic/layout transaction grouping remains."
+      "actual_command": "npm test -- --run --pool=threads --maxWorkers=1; npm run build; GitHub Actions Studio validation run 34642217208",
+      "actual_source_heads": {
+        "studio": "cfb0e71"
+      },
+      "evidence": "Studio CI run 34642217208 passed after compound history began snapshotting semantic and layout state together. The required multi-edit and auto-layout browser journey remains unverified."
     },
     {
       "id": "AT-035",

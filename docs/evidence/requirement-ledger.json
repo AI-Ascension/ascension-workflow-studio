@@ -343,7 +343,7 @@
       "mandatory": true,
       "work_package": "WP-11",
       "status": "partial",
-      "evidence": "Undo/redo exists; compound semantic/layout transaction grouping remains.",
+      "evidence": "Merged Studio commit cfb0e71 stores semantic documents and layout sidecars together in each bounded history snapshot. Semantic edits, alignment, and completed node drags now undo and redo atomically without leaving a partial layout state. The required multi-edit and auto-layout browser journey remains unverified.",
       "acceptance_cases": [
         "AT-034"
       ]
