@@ -574,10 +574,12 @@
         "P2-047"
       ],
       "work_package": "WP-15",
-      "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Merged owner PR #57 supplies conditional revision/etag writes and client mutation IDs with focused tests; the synthetic live process completed a conditional save. Studio CI run 34636278029 verified authenticated Chromium receives and presents the owner conflict record after a stale revision/etag save. Browser retry handling remains unverified."
+      "status": "implemented",
+      "actual_command": "npm test -- --run --pool=threads --maxWorkers=1; npm run lint; npm run build; GitHub Actions Studio validation run 34644931285",
+      "actual_source_heads": {
+        "studio": "64cc163"
+      },
+      "evidence": "Studio CI run 34644931285 passed unit, type, build, Chromium, Firefox, WebKit, recorded-run, and authenticated live-owner validation. The live browser intercepts one conditional draft PUT, permits the owner to commit it, drops only the response, retries from the UI with the original mutation identity, and confirms the owner revision increments exactly once."
     },
     {
       "id": "AT-048",
