@@ -134,6 +134,9 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
   const [publicationState, setPublicationState] = useState<"idle" | "publishing">("idle");
   const draftRef = useRef(draft);
   const [conflictOpen, setConflictOpen] = useState(true);
+  const [focusedGraph, setFocusedGraph] = useState<string>(() => initialDocument.entry_graph);
+  const [graphTrail, setGraphTrail] = useState<string[]>(() => [initialDocument.entry_graph]);
+  const [graphViewports, setGraphViewports] = useState<Record<string, { x: number; y: number; zoom: number }>>({});
   const mergeBaseRef = useRef<SemanticDocument>(cloneDocument(initialDocument));
   const mergeBaseLayoutRef = useRef<LayoutSidecar>(createLayout(initialDocument, "pending"));
   const persistedKeyRef = useRef<string | undefined>(undefined);
@@ -171,6 +174,9 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     mergeBaseRef.current = cloneDocument(initialDocument);
     mergeBaseLayoutRef.current = nextLayout;
     setConflictOpen(true);
+    setFocusedGraph(initialDocument.entry_graph);
+    setGraphTrail([initialDocument.entry_graph]);
+    setGraphViewports({});
     setDraft({ revision: 0, etag: "fixture-0", state: "saved", message: "Draft changes are local until autosave completes." });
   }, [initialDocument]);
 
@@ -186,6 +192,8 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
           history.current = new History<EditorSnapshot>({ document: saved.document, layout: nextLayout }, copyEditorSnapshot);
           mergeBaseRef.current = cloneDocument(saved.document);
           mergeBaseLayoutRef.current = nextLayout;
+          setFocusedGraph(saved.document.entry_graph);
+          setGraphTrail([saved.document.entry_graph]);
           if (saved.conflict) setConflictOpen(true);
           setDocument(saved.document);
           setLayout(nextLayout);
@@ -251,6 +259,29 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
 
   const selected = useMemo(() => findSelectedNode(document, selectedId), [document, selectedId]);
   const flowEdges = useMemo(() => toFlowEdges(document), [document]);
+  const activeGraphId = useMemo(() => (document.graphs.some((graph) => graph.id === focusedGraph) ? focusedGraph : document.entry_graph), [document.graphs, focusedGraph]);
+  const visibleNodes = useMemo(() => nodes.filter((node) => node.id.startsWith(`${activeGraphId}:`)), [nodes, activeGraphId]);
+  const visibleEdges = useMemo(() => flowEdges.filter((edge) => edge.source.startsWith(`${activeGraphId}:`)), [flowEdges, activeGraphId]);
+
+  const focusGraph = useCallback((graphId: string): void => {
+    if (!document.graphs.some((graph) => graph.id === graphId)) return;
+    setFocusedGraph(graphId);
+    setGraphTrail([graphId]);
+  }, [document.graphs]);
+
+  const focusTrailIndex = useCallback((index: number): void => {
+    setGraphTrail((current) => {
+      const next = current.slice(0, Math.max(0, Math.min(index + 1, current.length)));
+      if (next.length > 0) setFocusedGraph(next[next.length - 1]);
+      return next;
+    });
+  }, []);
+
+  const navigateIntoGraph = useCallback((graphId: string): void => {
+    if (!document.graphs.some((graph) => graph.id === graphId)) return;
+    setFocusedGraph(graphId);
+    setGraphTrail((current) => (current[current.length - 1] === graphId ? current : [...current, graphId]));
+  }, [document.graphs]);
 
   const ensureLayout = useCallback((nextDocument: SemanticDocument, currentLayout: LayoutSidecar): LayoutSidecar => {
     const next = { ...currentLayout.positions };
@@ -310,6 +341,11 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
   const selectNode = useCallback((id: string, additive = false): void => {
     setSelectedId(id);
     setSelectedEdge(undefined);
+    const owning = splitQualifiedId(id);
+    if (owning) {
+      setFocusedGraph(owning.graphId);
+      setGraphTrail((current) => (current.includes(owning.graphId) ? current : [owning.graphId]));
+    }
     setSelectedIds((current) => {
       const next = additive ? (current.includes(id) ? current.filter((candidate) => candidate !== id) : [...current, id]) : [id];
       setNodes((currentNodes) => currentNodes.map((node) => ({ ...node, selected: next.includes(node.id) })));
@@ -713,11 +749,15 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     {archivalImport ? <ArchivalImportPanel archival={archivalImport} /> : null}
     {bundlePreview ? <details className="bundle-preview"><summary>Last portable bundle preview</summary><pre>{bundlePreview}
 …</pre></details> : null}
+    <GraphNavigator document={document} activeGraphId={activeGraphId} trail={graphTrail} onFocus={focusGraph} onSelectTrail={focusTrailIndex} />
     {tab === "canvas" ? <div className="designer-body">
       <div className="flow-shell" aria-label="Workflow graph canvas">
         <ReactFlow<FlowNode, Edge<{ qualifiedSource: string; qualifiedTarget: string }>>
-          nodes={nodes}
-          edges={flowEdges}
+          key={activeGraphId}
+          nodes={visibleNodes}
+          edges={visibleEdges}
+          defaultViewport={graphViewports[activeGraphId] ?? { x: 0, y: 0, zoom: 1 }}
+          onMoveEnd={(_event, viewport) => setGraphViewports((current) => ({ ...current, [activeGraphId]: viewport }))}
           onNodesChange={onNodesChange}
           onConnect={onConnect}
           onNodeClick={(event, node) => selectNode(node.id, event.metaKey || event.ctrlKey)}
@@ -728,7 +768,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
             setLayout(nextLayout);
             setNodes(toFlowNodes(document, nextLayout));
           }}
-          fitView
+          fitView={graphViewports[activeGraphId] === undefined}
           fitViewOptions={{ padding: 0.2 }}
           nodesDraggable
           nodesConnectable
@@ -741,10 +781,10 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
         </ReactFlow>
       </div>
       <div className="inspector-stack">
-        <InspectorPanel selected={selected} selectedConfigText={selectedConfigText} onUpdate={updateSelected} onRemove={removeSelected} />
+        <InspectorPanel document={document} selected={selected} selectedConfigText={selectedConfigText} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />
         {selectedEdge ? <EdgeInspector document={document} selectedEdge={selectedEdge} onReconnect={applyReconnect} /> : null}
       </div>
-    </div> : <ListEditor document={document} selectedId={selectedId} selectedIds={selectedIds} onSelect={selectNode} onUpdate={updateSelected} onRemove={removeSelected} />}
+    </div> : <ListEditor document={document} selectedId={selectedId} selectedIds={selectedIds} onSelect={selectNode} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />}
     {diagnostics ? <DiagnosticsPanel result={diagnostics} onFocusPath={(path) => {
       const target = document.graphs.flatMap((graph) => graph.nodes.map((node) => ({ graphId: graph.id, nodeId: node.id }))).find((candidate) => path.includes(candidate.nodeId));
       if (target) {
@@ -761,13 +801,15 @@ interface SelectedNode {
 }
 
 interface InspectorPanelProps {
+  document: SemanticDocument;
   selected: SelectedNode | undefined;
   selectedConfigText: string;
   onUpdate: (update: (node: WorkflowNode) => WorkflowNode) => void;
   onRemove: () => void;
+  onNavigateGraph: (graphId: string) => void;
 }
 
-function InspectorPanel({ selected, selectedConfigText, onUpdate, onRemove }: InspectorPanelProps): JSX.Element {
+function InspectorPanel({ document, selected, selectedConfigText, onUpdate, onRemove, onNavigateGraph }: InspectorPanelProps): JSX.Element {
   const [configText, setConfigText] = useState(selectedConfigText);
   const [configError, setConfigError] = useState<string | undefined>();
   useEffect(() => setConfigText(selectedConfigText), [selectedConfigText]);
@@ -782,6 +824,8 @@ function InspectorPanel({ selected, selectedConfigText, onUpdate, onRemove }: In
         {nodeKinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
       </select>
     </label>
+    {selected.node.kind === "loop" ? <LoopBodyGraphNavigation document={document} node={selected.node} onNavigateGraph={onNavigateGraph} /> : null}
+    {selected.node.kind === "subworkflow" ? <SubworkflowReference node={selected.node} disabled={locked} onUpdate={onUpdate} /> : null}
     <TypedConfigFields node={selected.node} disabled={locked} onUpdate={onUpdate} />
     <label className="field-label">Configuration <span className="muted">JSON object</span>
       <textarea value={configText} disabled={locked} rows={12} onChange={(event) => { setConfigText(event.target.value); setConfigError(undefined); }} onBlur={() => {
@@ -862,6 +906,7 @@ const typedFieldsByKind: Record<string, TypedConfigFieldDefinition[]> = {
   execute_action: [{ key: "output", label: "Action output", type: "text" }],
   route: [{ key: "selector_ref", label: "Selector reference", type: "text" }],
   loop: [{ key: "body_graph", label: "Body graph", type: "text" }, { key: "max_iterations", label: "Maximum iterations", type: "number", min: 1 }, { key: "exit_guard_ref", label: "Exit guard", type: "text" }],
+  subworkflow: [],
   adaptive_region: [{ key: "region_id", label: "Protected region", type: "text" }, { key: "max_plan_nodes", label: "Maximum plan nodes", type: "number", min: 1 }, { key: "max_plan_edges", label: "Maximum plan edges", type: "number", min: 1 }, { key: "max_replans", label: "Maximum replans", type: "number", min: 0 }],
   terminal: [{ key: "outcome", label: "Terminal outcome", type: "text" }],
 };
@@ -1179,14 +1224,80 @@ interface ListEditorProps {
   onSelect: (id: string, additive?: boolean) => void;
   onUpdate: (update: (node: WorkflowNode) => WorkflowNode) => void;
   onRemove: () => void;
+  onNavigateGraph: (graphId: string) => void;
 }
 
-function ListEditor({ document, selectedId, selectedIds, onSelect, onUpdate, onRemove }: ListEditorProps): JSX.Element {
+function GraphNavigator({ document, activeGraphId, trail, onFocus, onSelectTrail }: { document: SemanticDocument; activeGraphId: string; trail: string[]; onFocus: (graphId: string) => void; onSelectTrail: (index: number) => void }): JSX.Element {
+  return <nav className="graph-nav panel-card" aria-label="Workflow graph navigation">
+    <div className="graph-nav-row">
+      <span className="eyebrow">Breadcrumbs</span>
+      <ol className="graph-breadcrumbs" aria-label="Graph breadcrumb trail">
+        {trail.map((graphId, index) => <li key={`${graphId}-${index}`}>{index > 0 ? <span className="graph-crumb-separator" aria-hidden="true">›</span> : null}{index === trail.length - 1 ? <span className="graph-crumb-current" aria-current="page">{graphId}</span> : <button className="graph-crumb" onClick={() => onSelectTrail(index)}>{graphId}</button>}</li>)}
+      </ol>
+    </div>
+    <div className="graph-nav-row">
+      <span className="eyebrow">Graphs</span>
+      <div className="graph-switcher" role="group" aria-label="All workflow graphs">
+        {document.graphs.map((graph) => <button key={graph.id} className={`button ${graph.id === activeGraphId ? "button-secondary" : "button-quiet"}`} aria-pressed={graph.id === activeGraphId} onClick={() => onFocus(graph.id)}>{graph.id}</button>)}
+      </div>
+    </div>
+    <p className="graph-nav-note">Graphs are navigated one at a time; this list is not execution ordering or parallelism.</p>
+  </nav>;
+}
+
+function LoopBodyGraphNavigation({ document, node, onNavigateGraph }: { document: SemanticDocument; node: WorkflowNode; onNavigateGraph: (graphId: string) => void }): JSX.Element | null {
+  const bodyGraph = node.config.body_graph;
+  if (typeof bodyGraph !== "string" || !document.graphs.some((graph) => graph.id === bodyGraph)) return null;
+  return <div className="nested-graph-action"><span className="muted">Bounded loop body</span><button className="button button-secondary" onClick={() => onNavigateGraph(bodyGraph)}>Open body graph: {bodyGraph}</button></div>;
+}
+
+function PinnedRefField({ label, value, disabled, onCommit }: { label: string; value: unknown; disabled: boolean; onCommit: (next: string) => void }): JSX.Element {
+  const current = typeof value === "string" ? value : "";
+  const [draft, setDraft] = useState(current);
+  const committed = useRef(current);
+  const [error, setError] = useState<string | undefined>();
+  useEffect(() => {
+    if (committed.current !== current) {
+      committed.current = current;
+      setDraft(current);
+    }
+  }, [current]);
+  return <label className="field-label">{label}<span className="muted">pinned reference</span>
+    <input value={draft} maxLength={256} disabled={disabled} onChange={(event) => { setDraft(event.target.value); setError(undefined); }} onBlur={() => {
+      if (draft.trim().length === 0) {
+        setError("A pinned subworkflow reference requires this value.");
+        return;
+      }
+      setError(undefined);
+      committed.current = draft;
+      onCommit(draft);
+    }} />
+    {error ? <span className="field-error" role="alert">{error}</span> : null}
+  </label>;
+}
+
+function SubworkflowReference({ node, disabled, onUpdate }: { node: WorkflowNode; disabled: boolean; onUpdate: InspectorPanelProps["onUpdate"] }): JSX.Element {
+  const [inspecting, setInspecting] = useState(false);
+  const raw = node.config.artifact_ref;
+  const ref = raw !== null && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, JsonValue> : {};
+  const update = (key: string, value: string): void => {
+    onUpdate((candidate) => ({ ...candidate, config: { ...candidate.config, artifact_ref: { ...ref, [key]: value } } }));
+  };
+  return <div className="subworkflow-reference" aria-label="Pinned subworkflow reference">
+    <div className="panel-title"><strong>Pinned subworkflow</strong><span className="ref-badges"><span className="ref-badge">v{typeof ref.version === "string" && ref.version ? ref.version : "unset"}</span><span className="ref-badge" title={typeof ref.digest === "string" ? ref.digest : undefined}>{typeof ref.digest === "string" && ref.digest ? `${ref.digest.slice(0, 12)}…` : "no digest"}</span></span></div>
+    <PinnedRefField label="Reference id" value={ref.id} disabled={disabled} onCommit={(value) => update("id", value)} />
+    <PinnedRefField label="Reference version" value={ref.version} disabled={disabled} onCommit={(value) => update("version", value)} />
+    <PinnedRefField label="Reference digest" value={ref.digest} disabled={disabled} onCommit={(value) => update("digest", value)} />
+    <button className="button button-quiet" onClick={() => setInspecting((current) => !current)}>{inspecting ? "Close reference note" : "Inspect reference"}</button>
+    {inspecting ? <Notice tone="warning" title="Library reference">This node pins an immutable library artifact by version and digest. Editing the shared definition requires an intentional fork or a new version; this Studio changes only the pinned reference.</Notice> : null}
+  </div>;
+}
+
+function ListEditor({ document, selectedId, selectedIds, onSelect, onUpdate, onRemove, onNavigateGraph }: ListEditorProps): JSX.Element {
   const selected = findSelectedNode(document, selectedId);
   return <div className="list-editor">
     <div className="list-editor-main">
       <div className="panel-title"><div><p className="eyebrow">Equivalent editor</p><h2>Semantic node list</h2></div><span className="muted">Keyboard friendly</span></div>
-      <nav className="graph-breadcrumbs" aria-label="Workflow graph breadcrumbs">{document.graphs.map((graph) => <button key={graph.id} className="button button-quiet" onClick={() => { const first = graph.nodes[0]; if (first) onSelect(`${graph.id}:${first.id}`); }}>{graph.id}</button>)}</nav>
       {document.graphs.map((graph) => <div className="graph-list" key={graph.id}>
         <div className="graph-list-title"><span>{graph.id}</span><span className="muted">entry: {graph.entry_node}</span></div>
         {graph.nodes.map((node) => {
@@ -1199,7 +1310,7 @@ function ListEditor({ document, selectedId, selectedIds, onSelect, onUpdate, onR
         })}
       </div>)}
     </div>
-    <InspectorPanel selected={selected} selectedConfigText={selected ? JSON.stringify(selected.node.config, null, 2) : ""} onUpdate={onUpdate} onRemove={onRemove} />
+    <InspectorPanel document={document} selected={selected} selectedConfigText={selected ? JSON.stringify(selected.node.config, null, 2) : ""} onUpdate={onUpdate} onRemove={onRemove} onNavigateGraph={onNavigateGraph} />
   </div>;
 }
 
@@ -1210,7 +1321,7 @@ function DiagnosticsPanel({ result, onFocusPath }: { result: ValidateResponse; o
   </div>;
 }
 
-const nodeKinds = ["observe", "decide", "execute_action", "route", "loop", "adaptive_region", "terminal"];
+const nodeKinds = ["observe", "decide", "execute_action", "route", "loop", "subworkflow", "adaptive_region", "terminal"];
 
 function toFlowNodes(document: SemanticDocument, layout: LayoutSidecar, selectedIds: string[] = []): FlowNode[] {
   return createFlowProjection({ semantic: document, layout }).nodes.map((node) => ({

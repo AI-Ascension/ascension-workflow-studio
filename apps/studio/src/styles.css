@@ -193,3 +193,18 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 
 .conflict-dismissed { display: grid; gap: 10px; justify-items: start; border-color: #7b5a30; }
 .conflict-dismissed p { margin: 0; color: var(--muted); font-size: .76rem; }
+
+.graph-nav { display: grid; gap: 8px; margin: 0 0 12px; padding: 12px 14px; }
+.graph-nav-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.graph-breadcrumbs { display: flex; align-items: center; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.graph-breadcrumbs li { display: flex; align-items: center; gap: 6px; }
+.graph-crumb { border: 0; background: transparent; color: var(--blue); font-size: .75rem; font-weight: 700; text-decoration: underline; padding: 2px 4px; }
+.graph-crumb-current { color: var(--text); font-size: .75rem; font-weight: 700; }
+.graph-crumb-separator { color: var(--muted); }
+.graph-switcher { display: flex; flex-wrap: wrap; gap: 6px; }
+.graph-nav-note { margin: 0; color: var(--muted); font-size: .7rem; }
+.nested-graph-action { display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.subworkflow-reference { display: grid; gap: 4px; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; }
+.subworkflow-reference .panel-title { align-items: center; }
+.ref-badges { display: inline-flex; gap: 6px; }
+.ref-badge { border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; color: #b9d8ff; font-family: monospace; font-size: .68rem; }
