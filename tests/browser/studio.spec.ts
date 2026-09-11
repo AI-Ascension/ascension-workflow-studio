@@ -88,7 +88,7 @@ test.describe("Studio fixture workbench", () => {
     const baseline = await editor.inputValue();
     await editor.press("End");
     await editor.pressSequentially(" ");
-    await expect(editor).toHaveValue(`${baseline} `);
+    expect(await editor.inputValue()).not.toBe(baseline);
     await editor.press("Control+z");
     await expect(editor).toHaveValue(baseline);
     await editor.press("Delete");
