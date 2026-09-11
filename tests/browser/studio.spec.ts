@@ -14,6 +14,16 @@ test.describe("Studio fixture workbench", () => {
     await page.screenshot({ path: "test-results/studio-designer.png", fullPage: true });
   });
 
+  test("renders graph nodes with an explicit high-contrast surface", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Open designer" }).first().click();
+    const node = page.locator(".react-flow__node").first();
+    await expect(node).toBeVisible();
+    await expect(node).toHaveCSS("background-color", "rgb(219, 234, 254)");
+    await expect(node).toHaveCSS("color", "rgb(16, 34, 56)");
+    await expect(node).toHaveCSS("border-top-color", "rgb(94, 155, 209)");
+  });
+
   test("shows safe run controls and replay compare without leaving the app", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Runs", exact: true }).click();
