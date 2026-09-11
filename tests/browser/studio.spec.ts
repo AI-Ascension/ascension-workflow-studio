@@ -108,4 +108,29 @@ test.describe("Studio fixture workbench", () => {
     await editor.press("Delete");
     await expect(rows).toHaveCount(initialCount + 1);
   });
+
+  test("multi-selects, aligns, auto-arranges, and restores layout with undo and redo", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Clone draft" }).first().click();
+    await page.getByRole("tab", { name: "List editor" }).click();
+    const rows = page.locator(".node-list-row");
+    await expect(rows.nth(1)).toBeVisible();
+    await rows.nth(0).click();
+    await rows.nth(1).click({ modifiers: ["Control"] });
+    await expect(rows.nth(0)).toHaveAttribute("aria-pressed", "true");
+    await expect(rows.nth(1)).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: "Align X" }).click();
+    await expect(page.locator(".validation-label")).toHaveText("Aligned the selected nodes without changing semantic execution.");
+    await page.getByRole("button", { name: "Auto-layout" }).click();
+    await expect(page.locator(".validation-label")).toHaveText("Auto-arranged the layout without changing semantic execution.");
+    await page.getByRole("tab", { name: "Canvas" }).click();
+    const nodes = page.locator(".react-flow__node");
+    const arranged = await nodes.nth(1).evaluate((node) => getComputedStyle(node).transform);
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect.poll(() => nodes.nth(1).evaluate((node) => getComputedStyle(node).transform)).not.toBe(arranged);
+    const undone = await nodes.nth(1).evaluate((node) => getComputedStyle(node).transform);
+    await page.getByRole("button", { name: "Redo" }).click();
+    await expect.poll(() => nodes.nth(1).evaluate((node) => getComputedStyle(node).transform)).toBe(arranged);
+    expect(undone).not.toBe(arranged);
+  });
 });

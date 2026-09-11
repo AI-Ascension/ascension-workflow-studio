@@ -5,6 +5,7 @@ import type { WorkflowDefinition } from "@studio/contracts";
 import {
   History,
   alignLayout,
+  autoLayout,
   canonicalJson,
   copyNodes,
   createLayout,
@@ -147,6 +148,9 @@ describe("workflow document identity", () => {
     const digest = await semanticDigest(original);
     const aligned = alignLayout(createLayout(original, digest), ["main:start", "main:done"], "x");
     expect(aligned.positions["main:start"].x).toBe(aligned.positions["main:done"].x);
+    const arranged = autoLayout(createLayout(original, digest), original);
+    expect(arranged.positions["main:done"].x).toBeGreaterThan(arranged.positions["main:start"].x);
+    expect(layoutIsValid(original, arranged)).toBe(true);
     const local = { ...original, version: "1.1.0" };
     const remote = { ...original, game_profile: "remote-profile" };
     const merged = mergeDocuments(original, local, remote);

@@ -33,6 +33,7 @@ import { CapabilityGateError, type StudioClient } from "@studio/client";
 import {
   History,
   alignLayout,
+  autoLayout,
   addEdge,
   addNode,
   cloneDocument,
@@ -344,6 +345,20 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
     }
   };
 
+  const arrangeLayout = (): void => {
+    try {
+      const nextLayout = autoLayout(layout, document);
+      history.current.commit({ document, layout: nextLayout });
+      setLayout(nextLayout);
+      setNodes(toFlowNodes(document, nextLayout, selectedIds));
+      setValidationState("valid");
+      setValidationMessage("Auto-arranged the layout without changing semantic execution.");
+    } catch (error: unknown) {
+      setValidationState("error");
+      setValidationMessage(error instanceof Error ? error.message : "Auto-layout was rejected.");
+    }
+  };
+
   const applyRawDefinition = (): void => {
     try {
       const imported = parseDefinitionImport(rawText);
@@ -612,6 +627,7 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
         <button className="button button-quiet" onClick={copySelection} disabled={selectedIds.length === 0 && !selectedId}>Copy</button>
         <button className="button button-quiet" onClick={pasteSelection} disabled={!clipboard}>Paste</button>
         <button className="button button-quiet" onClick={alignSelection} disabled={selectedIds.length < 2}>Align X</button>
+        <button className="button button-quiet" onClick={arrangeLayout}>Auto-layout</button>
         <button className={`button ${rawMode ? "button-secondary" : "button-quiet"}`} onClick={() => setRawMode((current) => !current)}>{rawMode ? "Close JSON" : "JSON mode"}</button>
         <button className="button button-quiet" onClick={() => void exportBundle()}>Export</button>
         <button className="button button-quiet" onClick={() => bundleInput.current?.click()}>Import</button>
