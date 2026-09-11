@@ -110,3 +110,13 @@ jobs:
       - name: Show live owner diagnostics
         if: failure()
         run: cat /tmp/studio-live.log
+      - name: Upload live owner browser diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-owner-browser-diagnostics
+          path: |
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 7
