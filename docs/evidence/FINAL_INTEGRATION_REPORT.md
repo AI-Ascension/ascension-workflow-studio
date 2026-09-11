@@ -1,6 +1,6 @@
 # Phase 2 final integration report
 
-Date: 2026-09-10  
+Date: 2026-09-11
 Readiness: merged Phase 2 implementation; release remains blocked by the recorded verification gates.
 
 ## Delivered product
@@ -22,7 +22,7 @@ The delivery artifacts are the static bundle under `artifacts/studio-bundle/`, i
 
 ## Coverage and evidence
 
-The requirement ledger currently reports 43 implemented, 31 partial, 33 blocked, and 13 not-started requirements. The acceptance ledger reports 38 evidenced, 36 partial, 33 blocked, and 13 not-run cases. The ledgers preserve the required distinction between source/unit evidence, browser evidence, real Phase 1 process evidence, delivery artifacts, and unavailable native proof.
+The requirement ledger currently reports 45 implemented, 30 partial, 32 blocked, and 13 not-started requirements. The acceptance ledger reports 38 evidenced, 36 partial, 33 blocked, and 13 not-run cases. The ledgers preserve the required distinction between source/unit evidence, browser evidence, real Phase 1 process evidence, delivery artifacts, and unavailable native proof.
 
 The clean-install checks passed:
 
@@ -38,7 +38,7 @@ The clean-install checks passed:
 - authenticated synthetic `sts2-workflow serve` flow: health, capabilities, definitions, draft create, conditional save, validation, publication, draft reload, and published-definition reload all returned HTTP 200; see `phase2-live-authoring-api.json`
 - Phase 2 package verifier and 34 package checker tests
 
-The initial Chromium command passed both browser journeys (2/2) against the built preview. The 2026-09-11 continuation added unsupported-import archival retention and passed all three Studio browser journeys in Chromium and Firefox. Firefox used a user-local dependency/font root and a test-only content-sandbox workaround. WebKit remains unavailable because this VM cannot create its required headless EGL display. This does not constitute a complete cross-browser or accessibility sign-off.
+The initial Chromium command passed both browser journeys (2/2) against the built preview. The 2026-09-11 continuation added unsupported-import archival retention and passed all three Studio browser journeys in Chromium and Firefox. GitHub Actions also passed Chromium, Firefox, and WebKit. Merged Studio commit `b7347fc` adds a GitHub-hosted authenticated live-owner Chromium regression: it builds the pinned harness, starts it with a bearer token, verifies owner health, enters the token and subject in the browser, and activates live-owner mode. It does not yet cover browser saves, publication, revocation, plans, or artifacts.
 
 The exact merged Phase 1 owner suites passed 6 management cases and 5 SQLite cases; the Phase 1 workflow contract, dynamic, runtime and durable-store suites passed 28 cases. Real temporary `sts2-workflow serve` processes passed the admitted health, capability, validation, inspect, run, status, event, replay, redacted-export, draft, save, publication, and reload API checks. Those records are in `docs/evidence/phase1-owner-tests.json`, `phase1-workflow-tests.json`, `phase1-live-api.json`, and `phase2-live-authoring-api.json`.
 
@@ -56,4 +56,4 @@ The Studio and owner PRs were merged in dependency order after their review chec
 
 ## Remaining gaps
 
-The mandatory unresolved work is explicit in the ledgers. The main blockers are the missing native child-session runtime; absent browser pairing, session revocation, plan/artifact retrieval and live browser attachment; the local VM's WebKit headless host requirements; the full accessibility/viewport/zoom matrix; production CSP/static-host review; independent runtime egress and license review; and shared-client regeneration. GitHub Actions now validates the combined Studio main head with unit, build, Chromium, Firefox, WebKit, and recorded-run browser checks. The implementation is merged, but it is not ready for a release decision.
+The mandatory unresolved work is explicit in the ledgers. The main blockers are the missing native child-session runtime; browser session revocation, browser draft persistence/publication, plan/artifact retrieval; the full accessibility/viewport/zoom matrix; production CSP/static-host review; independent runtime egress and license review; and shared-client regeneration. GitHub Actions now validates the combined Studio main head with unit, build, Chromium, Firefox, WebKit, recorded-run browser, and authenticated live-owner browser checks. The implementation is merged, but it is not ready for a release decision.

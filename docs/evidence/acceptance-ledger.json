@@ -328,7 +328,7 @@
       "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Fixture validation and live owner validation are wired; merged owner PR #57 supplies a publication route with digest and validation checks, and the synthetic live process completed validation/publication. Browser and native process evidence remain unavailable."
+      "evidence": "Fixture validation and live owner validation are wired; merged owner PR #57 supplies a publication route with digest and validation checks, and the synthetic live process completed validation/publication. Studio CI run 34628564577 also verified authenticated Chromium pairing and live-mode selection through the same-origin adapter. Browser draft validation/publication and native-gameplay evidence remain unavailable."
     },
     {
       "id": "AT-028",

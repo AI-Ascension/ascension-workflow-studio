@@ -10,6 +10,7 @@ This packet separates product evidence from package integrity and unresolved own
 - `npm test -- --run --pool=threads --maxWorkers=1` passed: 4 files, 99 tests. `npm run build` also passed at the merged source head.
 - Against the built local preview, the three Studio browser journeys passed in Chromium and Firefox: fixture designer, run/replay navigation, and unsupported-import archival retention. Firefox required a user-local dependency/font root and a test-only content-sandbox workaround. This local VM cannot create WebKit's required EGL display; the GitHub-hosted WebKit CI result below supplies the cross-engine execution evidence.
 - Merged Studio commit `e9037d3a210dc967a82d23f48948e4d49aa4bd87` adds the GitHub Actions validation workflow. Main-head run `34624430891` passed clean installation, lint/typecheck, unit tests, production build, Chromium, Firefox, WebKit, and the recorded-run Chromium regression.
+- Merged Studio commit `b7347fc` adds a GitHub-hosted authenticated live-owner Chromium regression. Run `34628564577` built the pinned `sts2-harness` binary, started it with the test bearer token, verified `/v1/health`, and used the built Studio bundle through the same-origin adapter. The browser entered the token and subject, received “Owner reports ok,” and activated live-owner mode. This proves pairing and mode selection only; it does not prove browser draft persistence, publication, revocation, plan inspection, or artifact retrieval.
 
 - `npm ci` passed with the pinned lockfile, including `@playwright/test` 1.63.0.
 - `npm run typecheck` and `npm run lint` passed for the strict app and Vite configuration projects.
@@ -32,14 +33,14 @@ The Studio draft now includes a non-canvas semantic list editor alongside the Re
 
 ## Capability and evidence limits
 
-The live adapter is real code against the merged owner routes, including draft persistence, conditional save, capability validation, and publication. A live synthetic process completed create, save, validate, publish, and reload checks. Browser pairing, session revocation, plan inspection, artifact retrieval, and live browser attachment are absent or unavailable. Fixture mode is explicit and deterministic; its evidence cannot satisfy native gameplay acceptance.
+The live adapter is real code against the merged owner routes, including draft persistence, conditional save, capability validation, and publication. A live synthetic process completed create, save, validate, publish, and reload checks. GitHub-hosted Chromium evidence now covers authenticated browser pairing and live-mode selection. Browser session revocation, browser draft persistence and publication, plan inspection, and artifact retrieval remain unavailable. Fixture mode is explicit and deterministic; its evidence cannot satisfy native gameplay acceptance.
 
 The runtime did not expose callable D0→D1→D2→D3 Luna Max child sessions. No subprocess chain or false attestation was substituted. The exact blocked and partial requirement entries are in `requirement-ledger.json`.
 
-The desktop fixture journeys now have Chromium and Firefox coverage. WebKit, the 390px-through-desktop responsive matrix, 200/400 percent zoom, manual screen-reader review, production host CSP headers, live owner attachment, and browser permission/revocation states remain unverified. The production bundle contains a single minified JavaScript chunk of 553,475 bytes because React Flow is included in the initial route; Vite reports a chunk-size warning, and route-level code splitting remains a follow-up.
+The desktop fixture journeys now have Chromium and Firefox coverage, and GitHub Actions also passes the configured WebKit suite. The 390px-through-desktop responsive matrix, 200/400 percent zoom, manual screen-reader review, production host CSP headers, and browser permission/revocation states remain unverified. The production bundle contains a single minified JavaScript chunk of 553,475 bytes because React Flow is included in the initial route; Vite reports a chunk-size warning, and route-level code splitting remains a follow-up.
 
 Phase 2 is merged. No release, deployment, live game session, or native hierarchy claim is made by this packet.
 
 ## Next verification gates
 
-Attach a served static bundle to a real authenticated harness process, exercise strict and dynamic owner round-trips, complete the cross-browser/accessibility/security matrix, and review the remaining owner adapter gaps before a release decision.
+Exercise browser draft persistence, publication, revocation, plan inspection, and artifact retrieval against the authenticated owner; then complete the responsive, accessibility, and production-host security matrix before a release decision.
