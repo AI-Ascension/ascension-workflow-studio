@@ -100,9 +100,13 @@ describe("workflow document identity", () => {
     expect(() => parseBoundedJson("9007199254740993")).toThrow("safe range");
     parseBoundedJson('{"__proto__":{"polluted":true}}');
     expect(({} as { polluted?: boolean }).polluted).toBeUndefined();
-    const archival = parseDefinitionImport('{"schema_version":"ascension.workflow/v2","graphs":[]}');
+    const original = '{\n  "graphs": [],\n  "schema_version": "ascension.workflow/v2"\n}';
+    const archival = parseDefinitionImport(original);
     expect(archival.kind).toBe("archival");
-    if (archival.kind === "archival") expect(archival.schemaVersion).toBe("ascension.workflow/v2");
+    if (archival.kind === "archival") {
+      expect(archival.schemaVersion).toBe("ascension.workflow/v2");
+      expect(archival.rawText).toBe(original);
+    }
   });
 
   it("remaps copied node IDs and retains only internal edges", () => {
