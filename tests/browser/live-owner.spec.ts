@@ -66,5 +66,7 @@ test("renders an owner revision conflict after a stale browser save", async ({ p
   await raw.fill(JSON.stringify(local, null, 2));
   await page.getByRole("button", { name: "Apply candidate" }).click();
   await expect(page.getByRole("heading", { name: "Local and remote drafts diverged" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Reload remote" })).toBeVisible();
+  await page.getByRole("button", { name: "Reload remote" }).click();
+  await expect(page.getByText("Remote revision loaded; local conflict was discarded.")).toBeVisible();
+  await expect(page.getByText("saved", { exact: true })).toBeVisible();
 });
