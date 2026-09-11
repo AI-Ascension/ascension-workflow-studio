@@ -282,6 +282,7 @@ export const DefinitionRecordSchema = z.object({
   updatedAt: z.string(),
   definition: WorkflowDefinitionSchema,
   capabilities: z.array(z.string()),
+  definitionDigest: z.string().optional(),
 }).strict();
 export type DefinitionRecord = z.infer<typeof DefinitionRecordSchema>;
 

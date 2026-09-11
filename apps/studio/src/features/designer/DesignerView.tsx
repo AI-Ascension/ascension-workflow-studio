@@ -46,6 +46,7 @@ import {
   layoutIsValid,
   mergeDocuments,
   mergeLayoutSidecars,
+  resolveSubworkflowReference,
   parseBoundedJson,
   parseDefinitionImport,
   removeNode,
@@ -76,6 +77,7 @@ type EditorTab = "canvas" | "list";
 
 interface DesignerViewProps {
   client: StudioClient;
+  catalog: DefinitionRecord[];
   definition: DefinitionRecord;
   initialDocument: WorkflowDefinition;
   initialRawText?: string;
@@ -111,7 +113,7 @@ function copyEditorSnapshot(snapshot: EditorSnapshot): EditorSnapshot {
   };
 }
 
-export function DesignerView({ client, definition, initialDocument, initialRawText, mode, onBack, onRun, onRawTextChange }: DesignerViewProps): JSX.Element {
+export function DesignerView({ client, catalog, definition, initialDocument, initialRawText, mode, onBack, onRun, onRawTextChange }: DesignerViewProps): JSX.Element {
   const [document, setDocument] = useState<SemanticDocument>(() => initialDocument);
   const [layout, setLayout] = useState<LayoutSidecar>(() => createLayout(initialDocument, "pending"));
   const [nodes, setNodes] = useState<FlowNode[]>(() => toFlowNodes(initialDocument, createLayout(initialDocument, "pending")));
@@ -788,10 +790,10 @@ export function DesignerView({ client, definition, initialDocument, initialRawTe
         </ReactFlow>
       </div>
       <div className="inspector-stack">
-        <InspectorPanel document={document} selected={selected} selectedConfigText={selectedConfigText} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />
+        <InspectorPanel document={document} catalog={catalog} selected={selected} selectedConfigText={selectedConfigText} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />
         {selectedEdge ? <EdgeInspector document={document} selectedEdge={selectedEdge} onReconnect={applyReconnect} /> : null}
       </div>
-    </div> : <ListEditor document={document} selectedId={selectedId} selectedIds={selectedIds} onSelect={selectNode} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />}
+    </div> : <ListEditor document={document} catalog={catalog} selectedId={selectedId} selectedIds={selectedIds} onSelect={selectNode} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />}
     {diagnostics ? <DiagnosticsPanel result={diagnostics} onFocusPath={(path) => {
       const target = document.graphs.flatMap((graph) => graph.nodes.map((node) => ({ graphId: graph.id, nodeId: node.id }))).find((candidate) => path.includes(candidate.nodeId));
       if (target) {
@@ -809,6 +811,7 @@ interface SelectedNode {
 
 interface InspectorPanelProps {
   document: SemanticDocument;
+  catalog: DefinitionRecord[];
   selected: SelectedNode | undefined;
   selectedConfigText: string;
   onUpdate: (update: (node: WorkflowNode) => WorkflowNode) => void;
@@ -816,7 +819,7 @@ interface InspectorPanelProps {
   onNavigateGraph: (graphId: string) => void;
 }
 
-function InspectorPanel({ document, selected, selectedConfigText, onUpdate, onRemove, onNavigateGraph }: InspectorPanelProps): JSX.Element {
+function InspectorPanel({ document, catalog, selected, selectedConfigText, onUpdate, onRemove, onNavigateGraph }: InspectorPanelProps): JSX.Element {
   const [configText, setConfigText] = useState(selectedConfigText);
   const [configError, setConfigError] = useState<string | undefined>();
   useEffect(() => setConfigText(selectedConfigText), [selectedConfigText]);
@@ -832,7 +835,7 @@ function InspectorPanel({ document, selected, selectedConfigText, onUpdate, onRe
       </select>
     </label>
     {selected.node.kind === "loop" ? <LoopBodyGraphNavigation document={document} node={selected.node} onNavigateGraph={onNavigateGraph} /> : null}
-    {selected.node.kind === "subworkflow" ? <SubworkflowReference node={selected.node} disabled={locked} onUpdate={onUpdate} /> : null}
+    {selected.node.kind === "subworkflow" ? <SubworkflowReference node={selected.node} catalog={catalog} disabled={locked} onUpdate={onUpdate} /> : null}
     <TypedConfigFields node={selected.node} disabled={locked} onUpdate={onUpdate} />
     <label className="field-label">Configuration <span className="muted">JSON object</span>
       <textarea value={configText} disabled={locked} rows={12} onChange={(event) => { setConfigText(event.target.value); setConfigError(undefined); }} onBlur={() => {
@@ -1226,6 +1229,7 @@ function EdgeInspector({ document, selectedEdge, onReconnect }: { document: Sema
 
 interface ListEditorProps {
   document: SemanticDocument;
+  catalog: DefinitionRecord[];
   selectedId: string | undefined;
   selectedIds: string[];
   onSelect: (id: string, additive?: boolean) => void;
@@ -1283,10 +1287,12 @@ function PinnedRefField({ label, value, disabled, onCommit }: { label: string; v
   </label>;
 }
 
-function SubworkflowReference({ node, disabled, onUpdate }: { node: WorkflowNode; disabled: boolean; onUpdate: InspectorPanelProps["onUpdate"] }): JSX.Element {
+function SubworkflowReference({ node, catalog, disabled, onUpdate }: { node: WorkflowNode; catalog: DefinitionRecord[]; disabled: boolean; onUpdate: InspectorPanelProps["onUpdate"] }): JSX.Element {
   const [inspecting, setInspecting] = useState(false);
   const raw = node.config.artifact_ref;
   const ref = raw !== null && typeof raw === "object" && !Array.isArray(raw) ? raw as Record<string, JsonValue> : {};
+  const resolution = resolveSubworkflowReference(catalog, node.config);
+  const resolutionTone = resolution.status === "resolved" ? (resolution.digestVerified ? "success" : "warning") : "danger";
   const update = (key: string, value: string): void => {
     onUpdate((candidate) => ({ ...candidate, config: { ...candidate.config, artifact_ref: { ...ref, [key]: value } } }));
   };
@@ -1295,12 +1301,17 @@ function SubworkflowReference({ node, disabled, onUpdate }: { node: WorkflowNode
     <PinnedRefField label="Reference id" value={ref.id} disabled={disabled} onCommit={(value) => update("id", value)} />
     <PinnedRefField label="Reference version" value={ref.version} disabled={disabled} onCommit={(value) => update("version", value)} />
     <PinnedRefField label="Reference digest" value={ref.digest} disabled={disabled} onCommit={(value) => update("digest", value)} />
+    <div className="reference-resolution" aria-label="Pinned reference resolution" data-status={resolution.status}>
+      <StatusBadge tone={resolutionTone}>{resolution.status === "resolved" ? (resolution.digestVerified ? "resolved" : "resolved · digest unverified") : "unavailable"}</StatusBadge>
+      <span>{resolution.message}</span>
+    </div>
+    <p className="muted reference-bindings">Phase 1 admits only this exact pinned reference; typed input/output bindings are not yet supported and no floating latest reference is used.</p>
     <button className="button button-quiet" onClick={() => setInspecting((current) => !current)}>{inspecting ? "Close reference note" : "Inspect reference"}</button>
     {inspecting ? <Notice tone="warning" title="Library reference">This node pins an immutable library artifact by version and digest. Editing the shared definition requires an intentional fork or a new version; this Studio changes only the pinned reference.</Notice> : null}
   </div>;
 }
 
-function ListEditor({ document, selectedId, selectedIds, onSelect, onUpdate, onRemove, onNavigateGraph }: ListEditorProps): JSX.Element {
+function ListEditor({ document, catalog, selectedId, selectedIds, onSelect, onUpdate, onRemove, onNavigateGraph }: ListEditorProps): JSX.Element {
   const selected = findSelectedNode(document, selectedId);
   return <div className="list-editor">
     <div className="list-editor-main">
@@ -1317,7 +1328,7 @@ function ListEditor({ document, selectedId, selectedIds, onSelect, onUpdate, onR
         })}
       </div>)}
     </div>
-    <InspectorPanel document={document} selected={selected} selectedConfigText={selected ? JSON.stringify(selected.node.config, null, 2) : ""} onUpdate={onUpdate} onRemove={onRemove} onNavigateGraph={onNavigateGraph} />
+    <InspectorPanel document={document} catalog={catalog} selected={selected} selectedConfigText={selected ? JSON.stringify(selected.node.config, null, 2) : ""} onUpdate={onUpdate} onRemove={onRemove} onNavigateGraph={onNavigateGraph} />
   </div>;
 }
 

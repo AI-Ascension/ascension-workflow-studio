@@ -215,3 +215,7 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 .identity-note { margin: -2px 0 4px; font-size: .68rem; }
 .validation-identity { display: inline-flex; gap: 8px; align-items: center; }
 .compile-identity { border: 1px solid var(--line); border-radius: 999px; padding: 2px 9px; color: var(--teal); font-family: monospace; font-size: .68rem; }
+
+.reference-resolution { display: flex; align-items: flex-start; gap: 8px; border-top: 1px solid rgba(44, 65, 91, .75); padding-top: 10px; }
+.reference-resolution span { color: var(--muted); font-size: .71rem; line-height: 1.4; }
+.reference-bindings { margin: 0 0 4px; font-size: .68rem; }
