@@ -308,10 +308,10 @@
         "P2-026"
       ],
       "work_package": "WP-08",
-      "status": "partial",
-      "actual_command": "npm test -- --run",
+      "status": "implemented",
+      "actual_command": "npm test -- --run --pool=threads --maxWorkers=1; GitHub Actions Studio validation runs 34639729580 and 34642971172",
       "actual_source_heads": {
-        "studio": "4b4788c"
+        "studio": "c779980"
       },
       "evidence": "Structured diagnostics are rendered as accessible focus buttons in source; owner delayed compiler and edge/property browser targets were not available.",
       "actual_evidence_refs": [
@@ -489,7 +489,7 @@
       "actual_source_heads": {
         "studio": "4b4788c"
       },
-      "evidence": "Studio CI run 34639729580 verified malformed JSON remains visible after Library navigation, does not replace the saved draft, and can be repaired, atomically applied, autosaved, and reopened. The complete malicious/future-schema browser matrix remains partial.",
+      "evidence": "Studio CI runs 34639729580 and 34642971172 verified malformed JSON remains visible after Library navigation, does not replace the saved draft, and can be repaired, atomically applied, autosaved, and reopened; duplicate keys are rejected without draft mutation; unsupported future-schema text is retained read-only.",
       "actual_evidence_refs": [
         "apps/studio/src/features/designer/DesignerView.tsx",
     "packages/document/src/index.ts",

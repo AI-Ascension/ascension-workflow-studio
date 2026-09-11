@@ -402,8 +402,8 @@
       "id": "P2-040",
       "mandatory": true,
       "work_package": "WP-13",
-      "status": "partial",
-      "evidence": "Merged Studio commit 3a63498 retains raw candidate text across in-app navigation without persisting malformed input. Studio CI run 34639729580 verified malformed JSON remains visible after navigation, the saved draft remains intact, and a repaired JSON candidate applies atomically and is then autosaved. The complete malicious/future-schema browser matrix remains partial.",
+      "status": "implemented",
+      "evidence": "Merged Studio commits 3a63498 and c779980 retain raw candidate text across in-app navigation without persisting rejected input. Studio CI runs 34639729580 and 34642971172 verify malformed JSON repair and atomic autosave/reopen, duplicate-key rejection without draft mutation, and future-schema archival retention.",
       "acceptance_cases": [
         "AT-040"
       ]
