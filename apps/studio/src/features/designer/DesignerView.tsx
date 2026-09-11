@@ -81,6 +81,12 @@ interface DraftState {
   server?: DraftRecord;
 }
 
+interface ArchivalImport {
+  schemaVersion: string;
+  rawText: string;
+  reason: string;
+}
+
 export function DesignerView({ client, definition, initialDocument, mode, onBack, onRun }: DesignerViewProps): JSX.Element {
   const [document, setDocument] = useState<SemanticDocument>(() => initialDocument);
   const [layout, setLayout] = useState<LayoutSidecar>(() => createLayout(initialDocument, "pending"));
@@ -93,7 +99,7 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
   const [rawMode, setRawMode] = useState(false);
   const [rawText, setRawText] = useState(() => JSON.stringify(initialDocument, null, 2));
   const [rawError, setRawError] = useState<string | undefined>();
-  const [archivalMessage, setArchivalMessage] = useState<string | undefined>();
+  const [archivalImport, setArchivalImport] = useState<ArchivalImport | undefined>();
   const [bundlePreview, setBundlePreview] = useState<string | undefined>();
   const [diagnostics, setDiagnostics] = useState<ValidateResponse | undefined>();
   const [validationState, setValidationState] = useState<"idle" | "running" | "valid" | "invalid" | "error">("idle");
@@ -126,7 +132,7 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
     setSelectedEdge(undefined);
     setRawText(JSON.stringify(initialDocument, null, 2));
     setRawError(undefined);
-    setArchivalMessage(undefined);
+    setArchivalImport(undefined);
     setDiagnostics(undefined);
     setValidationState("idle");
     setDraftHydrated(false);
@@ -222,7 +228,7 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
     setNodes(toFlowNodes(nextDocument, nextLayout));
     setRawText(JSON.stringify(nextDocument, null, 2));
     setRawError(undefined);
-    setArchivalMessage(undefined);
+    setArchivalImport(undefined);
     setDiagnostics(undefined);
     setValidationState("idle");
   }, [ensureLayout, layout]);
@@ -300,7 +306,7 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
     try {
       const imported = parseDefinitionImport(rawText);
       if (imported.kind === "archival") {
-        setArchivalMessage(`${imported.schemaVersion}: ${imported.reason}`);
+        setArchivalImport(imported);
         setValidationState("error");
         setValidationMessage("Future-schema content is retained read-only and cannot be submitted.");
         return;
@@ -440,8 +446,8 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    const raw = await file.text();
     try {
-      const raw = await file.text();
       const bundle = await parseStudioBundle(raw);
       history.current = new History(bundle.semantic, (value) => JSON.parse(JSON.stringify(value)) as WorkflowDefinition);
       setDocument(bundle.semantic);
@@ -451,15 +457,15 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
       setSelectedIds([]);
       setSelectedEdge(undefined);
       setRawText(JSON.stringify(bundle.semantic, null, 2));
-      setArchivalMessage(undefined);
+      setArchivalImport(undefined);
       setDiagnostics(undefined);
       setValidationState("valid");
       setValidationMessage("Imported and verified a digest-bound Studio bundle.");
     } catch (error: unknown) {
       try {
-        const imported = parseDefinitionImport(await file.text());
+        const imported = parseDefinitionImport(raw);
         if (imported.kind === "archival") {
-          setArchivalMessage(`${imported.schemaVersion}: ${imported.reason}`);
+          setArchivalImport(imported);
           setValidationState("error");
           setValidationMessage("Future-schema content was retained in read-only archival mode.");
         } else {
@@ -572,7 +578,7 @@ export function DesignerView({ client, definition, initialDocument, mode, onBack
     </div>
     <DefinitionControls document={document} onCommit={commit} />
     {rawMode ? <RawDefinitionPanel rawText={rawText} error={rawError} onChange={(value) => { setRawText(value); setRawError(undefined); }} onApply={applyRawDefinition} /> : null}
-    {archivalMessage ? <Notice tone="warning" title="Read-only archival import">{archivalMessage}</Notice> : null}
+    {archivalImport ? <ArchivalImportPanel archival={archivalImport} /> : null}
     {bundlePreview ? <details className="bundle-preview"><summary>Last portable bundle preview</summary><pre>{bundlePreview}
 …</pre></details> : null}
     {tab === "canvas" ? <div className="designer-body">
@@ -807,6 +813,14 @@ function GuardField({ guard, onCommit }: { guard: WorkflowGuard; onCommit: (guar
 
 function RawDefinitionPanel({ rawText, error, onChange, onApply }: { rawText: string; error: string | undefined; onChange: (value: string) => void; onApply: () => void }): JSX.Element {
   return <section className="raw-definition-panel panel-card" aria-label="Raw definition editor"><div className="panel-title"><div><p className="eyebrow">Bounded JSON mode</p><h2>Owner definition candidate</h2></div><button className="button button-primary" onClick={onApply}>Apply candidate</button></div><p className="muted">Duplicate keys, unsafe numbers, excessive depth, and unsupported schemas are rejected or retained read-only before admission.</p><textarea value={rawText} rows={18} spellCheck={false} onChange={(event) => onChange(event.target.value)} aria-label="Raw workflow definition JSON" />{error ? <p className="field-error" role="alert">{error}</p> : null}</section>;
+}
+
+function ArchivalImportPanel({ archival }: { archival: ArchivalImport }): JSX.Element {
+  return <section className="raw-definition-panel panel-card archival-import" aria-label="Read-only archival import">
+    <Notice tone="warning" title="Read-only archival import">{`${archival.schemaVersion}: ${archival.reason}`}</Notice>
+    <p className="muted">The original import text is retained locally for review only. It is not applied to this draft, autosaved, validated, or published.</p>
+    <textarea value={archival.rawText} rows={12} readOnly spellCheck={false} aria-label="Archived unsupported workflow definition JSON" />
+  </section>;
 }
 
 function ConflictPanel({ base, local, remote, onKeepRemote, onKeepLocal, onMerge }: { base: SemanticDocument; local: SemanticDocument; remote: SemanticDocument; onKeepRemote: () => void; onKeepLocal: () => Promise<void>; onMerge: () => void }): JSX.Element {

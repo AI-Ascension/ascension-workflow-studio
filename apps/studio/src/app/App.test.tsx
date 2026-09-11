@@ -1,5 +1,5 @@
 import { userEvent } from "@testing-library/user-event";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { App } from "./App";
@@ -29,5 +29,21 @@ describe("Studio shell", () => {
     await user.click(screen.getByRole("button", { name: "JSON mode" }));
     expect(screen.getByRole("textbox", { name: "Raw workflow definition JSON" })).toBeInTheDocument();
     expect(screen.getByText("Bounded JSON mode")).toBeInTheDocument();
+  });
+
+  it("keeps unsupported definition text in a read-only archival panel", async () => {
+    const user = userEvent.setup();
+    const original = '{\n  "graphs": [],\n  "schema_version": "ascension.workflow/v2"\n}';
+    render(<App />);
+    await screen.findByRole("heading", { name: "Workflow library" });
+    await user.click(screen.getAllByRole("button", { name: "Open designer" })[0]);
+    await user.click(screen.getByRole("button", { name: "JSON mode" }));
+    const editor = screen.getByRole("textbox", { name: "Raw workflow definition JSON" });
+    fireEvent.change(editor, { target: { value: original } });
+    await user.click(screen.getByRole("button", { name: "Apply candidate" }));
+    const archived = await screen.findByRole("textbox", { name: "Archived unsupported workflow definition JSON" });
+    expect(archived).toHaveValue(original);
+    expect(archived).toHaveAttribute("readonly");
+    expect(screen.getByText(/not applied to this draft, autosaved, validated, or published/i)).toBeInTheDocument();
   });
 });

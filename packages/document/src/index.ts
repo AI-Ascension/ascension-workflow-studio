@@ -58,7 +58,15 @@ const defaultJsonImportLimits: JsonImportLimits = {
 
 export type DefinitionImport =
   | { kind: "supported"; document: SemanticDocument }
-  | { kind: "archival"; schemaVersion: string; raw: JsonValue; reason: string };
+  | {
+    kind: "archival";
+    schemaVersion: string;
+    /** Parsed only for bounded classification. Never use this as a serialization source. */
+    raw: JsonValue;
+    /** The exact caller-provided JSON text, retained solely for read-only archival display/export. */
+    rawText: string;
+    reason: string;
+  };
 
 export interface MergeConflict {
   path: string;
@@ -151,6 +159,7 @@ export function parseDefinitionImport(raw: string, requestedLimits: Partial<Json
       kind: "archival",
       schemaVersion,
       raw: parsed,
+      rawText: raw,
       reason: "This schema version is unsupported by the active owner contract; the raw bytes remain read-only.",
     };
   }
