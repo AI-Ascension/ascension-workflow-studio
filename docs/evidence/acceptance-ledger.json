@@ -3,10 +3,10 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 43,
+    "evidenced": 44,
     "partial": 30,
     "implemented": 6,
-    "not_run": 7
+    "not_run": 6
   },
   "cases": [
     {
@@ -950,10 +950,16 @@
         "P2-074"
       ],
       "work_package": "WP-24",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34661271273 (live-owner browser against the real harness owner)",
+      "actual_source_heads": {
+        "studio": "46feb91"
+      },
+      "evidence": "The live-owner browser test drops an accepted command response, asserts the UI enters the unknown/checking state with the original command ID and no applied claim, then checks the outcome by the same ID and asserts it settles with that ID. It proves no new-ID retry and no optimistic completed status; admission and application are described separately.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/runs/RunsView.tsx",
+        "tests/browser/live-owner.spec.ts"
+      ]
     },
     {
       "id": "AT-075",
