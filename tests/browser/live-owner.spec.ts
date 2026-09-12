@@ -342,7 +342,7 @@ test("retries a lost draft-save response with the original mutation identity", a
   await page.getByRole("button", { name: "Apply candidate" }).click();
   await expect(page.getByRole("button", { name: "Retry save" })).toBeVisible();
   await page.getByRole("button", { name: "Retry save" }).click();
-  await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+  await expect(page.getByText(/Autosaved to the active adapter\.|The owner already stored this candidate/)).toBeVisible();
   expect(dropped).toBe(true);
 
   const saved = await page.evaluate(async (id) => {
@@ -631,4 +631,45 @@ test("scopes crash recovery by principal and survives quota pressure", async ({ 
   await expect(switched).toContainText("profile:other");
   await expect(switched).toContainText(/Stored records for this principal: 0/);
   await expect(switched.getByRole("button", { name: "Recover unsaved candidate" })).toBeDisabled();
+});
+
+test("reconciles the owner revision before retrying an offline save", async ({ page }) => {
+  await connectLiveOwner(page);
+  const definitionId = await openOwnedDraft(page);
+  await page.route("**/v1/studio/drafts/**", async (route) => {
+    const isRemoteMutation = (route.request().postData() ?? "").includes("studio.live-browser.offline-remote");
+    if (route.request().method() === "PUT" && !isRemoteMutation) {
+      await route.abort("failed");
+      return;
+    }
+    await route.continue();
+  });
+
+  await applyLocalEdit(page, (local) => { local.version = "1.0.9"; });
+  await expect(page.getByRole("button", { name: "Retry save" })).toBeVisible();
+
+  const remote = await page.evaluate(async (id) => {
+    const headers = { Authorization: "Bearer studio-live-ci-token", "Content-Type": "application/json" };
+    const draftPath = `/v1/studio/drafts/draft.${id}`;
+    const current = await (await fetch(draftPath, { headers })).json();
+    const response = await fetch(draftPath, {
+      method: "PUT",
+      headers,
+      body: JSON.stringify({
+        schema_version: "ascension.studio-authoring/v1",
+        expected_revision: current.revision,
+        etag: current.etag,
+        client_mutation_id: "studio.live-browser.offline-remote",
+        document: current.document,
+        layout: current.layout,
+      }),
+    });
+    return { status: response.status, body: await response.json() };
+  }, definitionId);
+  expect(remote.status).toBe(200);
+
+  await page.getByRole("button", { name: "Retry save" }).click();
+  await expect(page.getByRole("heading", { name: "Local and remote drafts diverged" })).toBeVisible();
+  await expect(page.getByText(/owner revision moved while this tab was offline/)).toBeVisible();
+  await expect(page.getByLabel("Raw workflow definition JSON")).toHaveValue(/"version": "1.0.9"/);
 });

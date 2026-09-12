@@ -48,6 +48,7 @@ import {
   layoutIsValid,
   mergeDocuments,
   mergeLayoutSidecars,
+  canonicalJson,
   createEditGeneration,
   resolveSubworkflowReference,
   semanticDigest,
@@ -416,8 +417,27 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     setRawError(undefined);
   };
 
-  const retrySave = (): void => {
+  const retrySave = async (): Promise<void> => {
     if (draft.state !== "offline") return;
+    setDraft((current) => ({ ...current, state: "saving", message: "Reconciling the owner revision before retrying…" }));
+    try {
+      const server = await client.getDraft(draftId);
+      if (server) {
+        const storedMatchesLocal = canonicalJson(server.document) === canonicalJson(document) && canonicalJson(server.layout) === canonicalJson(layout);
+        if (storedMatchesLocal) {
+          persistedKeyRef.current = valueKey(document, layout);
+          mergeBaseRef.current = cloneDocument(server.document);
+          setDraft({ revision: server.revision, etag: server.etag, state: "saved", message: "The owner already stored this candidate; the retry resolved to the existing revision." });
+          return;
+        }
+        if (server.revision !== draft.revision || server.etag !== draft.etag) {
+          setDraft({ revision: server.revision, etag: server.etag, state: "conflict", message: "The owner revision moved while this tab was offline; review the conflict before saving.", server });
+          return;
+        }
+      }
+    } catch {
+      // Reconciliation is best-effort; a failed lookup falls back to the retry identity.
+    }
     setDraft((current) => ({ ...current, state: "saving", message: "Retrying the same draft save identity…" }));
     setSaveRetry((current) => current + 1);
   };
@@ -836,7 +856,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       </div>
       <div className="heading-actions">
         <StatusBadge tone={draft.state === "saved" ? "success" : draft.state === "conflict" ? "danger" : "warning"}>{draft.state}</StatusBadge>
-        {draft.state === "offline" ? <button className="button button-secondary" onClick={retrySave}>Retry save</button> : null}
+        {draft.state === "offline" ? <button className="button button-secondary" onClick={() => void retrySave()}>Retry save</button> : null}
         <button className="button button-secondary" onClick={() => void validate()} disabled={validationState === "running" || publicationState === "publishing"}>◈ Validate</button>
         <button className="button button-primary" onClick={() => void publish()} disabled={publicationState === "publishing" || draft.state !== "saved"}>{publicationState === "publishing" ? "Publishing…" : "Publish revision"}</button>
         <button className="button button-primary" onClick={() => onRun(document)}>Run inspection</button>
