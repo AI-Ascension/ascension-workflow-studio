@@ -136,6 +136,11 @@ test("round-trips strict and dynamic definitions through the owner without seman
     expect(bundle).toContain(cardId);
 
     await page.setInputFiles('input[type="file"]', { name: "round-trip.studio.json", mimeType: "application/json", buffer: Buffer.from(bundle) });
+    const preview = page.getByLabel("Imported bundle preview");
+    await expect(preview).toBeVisible();
+    await expect(preview).toContainText(cardId);
+    await expect(preview).toContainText("No semantic differences from the current document.");
+    await preview.getByRole("button", { name: "Apply imported bundle" }).click();
     await expect(page.locator(".validation-label")).toHaveText(/Imported and verified a digest-bound Studio bundle\.|Autosaved to the active adapter\./);
     const after = await validateAndReadDigest(page);
     expect(after).toBe(before);
