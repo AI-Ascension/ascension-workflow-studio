@@ -96,6 +96,51 @@ async function applyLocalEdit(page: Page, edit: (document: { version: string; gr
   await page.getByRole("button", { name: "Apply candidate" }).click();
 }
 
+test("publishes adaptive region edits as a new revision and leaves the active run pinned", async ({ page }) => {
+  await connectLiveOwner(page);
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  const card = page.locator(".definition-card").filter({ hasText: "sts2.combat.dynamic" });
+  await expect(card).toHaveCount(1);
+  await card.getByRole("button", { name: "Clone draft" }).click();
+  await expect(page.getByText(/Loaded the owner-backed draft\.|Autosaved to the active adapter\./)).toBeVisible();
+
+  await page.getByRole("button", { name: "Run inspection" }).click();
+  await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
+  const runDigest = page.getByTestId("run-definition-digest");
+  await expect(runDigest).not.toHaveText("");
+  const pinnedDigest = (await runDigest.textContent()) ?? "";
+  expect(pinnedDigest.length).toBeGreaterThan(8);
+
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await page.locator(".definition-card").filter({ hasText: "sts2.combat.dynamic" }).getByRole("button", { name: "Open designer" }).click();
+  await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
+  await page.getByRole("tab", { name: "List editor" }).click();
+  await page.locator(".node-list-row", { hasText: "iteration_adaptive" }).click();
+  const inspector = page.getByLabel("Node inspector");
+  await expect(inspector).toContainText("Authored region bounds are editable");
+  const kindSelect = inspector.getByLabel("Node kind");
+  await expect(kindSelect).toBeDisabled();
+  await expect(inspector.locator("textarea")).toBeDisabled();
+  await expect(inspector.getByRole("button", { name: "Remove node" })).toHaveCount(0);
+  const replans = inspector.locator("label.field-label", { hasText: "Maximum replans" }).locator("input");
+  await replans.fill("3");
+  await replans.blur();
+  await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+
+  await page.getByRole("button", { name: /Validate/ }).click();
+  await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
+  const revisedDigest = (await page.getByTestId("identity-definition-digest").textContent()) ?? "";
+  expect(revisedDigest).not.toContain("not validated");
+  expect(pinnedDigest.startsWith(revisedDigest.replace("…", "").slice(0, 12))).toBe(false);
+  await page.getByRole("button", { name: "Publish revision" }).click();
+  await expect(page.locator(".validation-label")).toHaveText(/Published an immutable owner revision\.|This exact semantic digest is already published\./);
+
+  await page.getByRole("button", { name: "Runs", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
+  await expect(page.getByTestId("run-definition-digest")).toHaveText(pinnedDigest);
+  await expect(page.getByText(/pinned to its admitted definition digest/)).toBeVisible();
+  await expect(page.getByRole("button", { name: /Apply to active run|hot swap|Apply plan/i })).toHaveCount(0);
+});
 test("pairs with the authenticated owner through the same-origin adapter", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Open settings" }).click();
@@ -121,10 +166,11 @@ test("pairs with the authenticated owner through the same-origin adapter", async
   await page.getByRole("button", { name: /Validate/ }).click();
   await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
   await page.getByRole("button", { name: "Publish revision" }).click();
+  await page.waitForTimeout(1500);
   await expect(page.locator(".validation-label")).toHaveText(/Published an immutable owner revision\.|This exact semantic digest is already published\./);
   await page.getByRole("button", { name: "Library", exact: true }).click();
   await page.getByRole("button", { name: "Refresh library" }).click();
-  await expect(page.getByText("published", { exact: true })).toBeVisible();
+  await expect(page.getByText("published", { exact: true }).first()).toBeVisible();
 });
 
 test("renders an owner revision conflict after a stale browser save", async ({ page }) => {
