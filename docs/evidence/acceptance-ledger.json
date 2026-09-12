@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 59,
-    "partial": 21,
+    "evidenced": 61,
+    "partial": 19,
     "implemented": 6
   },
   "cases": [
@@ -598,10 +598,18 @@
         "P2-046"
       ],
       "work_package": "WP-15",
-      "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the synthetic live process completed draft create and reload. Studio CI run 34636988818 verified an authenticated Chromium user creates and hydrates a draft, receives a stale-revision draft-save conflict after a separate authenticated owner write, and resolves it by loading the remote owner revision. Browser retry and merge application remain unverified."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34679245809 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner)",
+      "actual_source_heads": {
+        "studio": "ec8dd67",
+        "owner": "PR #57"
+      },
+      "evidence": "Authenticated browser coverage against a real owner process for persistence/recovery: draft create and hydration, stale-revision draft-save conflict plus remote-revision resolution (CI run 34636988818), retry of a lost draft-save response with the original mutation identity, and three-way merge application with revalidation of the merged candidate. Authenticated live-owner browser suite against a real owner process (`sts2-workflow serve --auth-profile studio-live`), 18 tests.",
+      "actual_evidence_refs": [
+        "tests/browser/live-owner.spec.ts",
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "apps/studio/src/features/designer/recoveryStore.ts"
+      ]
     },
     {
       "id": "AT-047",
@@ -750,10 +758,18 @@
         "P2-056"
       ],
       "work_package": "WP-18",
-      "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Merged owner PR #57 supplies a typed publication response with published, already-published, and conflict outcomes; the synthetic live process observed the published outcome. Studio CI run 34632504542 verified published or already-published browser outcomes, and run 34638586490 verified authenticated browser presentation of a stale-revision publication conflict. Lost-response resolution by querying the original publication identity remains unverified."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34679245809 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner)",
+      "actual_source_heads": {
+        "studio": "ec8dd67",
+        "owner": "PR #57"
+      },
+      "evidence": "Typed publication outcomes (published, already-published, conflict) are exercised against a real owner process, including a stale-revision conflict presentation and \u2014 new in PR #97 \u2014 resolution of a lost publication response: the retry reuses the original publication identity and resolves to published or already_published without creating a duplicate revision. Authenticated live-owner browser suite against a real owner process (`sts2-workflow serve --auth-profile studio-live`), 18 tests.",
+      "actual_evidence_refs": [
+        "tests/browser/live-owner.spec.ts",
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "packages/client/src/index.ts"
+      ]
     },
     {
       "id": "AT-057",
