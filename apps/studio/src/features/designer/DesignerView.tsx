@@ -48,6 +48,7 @@ import {
   layoutIsValid,
   mergeDocuments,
   mergeLayoutSidecars,
+  createEditGeneration,
   resolveSubworkflowReference,
   semanticDigest,
   parseBoundedJson,
@@ -152,6 +153,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const mutationIdsRef = useRef(new Map<string, string>());
   const publicationIdsRef = useRef(new Map<string, string>());
   const saveGenerationRef = useRef(0);
+  const editGeneration = useRef(createEditGeneration());
   const history = useRef(new History<EditorSnapshot>(
     { document: initialDocument, layout: createLayout(initialDocument, "pending") },
     copyEditorSnapshot,
@@ -305,6 +307,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   }, []);
 
   const commitSnapshot = useCallback((nextDocument: SemanticDocument, nextLayout: LayoutSidecar): void => {
+    editGeneration.current.bump();
     const boundLayout = { ...ensureLayout(nextDocument, nextLayout), semanticDigest: "pending" } as LayoutSidecar;
     history.current.commit({ document: nextDocument, layout: boundLayout });
     setDocument(nextDocument);
@@ -581,8 +584,10 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const validate = async (): Promise<void> => {
     setValidationState("running");
     setValidationMessage("");
+    const generation = editGeneration.current.current();
     try {
       const result = await client.validate(document);
+      if (!editGeneration.current.isCurrent(generation)) return;
       setDiagnostics(result);
       setValidationState(result.valid ? "valid" : "invalid");
       setValidationMessage(result.valid ? `Validated at ${result.definition_digest.slice(0, 12)}…` : `${result.diagnostics.length} diagnostic${result.diagnostics.length === 1 ? "" : "s"} reported.`);
@@ -789,8 +794,10 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     setValidationState("running");
     setValidationMessage("Merged candidate requires fresh validation.");
     setDiagnostics(undefined);
+    const generation = editGeneration.current.current();
     try {
       const result = await client.validate(semantic.document);
+      if (!editGeneration.current.isCurrent(generation)) return;
       setDiagnostics(result);
       setValidationState(result.valid ? "valid" : "invalid");
       setValidationMessage(result.valid
