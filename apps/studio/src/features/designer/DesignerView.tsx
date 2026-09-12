@@ -684,7 +684,8 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   };
 
   const updateSelected = (update: (node: WorkflowNode) => WorkflowNode): void => {
-    if (!selected || selected.node.kind === "adaptive_region") return;
+    if (!selected) return;
+    if (selected.node.kind === "adaptive_region" && update(selected.node).kind !== "adaptive_region") return;
     commit(updateNode(document, selected.graphId, selected.node.id, update));
   };
 
@@ -901,7 +902,7 @@ function InspectorPanel({ document, catalog, selected, selectedConfigText, onUpd
   }
   const locked = selected.node.kind === "adaptive_region";
   return <aside className="inspector-panel" aria-label="Node inspector">
-    <div className="panel-title"><div><p className="eyebrow">Node inspector</p><h2>{selected.node.id}</h2></div><StatusBadge tone={locked ? "warning" : "success"}>{locked ? "read only" : selected.node.kind}</StatusBadge></div>
+    <div className="panel-title"><div><p className="eyebrow">Node inspector</p><h2>{selected.node.id}</h2></div><StatusBadge tone={locked ? "warning" : "success"}>{locked ? "protected region" : selected.node.kind}</StatusBadge></div>
     <label className="field-label">Node kind
       <select value={selected.node.kind} disabled={locked} onChange={(event) => onUpdate((node) => ({ ...node, kind: event.target.value }))}>
         {nodeKinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
@@ -909,7 +910,8 @@ function InspectorPanel({ document, catalog, selected, selectedConfigText, onUpd
     </label>
     {selected.node.kind === "loop" ? <LoopBodyGraphNavigation document={document} node={selected.node} onNavigateGraph={onNavigateGraph} /> : null}
     {selected.node.kind === "subworkflow" ? <SubworkflowReference node={selected.node} catalog={catalog} disabled={locked} onUpdate={onUpdate} /> : null}
-    <TypedConfigFields node={selected.node} disabled={locked} onUpdate={onUpdate} />
+    {locked ? <p className="muted" role="note">Authored region bounds are editable. The generated plan, allowed operations and runtime execution stay read-only and are never applied to an active run.</p> : null}
+    <TypedConfigFields node={selected.node} disabled={false} onUpdate={onUpdate} />
     <label className="field-label">Configuration <span className="muted">JSON object</span>
       <textarea value={configText} disabled={locked} rows={12} onChange={(event) => { setConfigText(event.target.value); setConfigError(undefined); }} onBlur={() => {
         try {
@@ -927,7 +929,7 @@ function InspectorPanel({ document, catalog, selected, selectedConfigText, onUpd
       }} />
     </label>
     {configError ? <p className="field-error" role="alert">{configError}</p> : null}
-    {locked ? <Notice tone="warning" title="Protected adaptive region">Planner output and protected execution stay under the harness authority. This Studio can inspect the region but cannot edit its runtime plan.</Notice> : null}
+    {locked ? <Notice tone="warning" title="Protected adaptive region">Publishing creates a new immutable definition for future runs; an active run stays pinned to its original digest. This view never applies a plan to an active run.</Notice> : null}
     {!locked ? <button className="button button-danger-outline" onClick={onRemove}>Remove node</button> : null}
   </aside>;
 }
