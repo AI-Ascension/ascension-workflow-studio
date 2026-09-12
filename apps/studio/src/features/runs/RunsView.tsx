@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { CommandKind, CommandResponse, EventPage, RunEvent, StatusResponse } from "@studio/contracts";
-import { applyEventPage, createProjection, type RunProjection, type StudioClient } from "@studio/client";
+import { ClientError, applyEventPage, createProjection, type RunProjection, type StudioClient } from "@studio/client";
 
 import { Notice } from "../../components/Notice";
 import { StatusBadge } from "../../components/StatusBadge";
@@ -20,8 +20,7 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsView
   const [projection, setProjection] = useState<RunProjection | undefined>();
   const [state, setState] = useState<"idle" | "loading" | "ready" | "error" | "resnapshot">("idle");
   const [message, setMessage] = useState("");
-  const [busyCommand, setBusyCommand] = useState<CommandKind | undefined>();
-  const [lastCommand, setLastCommand] = useState<CommandResponse | undefined>();
+  const [attempt, setAttempt] = useState<CommandAttempt | undefined>();
   const commandIds = useRef(new Map<string, string>());
 
   const refresh = useCallback(async (requestedRunId = runId): Promise<void> => {
@@ -58,22 +57,35 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsView
     onRunIdChange(next);
   };
 
-  const sendCommand = async (kind: CommandKind): Promise<void> => {
-    if (!status) return;
-    setBusyCommand(kind);
+  const submitAttempt = useCallback(async (next: CommandAttempt): Promise<void> => {
+    setAttempt(next);
     try {
-      const commandKey = `${status.run.workflow_run_id}:${status.run.run_revision}:${kind}`;
-      const commandId = commandIds.current.get(commandKey) ?? `studio.command.${Date.now()}.${commandIds.current.size}`;
-      commandIds.current.set(commandKey, commandId);
-      const response = await client.command(status.run.workflow_run_id, status.run.run_revision, kind, commandId);
-      setLastCommand(response);
-      await refresh(status.run.workflow_run_id);
+      const response = await client.command(next.runId, next.expectedRevision, next.kind, next.commandId);
+      setAttempt({ ...next, state: "settled", response, error: undefined });
+      await refresh(next.runId);
     } catch (error: unknown) {
-      setState("error");
-      setMessage(error instanceof Error ? error.message : "Command failed.");
-    } finally {
-      setBusyCommand(undefined);
+      if (error instanceof ClientError && typeof error.status === "number" && error.status < 500) {
+        setAttempt({ ...next, state: "settled", response: undefined, error: error.message });
+      } else {
+        setAttempt({ ...next, state: "unknown", response: undefined, error: error instanceof Error ? error.message : "No response from the owner." });
+      }
     }
+  }, [client, refresh]);
+
+  const commandLocked = attempt?.state === "sending" || attempt?.state === "unknown";
+  const busyCommand = attempt?.state === "sending" ? attempt.kind : undefined;
+
+  const sendCommand = async (kind: CommandKind): Promise<void> => {
+    if (!status || commandLocked) return;
+    const commandKey = `${status.run.workflow_run_id}:${status.run.run_revision}:${kind}`;
+    const commandId = commandIds.current.get(commandKey) ?? `studio.command.${Date.now()}.${commandIds.current.size}`;
+    commandIds.current.set(commandKey, commandId);
+    await submitAttempt({ kind, commandId, runId: status.run.workflow_run_id, expectedRevision: status.run.run_revision, state: "sending" });
+  };
+
+  const resolveCommand = async (): Promise<void> => {
+    if (attempt?.state !== "unknown") return;
+    await submitAttempt({ ...attempt, state: "sending" });
   };
 
   const canPause = status?.run.status === "running" || status?.run.status === "waiting_for_game" || status?.run.status === "waiting_for_provider";
@@ -104,12 +116,12 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsView
         <section className="panel-card controls-card" aria-labelledby="controls-title">
           <div className="panel-title"><div><p className="eyebrow">Safe controls</p><h2 id="controls-title">Operator actions</h2></div><span className="muted">actor scope: workflow:control</span></div>
           <p className="muted">Every command includes this run ID and the displayed revision. The owner remains responsible for admission and settlement.</p>
-          {lastCommand ? <div className="command-outcome" role="status"><StatusBadge tone={lastCommand.outcome === "applied" ? "success" : lastCommand.outcome === "pending" ? "warning" : "muted"}>{lastCommand.outcome}</StatusBadge><span>Command <code>{lastCommand.command_id}</code> reached revision {lastCommand.run_revision}; acceptance is not settlement.</span></div> : null}
+          {attempt ? (() => { const described = describeCommand(attempt); return <div className="command-outcome" role="status" data-command-state={attempt.state}><StatusBadge tone={described.tone}>{described.label}</StatusBadge><span className="command-detail">{described.detail}</span>{attempt.state === "unknown" ? <button className="button button-secondary" onClick={() => void resolveCommand()}>Check outcome</button> : null}</div>; })() : null}
           <div className="control-grid">
-            <CommandButton label="Pause" kind="pause" enabled={Boolean(canPause)} busy={busyCommand} onClick={sendCommand} />
-            <CommandButton label="Resume" kind="resume" enabled={Boolean(canResume)} busy={busyCommand} onClick={sendCommand} />
-            <CommandButton label="Step" kind="step" enabled={Boolean(canStep)} busy={busyCommand} onClick={sendCommand} />
-            <CommandButton label="Cancel" kind="cancel" enabled={Boolean(canCancel)} busy={busyCommand} onClick={sendCommand} danger />
+            <CommandButton label="Pause" kind="pause" enabled={Boolean(canPause)} busy={busyCommand} locked={commandLocked} onClick={sendCommand} />
+            <CommandButton label="Resume" kind="resume" enabled={Boolean(canResume)} busy={busyCommand} locked={commandLocked} onClick={sendCommand} />
+            <CommandButton label="Step" kind="step" enabled={Boolean(canStep)} busy={busyCommand} locked={commandLocked} onClick={sendCommand} />
+            <CommandButton label="Cancel" kind="cancel" enabled={Boolean(canCancel)} busy={busyCommand} locked={commandLocked} onClick={sendCommand} danger />
           </div>
         </section>
         <section className="panel-card" aria-labelledby="authority-title">
@@ -130,8 +142,31 @@ function Metric({ label, value, detail, tone = "muted" }: { label: string; value
   return <div className="metric-card"><span className="metric-label">{label}</span><strong className={`metric-value metric-${tone}`}>{value}</strong>{detail ? <span className="metric-detail">{detail}</span> : null}</div>;
 }
 
-function CommandButton({ label, kind, enabled, busy, danger, onClick }: { label: string; kind: CommandKind; enabled: boolean; busy: CommandKind | undefined; danger?: boolean; onClick: (kind: CommandKind) => Promise<void> }): JSX.Element {
-  return <button className={`button ${danger ? "button-danger-outline" : "button-secondary"}`} disabled={!enabled || Boolean(busy)} onClick={() => void onClick(kind)}>{busy === kind ? "Sending…" : label}</button>;
+function CommandButton({ label, kind, enabled, busy, locked, danger, onClick }: { label: string; kind: CommandKind; enabled: boolean; busy: CommandKind | undefined; locked: boolean; danger?: boolean; onClick: (kind: CommandKind) => Promise<void> }): JSX.Element {
+  return <button className={`button ${danger ? "button-danger-outline" : "button-secondary"}`} disabled={!enabled || locked || Boolean(busy)} onClick={() => void onClick(kind)}>{busy === kind ? "Sending…" : label}</button>;
+}
+
+interface CommandAttempt {
+  kind: CommandKind;
+  commandId: string;
+  runId: string;
+  expectedRevision: number;
+  state: "sending" | "unknown" | "settled";
+  response?: CommandResponse;
+  error?: string;
+}
+
+function describeCommand(attempt: CommandAttempt): { tone: "success" | "warning" | "muted" | "danger"; label: string; detail: string } {
+  if (attempt.state === "sending") return { tone: "warning", label: "sending", detail: `Sending command ${attempt.commandId}…` };
+  if (attempt.state === "unknown") return { tone: "warning", label: "unknown", detail: `No response for command ${attempt.commandId}. The owner may have admitted it; check the original ID before another intent.` };
+  if (attempt.error) return { tone: "danger", label: "rejected", detail: `Command ${attempt.commandId} was rejected before application: ${attempt.error}` };
+  const outcome = attempt.response?.outcome;
+  const revision = attempt.response?.run_revision;
+  if (outcome === "accepted") return { tone: "warning", label: "accepted", detail: `Command ${attempt.commandId} was admitted but not applied; reconciliation continues.` };
+  if (outcome === "pending") return { tone: "warning", label: "pending", detail: `Command ${attempt.commandId} is pending; application is not confirmed.` };
+  if (outcome === "applied") return { tone: "success", label: "applied", detail: `Command ${attempt.commandId} applied at revision ${revision}.` };
+  if (outcome === "duplicate") return { tone: "muted", label: "duplicate", detail: `Command ${attempt.commandId} already resolved; the owner returned the existing outcome at revision ${revision}.` };
+  return { tone: "muted", label: "settled", detail: `Command ${attempt.commandId} settled.` };
 }
 
 function EventRow({ event }: { event: RunEvent }): JSX.Element {
