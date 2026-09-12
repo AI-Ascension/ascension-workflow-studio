@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { WorkflowDefinition } from "@studio/contracts";
 
@@ -20,6 +20,7 @@ import {
   reconnectEdge,
   serializeStudioBundle,
   semanticDigest,
+  sha256Hex,
 } from "./index";
 
 function definition(): WorkflowDefinition {
@@ -159,5 +160,17 @@ describe("workflow document identity", () => {
     expect(merged.document?.game_profile).toBe("remote-profile");
     const conflict = mergeDocuments(original, { ...original, version: "1.1.0" }, { ...original, version: "1.2.0" });
     expect(conflict.conflicts.map((item) => item.path)).toContain("$.version");
+  });
+});
+
+describe("sha256 fallback", () => {
+  it("computes SHA-256 without Web Crypto for insecure LAN origins", async () => {
+    const original = globalThis.crypto;
+    vi.stubGlobal("crypto", {});
+    try {
+      expect(await sha256Hex("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+    } finally {
+      vi.stubGlobal("crypto", original);
+    }
   });
 });
