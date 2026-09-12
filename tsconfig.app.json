@@ -15,11 +15,10 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "baseUrl": ".",
     "paths": {
-      "@studio/contracts": ["packages/contracts/src/index.ts"],
-      "@studio/document": ["packages/document/src/index.ts"],
-      "@studio/client": ["packages/client/src/index.ts"]
+      "@studio/contracts": ["./packages/contracts/src/index.ts"],
+      "@studio/document": ["./packages/document/src/index.ts"],
+      "@studio/client": ["./packages/client/src/index.ts"]
     }
   },
   "include": ["apps/studio/src", "packages"]
