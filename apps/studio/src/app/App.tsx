@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ClientMode, OwnerApiClient } from "@studio/client";
 import { FixtureClient } from "@studio/client";
 import { OwnerApiClient as LiveOwnerApiClient } from "@studio/client";
-import { cloneDocument } from "@studio/document";
+import { cloneDocument, type ApprovedLinkMapping } from "@studio/document";
 import type { DefinitionRecord, WorkflowDefinition } from "@studio/contracts";
 
 import { StatusBadge } from "../components/StatusBadge";
@@ -34,6 +34,7 @@ export function App(): JSX.Element {
   const [runId, setRunId] = useState("run.fixture.1");
   const [appMessage, setAppMessage] = useState<string | undefined>();
   const [rawCandidateTexts, setRawCandidateTexts] = useState<Record<string, string>>({});
+  const [linkMappings, setLinkMappings] = useState<ApprovedLinkMapping[]>([]);
 
   const rememberRawCandidate = useCallback((definitionId: string, value: string): void => {
     setRawCandidateTexts((current) => current[definitionId] === value ? current : { ...current, [definitionId]: value });
@@ -118,9 +119,9 @@ export function App(): JSX.Element {
         {view === "recordings" ? <RecordingsView {...recording} /> : null}
         {view === "library" ? <LibraryView definitions={definitions} loading={loadingDefinitions} catalogNotice={catalogNotice} onOpen={openDefinition} onCreate={createDraft} onRefresh={() => setCatalogRefresh((current) => current + 1)} /> : null}
         {view === "designer" ? <DesignerView client={client} catalog={definitions} definition={selectedDefinition} initialDocument={activeDocument} initialRawText={rawCandidateTexts[selectedDefinition.id]} mode={mode} onBack={() => setView("library")} onRun={(document) => void runDocument(document)} onRawTextChange={rememberRawCandidate} /> : null}
-        {view === "runs" ? <RunsView client={client} mode={mode} initialRunId={runId} onRunIdChange={setRunId} /> : null}
+        {view === "runs" ? <RunsView client={client} mode={mode} initialRunId={runId} onRunIdChange={setRunId} linkMappings={linkMappings} /> : null}
         {view === "replay" ? <ReplayView client={client} mode={mode} definition={replayDocument} definitions={definitions} /> : null}
-        {view === "compatibility" ? <CompatibilityView mode={mode} onModeChange={setMode} liveClient={liveClient} /> : null}
+        {view === "compatibility" ? <CompatibilityView mode={mode} onModeChange={setMode} liveClient={liveClient} linkMappings={linkMappings} onAddMapping={(mapping) => setLinkMappings((current) => [...current.filter((candidate) => candidate.id !== mapping.id), mapping])} onRemoveMapping={(id) => setLinkMappings((current) => current.filter((candidate) => candidate.id !== id))} /> : null}
       </div>
     </main>
   </div>;

@@ -175,6 +175,32 @@ test.describe("Studio fixture workbench", () => {
     await expect(selection).not.toHaveAttribute("data-capabilities", /actions\.combat\.v1/);
   });
 
+  test("resolves reference links only through approved mappings", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Open settings" }).click();
+    const mappings = page.getByLabel("Approved reference mappings");
+    await expect(mappings).toContainText("No approved mappings configured.");
+    await mappings.getByLabel("Mapping template").fill("http://obs.example/traces/{trace_id}");
+    await mappings.getByRole("button", { name: "Add mapping" }).click();
+    await expect(mappings.getByText(/Approved links must use https/)).toBeVisible();
+    await mappings.getByLabel("Mapping kind").selectOption("run");
+    await mappings.getByLabel("Mapping label").fill("Obs run view");
+    await mappings.getByLabel("Mapping template").fill("https://obs.example/runs/{run_id}");
+    await mappings.getByRole("button", { name: "Add mapping" }).click();
+    await expect(mappings).toContainText("Obs run view");
+
+    await page.getByRole("button", { name: "Runs", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
+    const links = page.getByLabel("Approved reference links");
+    await expect(links.getByRole("link", { name: "Obs run view" })).toHaveAttribute("href", "https://obs.example/runs/run.fixture.1");
+
+    await links.getByLabel("Reference identifier probe").fill("https://evil.example/redirect");
+    await expect(links.getByText(/Raw URLs are not resolved/)).toBeVisible();
+    await expect(links.locator("a[href*='evil.example']")).toHaveCount(0);
+    await links.getByLabel("Reference identifier probe").fill("//evil.example/x");
+    await expect(links.getByText(/Raw URLs are not resolved/)).toBeVisible();
+  });
+
   test("shows safe run controls and replay compare without leaving the app", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Runs", exact: true }).click();

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { CommandKind, CommandResponse, EventPage, RunEvent, StatusResponse } from "@studio/contracts";
 import { ClientError, applyEventPage, createProjection, type RunProjection, type StudioClient } from "@studio/client";
+import { resolveApprovedLink, type ApprovedLinkMapping } from "@studio/document";
 
 import { Notice } from "../../components/Notice";
 import { StatusBadge } from "../../components/StatusBadge";
@@ -11,9 +12,10 @@ interface RunsViewProps {
   mode: "fixture" | "live";
   initialRunId: string;
   onRunIdChange: (runId: string) => void;
+  linkMappings: ApprovedLinkMapping[];
 }
 
-export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsViewProps): JSX.Element {
+export function RunsView({ client, mode, initialRunId, onRunIdChange, linkMappings }: RunsViewProps): JSX.Element {
   const [runId, setRunId] = useState(initialRunId);
   const [runInput, setRunInput] = useState(initialRunId);
   const [status, setStatus] = useState<StatusResponse | undefined>();
@@ -22,6 +24,7 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsView
   const [message, setMessage] = useState("");
   const [attempt, setAttempt] = useState<CommandAttempt | undefined>();
   const [cursorSequence, setCursorSequence] = useState<number | undefined>();
+  const [referenceProbe, setReferenceProbe] = useState("");
   const commandIds = useRef(new Map<string, string>());
 
   const refresh = useCallback(async (requestedRunId = runId): Promise<void> => {
@@ -150,6 +153,15 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange }: RunsView
           <dl className="detail-list"><div><dt>Definition digest</dt><dd><code>{status.run.definition_digest}</code></dd></div><div><dt>Game outcome</dt><dd>{status.run.game_outcome.replaceAll("_", " ")}</dd></div><div><dt>Cleanup</dt><dd>{status.run.cleanup.replaceAll("_", " ")}</dd></div><div><dt>Waiting reason</dt><dd>{status.waiting_reason ?? "—"}</dd></div><div><dt>Pending operation</dt><dd>{status.run.pending_operation ? `${status.run.pending_operation.operation_id} · ${status.run.pending_operation.state}` : "None"}</dd></div></dl>
         </section>
       </div>
+      <section className="panel-card" aria-label="Approved reference links"><div className="panel-title"><div><p className="eyebrow">References</p><h2>Approved links</h2></div><span className="muted">mapping only</span></div>
+        <p className="muted">Only operator-approved https mappings resolve here. Identifiers that are raw URLs or redirects are rejected; nothing is proxied.</p>
+        <label className="field-label">Reference identifier probe<input aria-label="Reference identifier probe" value={referenceProbe} onChange={(event) => setReferenceProbe(event.target.value)} placeholder={status.run.workflow_run_id} /></label>
+        {linkMappings.length ? <ul className="plain-list">{linkMappings.map((mapping) => {
+          const identifier = mapping.kind === "run" ? (referenceProbe.trim() || status.run.workflow_run_id) : mapping.kind === "trace" ? status.run.cursor.node_execution_id : (status.run.pending_operation?.operation_id ?? "");
+          const resolution = resolveApprovedLink([mapping], mapping.kind, identifier);
+          return <li key={mapping.id}>{resolution.status === "approved" ? <a href={resolution.url} target="_blank" rel="noreferrer noopener">{mapping.label}</a> : <span className={resolution.status === "rejected" ? "field-error" : "muted"} role={resolution.status === "rejected" ? "alert" : undefined}>{mapping.label}: {resolution.status} — {resolution.reason}</span>}</li>;
+        })}</ul> : <p className="muted">No approved mappings configured in settings.</p>}
+      </section>
       <section className="panel-card" aria-labelledby="budget-title"><div className="panel-title"><div><p className="eyebrow">Resource projection</p><h2 id="budget-title">Budget and invocation</h2></div><span className="muted">owner snapshot</span></div><div className="budget-grid"><Metric label="Provider calls" value={`${status.run.budget.provider_calls_consumed} / ${status.run.budget.provider_calls_reserved}`} /><Metric label="Node steps" value={String(status.run.budget.node_steps_consumed)} /><Metric label="Replans" value={String(status.run.budget.replans_consumed)} /><Metric label="Node execution" value={status.run.cursor.node_execution_id} /></div></section>
       <section className="panel-card timeline-card" aria-labelledby="timeline-title">
         <div className="panel-title"><div><p className="eyebrow">Retained event projection</p><h2 id="timeline-title">Timeline</h2></div><span className="muted">{visibleEvents.length} of {events.length} events</span></div>
