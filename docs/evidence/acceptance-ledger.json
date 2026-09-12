@@ -3,10 +3,10 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 44,
+    "evidenced": 45,
     "partial": 30,
     "implemented": 6,
-    "not_run": 6
+    "not_run": 5
   },
   "cases": [
     {
@@ -978,10 +978,16 @@
         "P2-076"
       ],
       "work_package": "WP-25",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34662266331 (live-owner browser against the real harness owner)",
+      "actual_source_heads": {
+        "studio": "287735a"
+      },
+      "evidence": "The live-owner browser test submits a run, pauses it to produce several retained events, records every non-GET request, then enters history, steps back and forward, scrubs to the first event, sets the cursor from an event, and returns to live. It asserts live Pause/Cancel are disabled in history, that zero non-GET requests were issued, and that no fresh-game button exists.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/runs/RunsView.tsx",
+        "tests/browser/live-owner.spec.ts"
+      ]
     },
     {
       "id": "AT-077",
