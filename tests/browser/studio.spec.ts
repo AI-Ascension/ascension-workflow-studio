@@ -345,6 +345,34 @@ test.describe("Studio fixture workbench", () => {
     await expect(page.getByText(/improved gameplay|caused the|because of the edit/i)).toHaveCount(0);
   });
 
+  test("supports narrow viewports, reduced motion, zoom and light/dark themes", async ({ page }) => {
+    await page.setViewportSize({ width: 480, height: 900 });
+    await page.goto("/");
+    await expect(page.locator(".definition-card").first()).toBeVisible();
+    const libraryOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(libraryOverflow).toBeLessThanOrEqual(2);
+
+    await page.getByRole("button", { name: "Open designer" }).first().click();
+    await expect(page.locator(".designer-body")).toBeVisible();
+    const designerOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(designerOverflow).toBeLessThanOrEqual(2);
+
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const duration = await page.locator(".button").first().evaluate((element) => getComputedStyle(element).transitionDuration);
+    expect(Number.parseFloat(duration)).toBeLessThan(0.01);
+
+    await page.emulateMedia({ colorScheme: "dark" });
+    const darkBackground = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--bg").trim());
+    await page.emulateMedia({ colorScheme: "light" });
+    const lightBackground = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--bg").trim());
+    expect(lightBackground).not.toBe(darkBackground);
+    expect(lightBackground.length).toBeGreaterThan(0);
+
+    await page.evaluate(() => { document.documentElement.style.zoom = "1.5"; });
+    const zoomOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(zoomOverflow).toBeLessThanOrEqual(4);
+  });
+
   test("shows safe run controls and replay compare without leaving the app", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Runs", exact: true }).click();
