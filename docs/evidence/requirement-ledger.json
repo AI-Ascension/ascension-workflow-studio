@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 62,
-    "partial": 25
+    "implemented": 63,
+    "partial": 24
   },
   "requirements": [
     {
@@ -482,7 +482,7 @@
       "mandatory": true,
       "work_package": "WP-15",
       "status": "implemented",
-      "evidence": "Owner: merged sts2-harness PR #88 (commit 44a4c2f; merge 5863c62) adds WORKFLOW_COMPILER_ID and reports it through the definition port and management validate response separately from the definition digest. Studio: merged PR #50 (commit 155b96b; merge bd6576d) consumes the optional compiler field and shows draft revision, definition digest, layout digest, and compiler identity as independent values. Studio live-owner CI run 34657583347 pins harness 5863c62 and passed all six jobs.",
+      "evidence": "Owner: merged sts2-harness PR #88 (commit 44a4c2f; merge 5863c62) adds WORKFLOW_COMPILER_ID and reports it through the definition port and management validate response separately from the definition digest. Studio: merged PR #50 (commit 155b96b; merge bd6576d) consumes the optional compiler field and shows draft revision, definition digest, layout digest, and compiler identity as independent values. Studio live-owner CI run 34657583347 pins harness 5863c62 and passed all six jobs. Following PR #72 (commit 0f14893), the layout sidecar binding is explicitly the client canonical semantic digest on validation and merged-candidate revalidation, keeping it distinct from the owner definition digest and the compiler identity while allowing digest-bound live export.",
       "acceptance_cases": [
         "AT-048"
       ]
@@ -941,8 +941,8 @@
       "id": "P2-094",
       "mandatory": true,
       "work_package": "WP-31",
-      "status": "partial",
-      "evidence": "docs/evidence/phase1-workflow-tests.json; owner strict/dynamic contract/runtime tests pass, but Studio live browser round-trip is unverified.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #72 (commit 0f14893; merge af1c568) proves real canonical strict and dynamic round-trips through the owner. A live-owner test clones a strict setup draft and a dynamic combat draft, validates each against the owner, exports the digest-bound Studio bundle, re-imports it, re-validates, and asserts the definition digest is unchanged; the dynamic round-trip additionally asserts the adaptive region survives. The PR also fixes a defect this exposed: the layout sidecar was bound to the owner's raw definition digest, which blocked live-mode bundle export and conflated the inert layout binding with the compiled definition identity; the layout is now bound to the client canonical semantic digest. Studio CI run 34668771609 passed all six jobs.",
       "acceptance_cases": [
         "AT-094"
       ]
