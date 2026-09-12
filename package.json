@@ -20,7 +20,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@noble/hashes": "2.0.1",
+    "@noble/hashes": "2.4.0",
     "@xyflow/react": "12.11.6",
     "ajv": "8.17.1",
     "react": "19.3.0",
