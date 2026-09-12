@@ -345,6 +345,7 @@ test.describe("Studio fixture workbench", () => {
     await expect(page.getByText(/improved gameplay|caused the|because of the edit/i)).toHaveCount(0);
   });
 
+
   test("supports narrow viewports, reduced motion, zoom and light/dark themes", async ({ page }) => {
     await page.setViewportSize({ width: 480, height: 900 });
     await page.goto("/");

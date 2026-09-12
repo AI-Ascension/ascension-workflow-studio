@@ -194,9 +194,13 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   useEffect(() => {
     let active = true;
     const loadDraft = async (): Promise<void> => {
+      const loadGeneration = saveGenerationRef.current;
       try {
         const saved = await client.getDraft(draftId);
         if (!active) return;
+        // A save that started after this load must win; a late load response
+        // cannot repopulate newer local state.
+        if (saveGenerationRef.current !== loadGeneration) return;
         if (saved) {
           const parsedLayout = LayoutSidecarSchema.safeParse(saved.layout);
           const nextLayout = parsedLayout.success ? parsedLayout.data : createLayout(saved.document, "pending");
@@ -592,7 +596,11 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       setValidationState(result.valid ? "valid" : "invalid");
       setValidationMessage(result.valid ? `Validated at ${result.definition_digest.slice(0, 12)}…` : `${result.diagnostics.length} diagnostic${result.diagnostics.length === 1 ? "" : "s"} reported.`);
       const layoutBinding = await semanticDigest(document);
-      setLayout((current) => ({ ...current, semanticDigest: layoutBinding }));
+      const boundLayout = { ...layout, semanticDigest: layoutBinding } as LayoutSidecar;
+      if (persistedKeyRef.current === valueKey(document, layout)) {
+        persistedKeyRef.current = valueKey(document, boundLayout);
+      }
+      setLayout(boundLayout);
     } catch (error: unknown) {
       setValidationState("error");
       setValidationMessage(error instanceof Error ? error.message : "Validation failed.");
