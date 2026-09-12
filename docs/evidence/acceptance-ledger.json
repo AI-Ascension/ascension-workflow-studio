@@ -3,10 +3,10 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 45,
+    "evidenced": 46,
     "partial": 30,
     "implemented": 6,
-    "not_run": 5
+    "not_run": 4
   },
   "cases": [
     {
@@ -645,10 +645,18 @@
         "P2-051"
       ],
       "work_package": "WP-16",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "evidenced",
+      "actual_command": "npm test -- --run (recovery unit tests); GitHub Actions Studio validation run 34663307981 (live-owner browser against the real harness owner)",
+      "actual_source_heads": {
+        "studio": "50be7c3"
+      },
+      "evidence": "Unit tests cover record sanitization, principal/workspace binding, TTL expiry and count/byte pruning. The live-owner browser test simulates QuotaExceededError, asserts a record is still stored and the buffer reports itself full, inspects the persisted record to confirm it contains no bearer token or command/snapshot fields and is bound to the acting principal, then switches the actor subject and asserts zero recoverable records for the new principal (no cross-user leak).",
+      "actual_evidence_refs": [
+        "packages/document/src/recovery.ts",
+        "apps/studio/src/features/designer/recoveryStore.ts",
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "tests/browser/live-owner.spec.ts"
+      ]
     },
     {
       "id": "AT-052",

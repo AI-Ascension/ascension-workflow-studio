@@ -3,9 +3,9 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 58,
+    "implemented": 59,
     "partial": 24,
-    "not_started": 5
+    "not_started": 4
   },
   "requirements": [
     {
@@ -512,8 +512,8 @@
       "id": "P2-051",
       "mandatory": true,
       "work_package": "WP-16",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #62 (commit 50be7c3; merge e3a6a95) adds an opt-in bounded crash-recovery buffer: sanitized IndexedDB records for document, layout and raw text only, with a 24-hour TTL, count and byte budgets, and principal/workspace binding. Quota exhaustion drops older records and keeps the newest candidate. The designer offers toggle, recover, export and clear controls with explicit reauthorization for local data, and the client exposes the session principal so records never cross accounts. Studio CI run 34663307981 passed all six jobs.",
       "acceptance_cases": [
         "AT-051"
       ]
