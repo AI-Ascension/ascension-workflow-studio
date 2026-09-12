@@ -101,13 +101,13 @@ export function RunsView({ client, contextClient, mode, initialRunId, onRunIdCha
             } else setMemoryMessage(memory.enabled ? `Read-only memory search is available (${memory.supported_operations.join(", ") || "no operations disclosed"}).` : "Memory projection is explicitly unavailable.");
           } catch { setMemoryMessage("Memory projection is unavailable from the composed context owner."); }
         } else setMemoryMessage("Memory search is unavailable from this owner.");
-        if (association.value.capabilities.provider_session_inspect && contextRunId) {
+        if (association.value.capabilities.provider_session_inspect) {
           try {
-            const sessions = await contextClient.providerSessions(contextRunId);
-            setSessionMessage(sessions.value.run_id === contextRunId
+            const sessions = await client.providerSessions(requestedRunId);
+            setSessionMessage(sessions.value.run_id === requestedRunId
               ? `Read-only session projection: ${sessions.value.bindings.length} binding(s), ${sessions.value.operations.length} operation(s).`
-              : "Provider-session projection was rejected because the Context owner returned a different run identity.");
-          } catch { setSessionMessage("Provider-session projection is unavailable from the composed context owner."); }
+              : "Provider-session projection was rejected because the Harness returned a different workflow run identity.");
+          } catch { setSessionMessage("Provider-session projection is unavailable from the Harness owner."); }
         } else setSessionMessage("Provider-session inspection is unavailable from this owner.");
       } else {
         setContextAssociation(undefined);

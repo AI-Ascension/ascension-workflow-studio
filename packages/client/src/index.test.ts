@@ -212,6 +212,20 @@ describe("same-origin client boundary", () => {
     await expect(client.contextAssociation("run.fixture.1")).rejects.toThrow("workflow context association failed runtime decoding");
   });
 
+  it("uses the Harness-owned, scoped provider-session projection", async () => {
+    const requests: string[] = [];
+    const client = new OwnerApiClient({ baseUrl: "/v1", fetcher: async (input) => {
+      requests.push(String(input));
+      return new Response(JSON.stringify({
+        schema: "ascension.provider-session.api-result.v1", operation: "list",
+        value: { run_id: "workflow.run.1", bindings: [], operations: [], next_cursor: null },
+        effect_class: "local_metadata_only", inference_calls: 0, game_effects: 0,
+      }), { status: 200 });
+    } });
+    await expect(client.providerSessions("workflow.run.1")).resolves.toMatchObject({ value: { run_id: "workflow.run.1" } });
+    expect(requests).toEqual(["/v1/workflow-runs/workflow.run.1/provider-sessions"]);
+  });
+
   it("uses typed, separate same-origin context read routes", async () => {
     const paths: string[] = [];
     let call = 0;
@@ -228,20 +242,14 @@ describe("same-origin client boundary", () => {
           hidden_reasoning_access: false, direct_game_dispatch: false,
         }), { status: 200 });
       }
-      if (call === 2) return new Response(JSON.stringify({
-        schema: "ascension.provider-session.api-result.v1", operation: "list",
-        value: { run_id: "run.1", bindings: [], operations: [], next_cursor: null },
-        effect_class: "local_metadata_only", inference_calls: 0, game_effects: 0,
-      }), { status: 200 });
       return new Response(JSON.stringify({
         run_id: "run.1", next_cursor: null,
         snapshots: [{ snapshot_id: "snapshot.1", run_id: "run.1", episode_id: "episode.1", boundary: "exo_session_request", capture_mode: "metadata", component_count: 2, application_capture_complete: true, incomplete_reasons: [] }],
       }), { status: 200 });
     } });
     await expect(client.memoryCapabilities()).resolves.toMatchObject({ enabled: false });
-    await expect(client.providerSessions("run.1")).resolves.toMatchObject({ value: { run_id: "run.1" } });
     await expect(client.snapshots("run.1")).resolves.toMatchObject({ snapshots: [{ snapshot_id: "snapshot.1" }] });
-    expect(paths).toEqual(["/api/context/v3/memory/capabilities", "/api/context/v1/runs/run.1/provider-sessions", "/api/context/v1/runs/run.1/snapshots"]);
+    expect(paths).toEqual(["/api/context/v3/memory/capabilities", "/api/context/v1/runs/run.1/snapshots"]);
   });
 
   it("uses a bounded Context comparison route rather than a generic proxy", async () => {

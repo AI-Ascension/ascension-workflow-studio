@@ -94,6 +94,8 @@ export interface StudioClient {
   status(runId: string): Promise<StatusResponse>;
   events(runId: string, afterSequence: number, limit?: number): Promise<EventPage>;
   contextAssociation(runId: string): Promise<ContextAssociation>;
+  /** Harness-owned, read-only session metadata for this exact workflow run. */
+  providerSessions(runId: string): Promise<ProviderSessionList>;
   command(runId: string, expectedRevision: number, kind: CommandKind, commandId?: string): Promise<CommandResponse>;
   replay(runId: string): Promise<ReplayResponse>;
   export(runId: string): Promise<ExportResponse>;
@@ -141,10 +143,6 @@ export class ContextServiceClient {
 
   public async memoryCapabilities(): Promise<MemoryCapabilities> {
     return decodeWith(MemoryCapabilitiesSchema, await this.json("/v3/memory/capabilities"), "memory capabilities");
-  }
-
-  public async providerSessions(runId: string): Promise<ProviderSessionList> {
-    return decodeWith(ProviderSessionListSchema, await this.json(`/v1/runs/${encodeIdentifier(runId)}/provider-sessions`), "provider session list");
   }
 
   public async snapshots(runId: string): Promise<ContextSnapshotList> {
@@ -354,6 +352,11 @@ export class OwnerApiClient implements StudioClient {
   public async contextAssociation(runId: string): Promise<ContextAssociation> {
     const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}/context`, { method: "GET" });
     return decodeWith(ContextAssociationSchema, response, "workflow context association");
+  }
+
+  public async providerSessions(runId: string): Promise<ProviderSessionList> {
+    const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}/provider-sessions`, { method: "GET" });
+    return decodeWith(ProviderSessionListSchema, response, "workflow provider-session list");
   }
 
   public async command(runId: string, expectedRevision: number, kind: CommandKind, commandId?: string): Promise<CommandResponse> {
@@ -773,6 +776,18 @@ export class FixtureClient implements StudioClient {
       context: { availability: "not_applicable", context_ref: null, run_id: null, episode_id: null, agent_id: null, snapshot_id: null, approved_revision_id: null, plan_epoch: null, reason_code: "fixture_context_adapter_unavailable" },
       capture: { mode: "unavailable", state: "unavailable", attempt_id: null, reason_code: "fixture_context_adapter_unavailable" },
       capabilities: { inspect_metadata: true, read_retained_content: false, edit_context: false, control_context: false, memory_search: false, provider_session_inspect: false },
+    });
+  }
+
+  public async providerSessions(runId: string): Promise<ProviderSessionList> {
+    const run = this.runs.get(runId) ?? this.createDefaultRun(runId);
+    return ProviderSessionListSchema.parse({
+      schema: "ascension.provider-session.api-result.v1",
+      operation: "list",
+      value: { run_id: run.status.run.workflow_run_id, bindings: [], operations: [], next_cursor: null },
+      effect_class: "local_metadata_only",
+      inference_calls: 0,
+      game_effects: 0,
     });
   }
 
