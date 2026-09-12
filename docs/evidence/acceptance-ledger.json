@@ -3,10 +3,9 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 48,
+    "evidenced": 49,
     "partial": 31,
-    "implemented": 6,
-    "not_run": 1
+    "implemented": 6
   },
   "cases": [
     {
@@ -1072,10 +1071,19 @@
         "P2-082"
       ],
       "work_package": "WP-27",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "evidenced",
+      "actual_command": "npm test -- --run (map projection unit tests); GitHub Actions Studio validation run 34667821882 (browser chromium/firefox/webkit, recorded-run, live-owner)",
+      "actual_source_heads": {
+        "studio": "fc0a44c"
+      },
+      "evidence": "Unit tests assert the pinned golden digest, parsing/pinning, available/stale/unavailable support states, and rejection of oversized or strict-violating projections. The browser test opens the panel with no projection (explicit not-loaded state), loads the admitted projection (available, pinned schema/projection version, generation 42, instance map-instance-1, 4 nodes/4 edges, 2 host navigation bindings pinned but not exposed as actions, zero navigation controls), then loads stale and unavailable variants with reasons and a malformed projection rejected by schema. The workflow graph and the map projection are separate panels.",
+      "actual_evidence_refs": [
+        "packages/document/src/mapProjection.ts",
+        "packages/document/src/mapProjection.test.ts",
+        "contracts/accepted/phase1/map/visible-map.golden.json",
+        "apps/studio/src/features/runs/RunsView.tsx",
+        "tests/browser/studio.spec.ts"
+      ]
     },
     {
       "id": "AT-083",
