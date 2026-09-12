@@ -17,6 +17,7 @@ export * from "./reference";
 export * from "./recovery";
 export * from "./links";
 export * from "./mapProjection";
+export * from "./generation";
 
 export type SemanticDocument = WorkflowDefinition;
 
