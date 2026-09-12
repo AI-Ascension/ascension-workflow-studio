@@ -320,6 +320,19 @@ test.describe("Studio fixture workbench", () => {
     expect(errors).toEqual([]);
   });
 
+  test("compares runs by pinned context without causal overclaims", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Replay / Compare", exact: true }).click();
+    await page.getByRole("button", { name: "Replay & compare" }).click();
+    const context = page.getByLabel("Run context comparison");
+    await expect(context).toBeVisible();
+    await expect(context).toContainText("Primary run");
+    await expect(context).toContainText("Secondary run");
+    await expect(context).toContainText(/revision \d+/);
+    await expect(context).toContainText("not causal proof");
+    await expect(page.getByText(/improved gameplay|caused the|because of the edit/i)).toHaveCount(0);
+  });
+
   test("shows safe run controls and replay compare without leaving the app", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Runs", exact: true }).click();
