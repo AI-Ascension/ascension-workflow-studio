@@ -14,23 +14,26 @@ import { ReplayView } from "../features/replay/ReplayView";
 import { RunsView } from "../features/runs/RunsView";
 import { RecordingsView } from "../features/recordings/RecordingsView";
 import { useRecording } from "../features/recordings/useRecording";
+import { benchmarkCatalog } from "../features/benchmark/benchmark";
 import { fixtureDefinitions } from "../fixtures/catalog";
+
+const studioCatalog = benchmarkCatalog() ?? fixtureDefinitions;
 
 type View = "library" | "designer" | "runs" | "replay" | "compatibility" | "recordings";
 
 export function App(): JSX.Element {
   const recording = useRecording();
-  const fixtureClient = useMemo(() => new FixtureClient(fixtureDefinitions), []);
+  const fixtureClient = useMemo(() => new FixtureClient(studioCatalog), []);
   const liveClient = useMemo(() => new LiveOwnerApiClient(), []);
   const [mode, setMode] = useState<ClientMode>("fixture");
   const client = mode === "fixture" ? fixtureClient : liveClient;
   const [view, setView] = useState<View>("library");
-  const [definitions, setDefinitions] = useState<DefinitionRecord[]>(fixtureDefinitions);
+  const [definitions, setDefinitions] = useState<DefinitionRecord[]>(studioCatalog);
   const [loadingDefinitions, setLoadingDefinitions] = useState(false);
   const [catalogRefresh, setCatalogRefresh] = useState(0);
   const [catalogNotice, setCatalogNotice] = useState<string | undefined>();
-  const [selectedDefinition, setSelectedDefinition] = useState<DefinitionRecord>(fixtureDefinitions[0]);
-  const [activeDocument, setActiveDocument] = useState<WorkflowDefinition>(fixtureDefinitions[0].definition);
+  const [selectedDefinition, setSelectedDefinition] = useState<DefinitionRecord>(studioCatalog[0]);
+  const [activeDocument, setActiveDocument] = useState<WorkflowDefinition>(studioCatalog[0].definition);
   const [runId, setRunId] = useState("run.fixture.1");
   const [appMessage, setAppMessage] = useState<string | undefined>();
   const [rawCandidateTexts, setRawCandidateTexts] = useState<Record<string, string>>({});
@@ -51,12 +54,12 @@ export function App(): JSX.Element {
         setSelectedDefinition(records[0]);
         setActiveDocument(records[0].definition);
       } else if (mode === "live") {
-        setDefinitions(fixtureDefinitions);
+        setDefinitions(studioCatalog);
         setCatalogNotice("The owner returned no published definitions; showing the checked-in catalog for inspection.");
       }
     }).catch((error: unknown) => {
       if (!mounted) return;
-      setDefinitions(fixtureDefinitions);
+      setDefinitions(studioCatalog);
       setCatalogNotice(error instanceof Error ? `${error.message} Showing the checked-in Phase 1 catalog for inspection.` : "Live catalog is unavailable; showing the checked-in Phase 1 catalog.");
     }).finally(() => {
       if (mounted) setLoadingDefinitions(false);
@@ -72,7 +75,7 @@ export function App(): JSX.Element {
   };
 
   const createDraft = (template?: DefinitionRecord): void => {
-    const base = template ?? definitions[0] ?? fixtureDefinitions[0];
+    const base = template ?? definitions[0] ?? studioCatalog[0];
     const draft = cloneDocument(base.definition);
     // The owner admits only `summary` and `synthetic` in annotations, so the
     // template provenance is recorded in the summary text; the pinned
