@@ -3,10 +3,10 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 47,
+    "evidenced": 48,
     "partial": 30,
     "implemented": 6,
-    "not_run": 3
+    "not_run": 2
   },
   "cases": [
     {
@@ -568,10 +568,17 @@
         "P2-045"
       ],
       "work_package": "WP-14",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34665788579 (live-owner browser against the real harness owner)",
+      "actual_source_heads": {
+        "studio": "46594ef"
+      },
+      "evidence": "The live-owner browser test submits a run against an adaptive-region definition, edits the authored max_replans bound, validates (definition digest changes) and publishes a new immutable owner revision, then returns to the run inspector and asserts the run still reports its original pinned definition digest and shows the pinned note. No apply-to-active-run, hot-swap or apply-plan control exists, and the region's raw plan configuration stays read-only.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "apps/studio/src/features/runs/RunsView.tsx",
+        "tests/browser/live-owner.spec.ts"
+      ]
     },
     {
       "id": "AT-046",
