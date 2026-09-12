@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 72,
-    "partial": 15
+    "implemented": 74,
+    "partial": 13
   },
   "requirements": [
     {
@@ -461,8 +461,8 @@
       "id": "P2-046",
       "mandatory": true,
       "work_package": "WP-15",
-      "status": "partial",
-      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the synthetic live process completed draft create and reload. Studio CI run 34636988818 verified an authenticated Chromium user creates and hydrates a draft, receives a stale-revision draft-save conflict after a separate authenticated owner write, and resolves it by loading the remote owner revision. Browser retry and merge application remain unverified.",
+      "status": "implemented",
+      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the synthetic live process completed draft create and reload. Studio CI run 34636988818 verified an authenticated Chromium user creates and hydrates a draft, receives a stale-revision draft-save conflict after a separate authenticated owner write, and resolves it by loading the remote owner revision. Studio PR #97 (head ec8dd67; merge pending; Studio CI run 34679245809 passed all six jobs) closes the two remaining browser gaps: `tests/browser/live-owner.spec.ts` \u201cretries a lost draft-save response with the original mutation identity\u201d verifies retry without a duplicate revision, and \u201cmerges non-overlapping semantic and layout candidates and revalidates them\u201d applies a three-way merge against the real owner and revalidates the merged candidate. Authenticated live-owner browser suite against a real owner process (`sts2-workflow serve --auth-profile studio-live`), 18 tests.",
       "acceptance_cases": [
         "AT-046"
       ]
@@ -561,8 +561,8 @@
       "id": "P2-056",
       "mandatory": true,
       "work_package": "WP-18",
-      "status": "partial",
-      "evidence": "Merged owner PR #57 supplies a typed publication response with published, already-published, and conflict outcomes; the synthetic live process observed the published outcome. Studio CI run 34632504542 verified published or already-published browser outcomes, and run 34638586490 verified authenticated browser presentation of a stale-revision publication conflict. Lost-response resolution by querying the original publication identity remains unverified.",
+      "status": "implemented",
+      "evidence": "Merged owner PR #57 supplies a typed publication response with published, already-published, and conflict outcomes; the synthetic live process observed the published outcome. Studio CI run 34632504542 verified published or already-published browser outcomes, and run 34638586490 verified authenticated browser presentation of a stale-revision publication conflict. Studio PR #97 (head ec8dd67; Studio CI run 34679245809 passed all six jobs) closes the lost-response gap: the live-owner browser test \u201cresolves a lost publication response through the original publication identity\u201d drops the first publish response after the owner accepted it, then verifies the retry reuses the original `client_mutation_id`, `expected_definition_digest` and `expected_revision` and resolves to `published` or `already_published` without a duplicate immutable revision. Authenticated live-owner browser suite against a real owner process (`sts2-workflow serve --auth-profile studio-live`), 18 tests.",
       "acceptance_cases": [
         "AT-056"
       ]
