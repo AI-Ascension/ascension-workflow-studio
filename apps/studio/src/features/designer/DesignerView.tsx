@@ -22,7 +22,9 @@ import {
 import {
   JsonObjectSchema,
   LayoutSidecarSchema,
+  contextBindingsFromCapabilities,
   type DefinitionRecord,
+  type ContextBinding,
   type DraftRecord,
   type JsonObject,
   type JsonValue,
@@ -141,6 +143,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const [diagnostics, setDiagnostics] = useState<ValidateResponse | undefined>();
   const [validationState, setValidationState] = useState<"idle" | "running" | "valid" | "invalid" | "error">("idle");
   const [validationMessage, setValidationMessage] = useState("");
+  const [contextBindings, setContextBindings] = useState<ContextBinding[] | undefined>();
   const [draft, setDraft] = useState<DraftState>({ revision: 0, etag: "fixture-0", state: "saved", message: "Draft changes are local until autosave completes." });
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [saveRetry, setSaveRetry] = useState(0);
@@ -174,6 +177,14 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   documentRef.current = document;
 
   const draftId = `draft.${definition.id}`;
+
+  useEffect(() => {
+    let active = true;
+    void client.capabilities().then((response) => {
+      if (active) setContextBindings(contextBindingsFromCapabilities(response.capabilities));
+    }).catch(() => { if (active) setContextBindings(undefined); });
+    return () => { active = false; };
+  }, [client]);
 
   const valueKey = (nextDocument: SemanticDocument, nextLayout: LayoutSidecar): string => JSON.stringify({ document: nextDocument, layout: nextLayout });
 
@@ -928,6 +939,10 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       <span>Compiler <code data-testid="identity-compiler">{diagnostics?.compiler ?? "not reported"}</code></span>
     </div>
     <p className="identity-note muted">Draft revision, definition digest, layout digest, and compiler identity are independent; none substitutes for another.</p>
+    <section className="panel-card" aria-label="Context reference catalog">
+      <div className="panel-title"><div><p className="eyebrow">Authoring context references</p><h2>Owner binding catalog</h2></div><StatusBadge tone={contextBindings ? "success" : "muted"}>{contextBindings ? "available" : "unavailable"}</StatusBadge></div>
+      {contextBindings ? <p className="muted">{contextBindings.map((binding) => `${binding.context_ref} (${binding.node_kinds.join(", ")})`).join(" · ") || "No compatible references were disclosed."}</p> : <p className="muted">The owner has not disclosed a context-binding catalog. Validation remains authoritative; this editor will not infer bindings.</p>}
+    </section>
     <RecoveryPanel enabled={recoveryEnabled} principal={principal} count={principalRecordCount} recoverable={recoverable} notice={recoveryNotice} onToggle={() => setRecoveryEnabled((current) => !current)} onRecover={recoverLocalCandidate} onExport={exportRecovery} onClear={clearRecovery} />
     {draft.state === "conflict" ? <Notice tone="danger" title="Draft conflict">The server revision changed while this editor was saving. Local edits are preserved until an explicit resolution.</Notice> : null}
     {draft.state === "conflict" && conflictRemoteDocument && conflictRemoteLayout && conflictOpen ? <ConflictPanel base={mergeBaseRef.current} baseLayout={mergeBaseLayoutRef.current} local={document} localLayout={layout} remote={conflictRemoteDocument} remoteLayout={conflictRemoteLayout} onKeepRemote={reloadRemoteConflict} onKeepLocal={saveLocalAsNew} onMerge={mergeConflict} onCancel={cancelConflictResolution} /> : null}

@@ -1,5 +1,12 @@
 import {
   CapabilityResponseSchema,
+  ContextAssociationSchema,
+  ContextComparisonSchema,
+  ContextEventPageSchema,
+  ContextSnapshotListSchema,
+  ContextSnapshotManifestSchema,
+  MemoryCapabilitiesSchema,
+  ProviderSessionListSchema,
   CommandResponseSchema,
   DefinitionRecordSchema,
   DiffResponseSchema,
@@ -21,6 +28,13 @@ import {
   WorkflowDefinitionSchema,
   decodeWith,
   type CapabilityResponse,
+  type ContextAssociation,
+  type ContextComparison,
+  type ContextEventPage,
+  type ContextSnapshotList,
+  type ContextSnapshotManifest,
+  type MemoryCapabilities,
+  type ProviderSessionList,
   type CommandKind,
   type CommandResponse,
   type DefinitionRecord,
@@ -79,6 +93,7 @@ export interface StudioClient {
   submitRun(definition: WorkflowDefinition, instanceId: string, profile: string): Promise<RunSubmissionResponse>;
   status(runId: string): Promise<StatusResponse>;
   events(runId: string, afterSequence: number, limit?: number): Promise<EventPage>;
+  contextAssociation(runId: string): Promise<ContextAssociation>;
   command(runId: string, expectedRevision: number, kind: CommandKind, commandId?: string): Promise<CommandResponse>;
   replay(runId: string): Promise<ReplayResponse>;
   export(runId: string): Promise<ExportResponse>;
@@ -107,6 +122,66 @@ export interface OwnerApiClientOptions {
   token?: string;
   actorScope?: string;
   fetcher?: typeof fetch;
+}
+
+/** Separate same-origin client for Context Console projections. It intentionally
+ * exposes only typed read methods and is not a generic route proxy. */
+export class ContextServiceClient {
+  private readonly baseUrl: string;
+  private readonly fetcher: typeof fetch;
+  private token: string | undefined;
+
+  public constructor(options: { baseUrl?: string; token?: string; fetcher?: typeof fetch } = {}) {
+    this.baseUrl = normalizeRelativeBase(options.baseUrl ?? "/api/context");
+    this.fetcher = options.fetcher ?? fetch.bind(globalThis);
+    this.token = options.token;
+  }
+
+  public setToken(token: string | undefined): void { this.token = token; }
+
+  public async memoryCapabilities(): Promise<MemoryCapabilities> {
+    return decodeWith(MemoryCapabilitiesSchema, await this.json("/v3/memory/capabilities"), "memory capabilities");
+  }
+
+  public async providerSessions(runId: string): Promise<ProviderSessionList> {
+    return decodeWith(ProviderSessionListSchema, await this.json(`/v1/runs/${encodeIdentifier(runId)}/provider-sessions`), "provider session list");
+  }
+
+  public async snapshots(runId: string): Promise<ContextSnapshotList> {
+    return decodeWith(ContextSnapshotListSchema, await this.json(`/v1/runs/${encodeIdentifier(runId)}/snapshots`), "context snapshot list");
+  }
+
+  public async compareSnapshots(runId: string, leftSnapshotId: string, rightSnapshotId: string): Promise<ContextComparison> {
+    const query = new URLSearchParams({ left: encodeIdentifier(leftSnapshotId), right: encodeIdentifier(rightSnapshotId) });
+    return decodeWith(ContextComparisonSchema, await this.json(`/v1/runs/${encodeIdentifier(runId)}/compare?${query}`), "context comparison");
+  }
+
+  public async snapshot(runId: string, snapshotId: string): Promise<ContextSnapshotManifest> {
+    return decodeWith(ContextSnapshotManifestSchema, await this.json(`/v1/runs/${encodeIdentifier(runId)}/snapshots/${encodeIdentifier(snapshotId)}`), "context snapshot manifest");
+  }
+
+  public async events(runId: string, cursor?: string): Promise<ContextEventPage> {
+    const query = cursor ? `?${new URLSearchParams({ cursor }).toString()}` : "";
+    return decodeWith(ContextEventPageSchema, await this.json(`/v1/runs/${encodeIdentifier(runId)}/events${query}`), "context event page");
+  }
+
+  private async json(path: string): Promise<unknown> {
+    try { return await (await this.request(path)).json(); }
+    catch { throw new ClientError("Context service returned invalid JSON", "context_service_decode"); }
+  }
+
+  private async request(path: string): Promise<Response> {
+    const headers = new Headers({ Accept: "application/json" });
+    if (this.token) headers.set("Authorization", `Bearer ${this.token}`);
+    let response: Response;
+    try {
+      response = await this.fetcher(`${this.baseUrl}${path}`, { method: "GET", headers, credentials: "same-origin" });
+    } catch {
+      throw new ClientError("Context service is unavailable", "context_service_unavailable");
+    }
+    if (!response.ok) throw new ClientError("Context service request was rejected", "context_service_rejected", response.status);
+    return response;
+  }
 }
 
 export class OwnerApiClient implements StudioClient {
@@ -274,6 +349,11 @@ export class OwnerApiClient implements StudioClient {
     const query = new URLSearchParams({ after_sequence: String(afterSequence), limit: String(limit) });
     const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}/events?${query.toString()}`, { method: "GET" });
     return decodeWith(EventPageSchema, response, "run events");
+  }
+
+  public async contextAssociation(runId: string): Promise<ContextAssociation> {
+    const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}/context`, { method: "GET" });
+    return decodeWith(ContextAssociationSchema, response, "workflow context association");
   }
 
   public async command(runId: string, expectedRevision: number, kind: CommandKind, commandId?: string): Promise<CommandResponse> {
@@ -584,6 +664,9 @@ export class FixtureClient implements StudioClient {
       schema_version: "ascension.capabilities/v1",
       capabilities: {
         capabilities: ["observe.fair-play.v1", "actions.catalog.v1", "actions.settlement.v1", "studio.fixture.v1"],
+        context_bindings: [
+          { context_ref: "context.synthetic.v1", node_kinds: ["analyze", "decide"] },
+        ],
       },
     };
   }
@@ -676,6 +759,23 @@ export class FixtureClient implements StudioClient {
     };
   }
 
+  public async contextAssociation(runId: string): Promise<ContextAssociation> {
+    const run = this.runs.get(runId) ?? this.createDefaultRun(runId);
+    return ContextAssociationSchema.parse({
+      schema_version: "ascension.workflow-context-association/v1",
+      workflow: {
+        workflow_run_id: run.status.run.workflow_run_id,
+        definition_digest: run.status.run.definition_digest,
+        graph_id: run.status.run.cursor.graph_id,
+        node_id: run.status.run.cursor.node_id,
+        node_execution_id: run.status.run.cursor.node_execution_id,
+      },
+      context: { availability: "not_applicable", context_ref: null, run_id: null, episode_id: null, agent_id: null, snapshot_id: null, approved_revision_id: null, plan_epoch: null, reason_code: "fixture_context_adapter_unavailable" },
+      capture: { mode: "unavailable", state: "unavailable", attempt_id: null, reason_code: "fixture_context_adapter_unavailable" },
+      capabilities: { inspect_metadata: true, read_retained_content: false, edit_context: false, control_context: false, memory_search: false, provider_session_inspect: false },
+    });
+  }
+
   public async command(runId: string, expectedRevision: number, kind: CommandKind, _commandId?: string): Promise<CommandResponse> {
     const safe = buildSafeCommand(runId, expectedRevision, kind);
     const run = this.runs.get(runId) ?? this.createDefaultRun(runId);
@@ -713,7 +813,7 @@ export class FixtureClient implements StudioClient {
     if (!definition) {
       throw new ClientError("Fixture catalog has no definition", "fixture_empty");
     }
-    const digest = "fixture-catalog-digest";
+    const digest = "f".repeat(64);
     const snapshot = makeFixtureSnapshot(runId, digest, "paused", 1);
     const event = makeFixtureEvent(runId, digest, 1, "run_started", snapshot.cursor.node_execution_id);
     const run = {

@@ -171,6 +171,171 @@ export const EventPageSchema = z.object({
 }).strict();
 export type EventPage = z.infer<typeof EventPageSchema>;
 
+/** Redacted association of the current workflow cursor to owner context evidence. */
+export const ContextAssociationSchema = z.object({
+  schema_version: z.literal("ascension.workflow-context-association/v1"),
+  workflow: z.object({
+    workflow_run_id: z.string().min(1).max(128),
+    definition_digest: z.string().regex(/^[a-f0-9]{64}$/),
+    graph_id: z.string().min(1).max(128),
+    node_id: z.string().min(1).max(128),
+    node_execution_id: z.string().min(1).max(128),
+  }).strict(),
+  context: z.object({
+    availability: z.enum(["available", "unavailable", "not_applicable"]),
+    context_ref: z.string().min(1).max(128).nullable(),
+    run_id: z.string().min(1).max(128).nullable(),
+    episode_id: z.string().min(1).max(128).nullable(),
+    agent_id: z.string().min(1).max(128).nullable(),
+    snapshot_id: z.string().min(1).max(128).nullable(),
+    approved_revision_id: z.string().min(1).max(128).nullable(),
+    plan_epoch: z.number().int().nonnegative().nullable(),
+    reason_code: z.string().min(1).max(128).optional(),
+  }).strict(),
+  capture: z.object({
+    mode: z.enum(["off", "metadata", "memory", "private", "unavailable"]),
+    state: z.enum(["not_captured", "prepared", "input_write_completed", "provider_receipt_reported", "unknown", "unavailable"]),
+    attempt_id: z.string().min(1).max(128).nullable(),
+    reason_code: z.string().min(1).max(128).optional(),
+  }).strict(),
+  capabilities: z.object({
+    inspect_metadata: z.boolean(),
+    read_retained_content: z.boolean(),
+    edit_context: z.boolean(),
+    control_context: z.boolean(),
+    memory_search: z.boolean(),
+    provider_session_inspect: z.boolean(),
+  }).strict(),
+}).strict().superRefine((value, context) => {
+  if (value.context.availability !== "available") {
+    if ([value.context.context_ref, value.context.run_id, value.context.episode_id, value.context.agent_id, value.context.snapshot_id, value.context.approved_revision_id, value.context.plan_epoch].some((item) => item !== null)) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "Unavailable context association must not contain inferred identities." });
+    }
+    return;
+  }
+  if ([value.context.context_ref, value.context.run_id, value.context.episode_id, value.context.agent_id, value.context.snapshot_id, value.context.approved_revision_id].some((item) => item === null) || !value.context.plan_epoch) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Available context association requires all bound identities and a positive plan epoch." });
+  }
+});
+export type ContextAssociation = z.infer<typeof ContextAssociationSchema>;
+
+const ContextScopeSchema = z.object({
+  project_id: z.string().min(1).max(128),
+  run_id: z.string().min(1).max(128),
+  episode_id: z.string().min(1).max(128),
+  agent_id: z.string().min(1).max(128),
+}).strict();
+
+export const MemoryCapabilitiesSchema = z.object({
+  schema: z.literal("ascension.context-memory.capabilities.v1"),
+  product_phase: z.literal(3),
+  scope: ContextScopeSchema,
+  enabled: z.boolean(),
+  supported_operations: z.array(z.string()).max(32),
+  phase2_approval_required: z.boolean(),
+  persistent_provider_sessions: z.boolean(),
+  provider_side_compaction: z.boolean(),
+  hidden_reasoning_access: z.boolean(),
+  direct_game_dispatch: z.boolean(),
+}).passthrough();
+export type MemoryCapabilities = z.infer<typeof MemoryCapabilitiesSchema>;
+
+export const ProviderSessionListSchema = z.object({
+  schema: z.literal("ascension.provider-session.api-result.v1"),
+  operation: z.literal("list"),
+  value: z.object({
+    run_id: z.string().min(1).max(128),
+    bindings: z.array(z.object({
+      binding_id: z.string().min(1).max(128),
+      state: z.string().min(1).max(128),
+      history_coverage: z.string().min(1).max(128),
+      game_dispatch_capability: z.boolean(),
+    }).passthrough()).max(128),
+    operations: z.array(z.object({
+      operation_id: z.string().min(1).max(128),
+      state: z.string().min(1).max(128),
+      game_effects: z.number().int().nonnegative(),
+      auto_resume: z.boolean(),
+    }).passthrough()).max(128),
+    next_cursor: z.string().nullable(),
+  }).strict(),
+  effect_class: z.literal("local_metadata_only"),
+  inference_calls: z.literal(0),
+  game_effects: z.literal(0),
+}).strict();
+export type ProviderSessionList = z.infer<typeof ProviderSessionListSchema>;
+
+/** Bounded, metadata-only projection returned by the Context owner read API.
+ * Retained component bytes deliberately have no representation in Studio. */
+export const ContextSnapshotSummarySchema = z.object({
+  snapshot_id: z.string().min(1).max(128),
+  run_id: z.string().min(1).max(128),
+  episode_id: z.string().min(1).max(128),
+  boundary: z.string().min(1).max(128),
+  capture_mode: z.string().min(1).max(128),
+  component_count: z.number().int().nonnegative(),
+  application_capture_complete: z.boolean(),
+  incomplete_reasons: z.array(z.string().min(1).max(128)).max(64),
+}).strict();
+export type ContextSnapshotSummary = z.infer<typeof ContextSnapshotSummarySchema>;
+
+export const ContextSnapshotListSchema = z.object({
+  run_id: z.string().min(1).max(128),
+  snapshots: z.array(ContextSnapshotSummarySchema).max(200),
+  next_cursor: z.null(),
+}).strict();
+export type ContextSnapshotList = z.infer<typeof ContextSnapshotListSchema>;
+
+export const ContextComparisonSchema = z.object({
+  comparison: z.object({
+    left_snapshot_id: z.string().min(1).max(128),
+    right_snapshot_id: z.string().min(1).max(128),
+    same_boundary: z.boolean(),
+    same_component_order: z.boolean(),
+    changed_components: z.array(z.string().min(1).max(128)).max(128),
+  }).strict(),
+  read_only: z.literal(true),
+}).strict();
+export type ContextComparison = z.infer<typeof ContextComparisonSchema>;
+
+const ContextIdentifierSchema = z.string().min(1).max(128);
+export const ContextSnapshotManifestSchema = z.object({
+  schema: z.literal("ascension.context-snapshot.v1"),
+  snapshot_id: ContextIdentifierSchema,
+  identity: z.object({ run_id: ContextIdentifierSchema, episode_id: ContextIdentifierSchema, agent_id: ContextIdentifierSchema, model_execution_id: ContextIdentifierSchema, provider_attempt_id: ContextIdentifierSchema }).strict(),
+  boundary: ContextIdentifierSchema,
+  capture_mode: z.enum(["metadata", "memory", "private"]),
+  application_capture_complete: z.boolean(),
+  incomplete_reasons: z.array(ContextIdentifierSchema).max(16),
+  components: z.array(z.object({
+    component_id: ContextIdentifierSchema,
+    ordinal: z.number().int().nonnegative().max(127),
+    kind: ContextIdentifierSchema,
+    role: z.string().nullable(),
+    media_type: z.string().min(1).max(128),
+    observed_bytes: z.number().int().nonnegative(),
+    content_status: ContextIdentifierSchema,
+  }).strip()).min(1).max(128),
+}).strip();
+export type ContextSnapshotManifest = z.infer<typeof ContextSnapshotManifestSchema>;
+
+export const ContextEventPageSchema = z.object({
+  run_id: ContextIdentifierSchema,
+  events: z.array(z.object({
+    event_id: ContextIdentifierSchema,
+    producer_id: ContextIdentifierSchema,
+    sequence: z.number().int().nonnegative(),
+    snapshot_id: ContextIdentifierSchema,
+    provider_attempt_id: ContextIdentifierSchema,
+    observed_at: z.string().min(1).max(128),
+    event_type: ContextIdentifierSchema,
+  }).strip()).max(200),
+  next_cursor: z.string().min(1).max(2048).nullable(),
+  gap: z.boolean(),
+  offline: z.literal(false),
+}).strict();
+export type ContextEventPage = z.infer<typeof ContextEventPageSchema>;
+
 export const HealthResponseSchema = z.object({
   schema_version: z.string(),
   status: z.string(),
@@ -181,6 +346,22 @@ export const CapabilityResponseSchema = z.object({
   capabilities: JsonValueSchema,
 }).strict();
 export type CapabilityResponse = z.infer<typeof CapabilityResponseSchema>;
+
+export const ContextBindingSchema = z.object({
+  context_ref: z.string().min(1).max(128),
+  node_kinds: z.array(z.enum(["analyze", "decide"])).min(1).max(2),
+}).strict();
+export type ContextBinding = z.infer<typeof ContextBindingSchema>;
+
+/** Extract only the bounded authoring metadata from an otherwise owner-defined
+ * capability document. Unknown owner capabilities remain opaque. */
+export function contextBindingsFromCapabilities(value: JsonValue): ContextBinding[] | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+  const candidate = (value as JsonObject).context_bindings;
+  if (!Array.isArray(candidate)) return undefined;
+  const parsed = z.array(ContextBindingSchema).max(128).safeParse(candidate);
+  return parsed.success ? parsed.data : undefined;
+}
 
 export const ValidateResponseSchema = z.object({
   schema_version: z.string(),

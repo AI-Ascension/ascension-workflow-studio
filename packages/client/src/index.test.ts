@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { EventPage, RunEvent, WorkflowDefinition } from "@studio/contracts";
 
 import {
+  ContextServiceClient,
   OwnerApiClient,
   applyEventPage,
   buildSafeCommand,
@@ -189,5 +190,90 @@ describe("same-origin client boundary", () => {
     client.setActorScope("profile:studio");
     await client.command("run.1", 1, "pause", "command.stable");
     expect(commandBody).toMatchObject({ actor_scope: "profile:studio", command_id: "command.stable" });
+  });
+
+  it("decodes a scoped context association and rejects inferred unavailable identities", async () => {
+    const digest = "a".repeat(64);
+    const association = {
+      schema_version: "ascension.workflow-context-association/v1",
+      workflow: { workflow_run_id: "run.fixture.1", definition_digest: digest, graph_id: "main", node_id: "decide", node_execution_id: "run.fixture.1.node.2" },
+      context: { availability: "unavailable", context_ref: null, run_id: null, episode_id: null, agent_id: null, snapshot_id: null, approved_revision_id: null, plan_epoch: null, reason_code: "adapter_unavailable" },
+      capture: { mode: "unavailable", state: "unavailable", attempt_id: null, reason_code: "adapter_unavailable" },
+      capabilities: { inspect_metadata: true, read_retained_content: false, edit_context: false, control_context: false, memory_search: false, provider_session_inspect: false },
+    };
+    const malformed = { ...association, context: { ...association.context, context_ref: "invented.context" } };
+    const requests: string[] = [];
+    const client = new OwnerApiClient({ baseUrl: "/v1", fetcher: async (input) => {
+      requests.push(String(input));
+      return new Response(JSON.stringify(requests.length === 1 ? association : malformed), { status: 200 });
+    } });
+    await expect(client.contextAssociation("run.fixture.1")).resolves.toMatchObject({ workflow: { node_execution_id: "run.fixture.1.node.2" } });
+    expect(requests).toEqual(["/v1/workflow-runs/run.fixture.1/context"]);
+    await expect(client.contextAssociation("run.fixture.1")).rejects.toThrow("workflow context association failed runtime decoding");
+  });
+
+  it("uses typed, separate same-origin context read routes", async () => {
+    const paths: string[] = [];
+    let call = 0;
+    const client = new ContextServiceClient({ baseUrl: "/api/context", fetcher: async (input) => {
+      const path = String(input);
+      paths.push(path);
+      call += 1;
+      if (call === 1) {
+        return new Response(JSON.stringify({
+          schema: "ascension.context-memory.capabilities.v1", product_phase: 3,
+          scope: { project_id: "project", run_id: "run.1", episode_id: "episode", agent_id: "agent" },
+          enabled: false, supported_operations: [], phase2_approval_required: true,
+          persistent_provider_sessions: false, provider_side_compaction: false,
+          hidden_reasoning_access: false, direct_game_dispatch: false,
+        }), { status: 200 });
+      }
+      if (call === 2) return new Response(JSON.stringify({
+        schema: "ascension.provider-session.api-result.v1", operation: "list",
+        value: { run_id: "run.1", bindings: [], operations: [], next_cursor: null },
+        effect_class: "local_metadata_only", inference_calls: 0, game_effects: 0,
+      }), { status: 200 });
+      return new Response(JSON.stringify({
+        run_id: "run.1", next_cursor: null,
+        snapshots: [{ snapshot_id: "snapshot.1", run_id: "run.1", episode_id: "episode.1", boundary: "exo_session_request", capture_mode: "metadata", component_count: 2, application_capture_complete: true, incomplete_reasons: [] }],
+      }), { status: 200 });
+    } });
+    await expect(client.memoryCapabilities()).resolves.toMatchObject({ enabled: false });
+    await expect(client.providerSessions("run.1")).resolves.toMatchObject({ value: { run_id: "run.1" } });
+    await expect(client.snapshots("run.1")).resolves.toMatchObject({ snapshots: [{ snapshot_id: "snapshot.1" }] });
+    expect(paths).toEqual(["/api/context/v3/memory/capabilities", "/api/context/v1/runs/run.1/provider-sessions", "/api/context/v1/runs/run.1/snapshots"]);
+  });
+
+  it("uses a bounded Context comparison route rather than a generic proxy", async () => {
+    const paths: string[] = [];
+    const client = new ContextServiceClient({ baseUrl: "/api/context", fetcher: async (input) => {
+      paths.push(String(input));
+      return new Response(JSON.stringify({
+        comparison: { left_snapshot_id: "snapshot.left", right_snapshot_id: "snapshot.right", same_boundary: false, same_component_order: true, changed_components: ["component.1"] },
+        read_only: true,
+      }), { status: 200 });
+    } });
+    await expect(client.compareSnapshots("context.run.1", "snapshot.left", "snapshot.right")).resolves.toMatchObject({ read_only: true });
+    expect(paths).toEqual(["/api/context/v1/runs/context.run.1/compare?left=snapshot.left&right=snapshot.right"]);
+  });
+
+  it("decodes only bounded Context manifest metadata and paged event metadata", async () => {
+    const paths: string[] = [];
+    const client = new ContextServiceClient({ baseUrl: "/api/context", fetcher: async (input) => {
+      const path = String(input);
+      paths.push(path);
+      if (path.includes("/snapshots/")) return new Response(JSON.stringify({
+        schema: "ascension.context-snapshot.v1", snapshot_id: "snapshot.1",
+        identity: { run_id: "context.run.1", episode_id: "episode.1", agent_id: "agent.1", model_execution_id: "execution.1", provider_attempt_id: "attempt.1" },
+        boundary: "adapter.http_body", capture_mode: "metadata", application_capture_complete: true, incomplete_reasons: [],
+        components: [{ component_id: "component.1", ordinal: 0, kind: "serialized_http_body", role: null, media_type: "application/json", observed_bytes: 12, content_status: "complete", content_ref: "must-not-reach-ui" }],
+      }), { status: 200 });
+      return new Response(JSON.stringify({ run_id: "context.run.1", events: [{ event_id: "event.1", producer_id: "producer.1", sequence: 1, snapshot_id: "snapshot.1", provider_attempt_id: "attempt.1", observed_at: "2026-09-12T00:00:00Z", event_type: "capture.prepared", details: { private: "discarded" } }], next_cursor: "cursor.1", gap: false, offline: false }), { status: 200 });
+    } });
+    const snapshot = await client.snapshot("context.run.1", "snapshot.1");
+    expect(snapshot.components[0]).not.toHaveProperty("content_ref");
+    const events = await client.events("context.run.1", "cursor.0");
+    expect(events.events[0]).not.toHaveProperty("details");
+    expect(paths).toEqual(["/api/context/v1/runs/context.run.1/snapshots/snapshot.1", "/api/context/v1/runs/context.run.1/events?cursor=cursor.0"]);
   });
 });

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 
-import type { CommandKind, CommandResponse, EventPage, RunEvent, StatusResponse } from "@studio/contracts";
-import { ClientError, applyEventPage, createProjection, type RunProjection, type StudioClient } from "@studio/client";
+import type { CommandKind, CommandResponse, ContextAssociation, ContextEventPage, ContextSnapshotManifest, EventPage, RunEvent, StatusResponse } from "@studio/contracts";
+import { ClientError, applyEventPage, createProjection, type ContextServiceClient, type RunProjection, type StudioClient } from "@studio/client";
 import { mapProjectionSupport, pinnedMapIdentity, resolveApprovedLink, VisibleMapProjectionSchema, type ApprovedLinkMapping, type VisibleMapProjection } from "@studio/document";
 
 import { Notice } from "../../components/Notice";
@@ -9,17 +9,26 @@ import { StatusBadge } from "../../components/StatusBadge";
 
 interface RunsViewProps {
   client: StudioClient;
+  contextClient: ContextServiceClient;
   mode: "fixture" | "live";
   initialRunId: string;
   onRunIdChange: (runId: string) => void;
   linkMappings: ApprovedLinkMapping[];
 }
 
-export function RunsView({ client, mode, initialRunId, onRunIdChange, linkMappings }: RunsViewProps): JSX.Element {
+export function RunsView({ client, contextClient, mode, initialRunId, onRunIdChange, linkMappings }: RunsViewProps): JSX.Element {
   const [runId, setRunId] = useState(initialRunId);
   const [runInput, setRunInput] = useState(initialRunId);
   const [status, setStatus] = useState<StatusResponse | undefined>();
   const [projection, setProjection] = useState<RunProjection | undefined>();
+  const [contextAssociation, setContextAssociation] = useState<ContextAssociation | undefined>();
+  const [contextMessage, setContextMessage] = useState<string | undefined>();
+  const [contextSnapshotMessage, setContextSnapshotMessage] = useState<string | undefined>();
+  const [contextManifest, setContextManifest] = useState<ContextSnapshotManifest | undefined>();
+  const [contextEvents, setContextEvents] = useState<ContextEventPage | undefined>();
+  const [contextEventsMessage, setContextEventsMessage] = useState<string | undefined>();
+  const [memoryMessage, setMemoryMessage] = useState("Memory search is unavailable from this owner.");
+  const [sessionMessage, setSessionMessage] = useState("Provider-session inspection is unavailable from this owner.");
   const [state, setState] = useState<"idle" | "loading" | "ready" | "error" | "resnapshot">("idle");
   const [message, setMessage] = useState("");
   const [attempt, setAttempt] = useState<CommandAttempt | undefined>();
@@ -35,9 +44,79 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange, linkMappin
     try {
       const nextStatus = await client.status(requestedRunId);
       const nextProjection = createProjection(requestedRunId, nextStatus.run.definition_digest);
-      const page: EventPage = await client.events(requestedRunId, 0);
+      const [page, association] = await Promise.all([
+        client.events(requestedRunId, 0),
+        client.contextAssociation(requestedRunId).then((value) => ({ value })).catch((error: unknown) => ({ error })),
+      ]);
       const applied = applyEventPage(nextProjection, page);
       setStatus(nextStatus);
+      if ("value" in association) {
+        setContextAssociation(association.value);
+        setContextMessage(undefined);
+        const contextRunId = association.value.context.run_id;
+        if (association.value.context.availability === "available" && contextRunId && association.value.context.snapshot_id) {
+          try {
+            const snapshots = await contextClient.snapshots(contextRunId);
+            const current = snapshots.snapshots.find((item) => item.snapshot_id === association.value.context.snapshot_id);
+            setContextSnapshotMessage(current
+              ? `${current.component_count} component(s) · ${current.capture_mode} capture · ${current.application_capture_complete ? "complete" : `incomplete: ${current.incomplete_reasons.join(", ") || "reason not disclosed"}`}`
+              : "The owner did not disclose the bound snapshot in this scoped context run.");
+          } catch { setContextSnapshotMessage("Context snapshot metadata is unavailable from the composed context owner."); }
+          try {
+            const [manifest, events] = await Promise.all([
+              contextClient.snapshot(contextRunId, association.value.context.snapshot_id),
+              contextClient.events(contextRunId),
+            ]);
+            const expected = association.value.context;
+            if (manifest.snapshot_id !== expected.snapshot_id || manifest.identity.run_id !== contextRunId || manifest.identity.episode_id !== expected.episode_id || manifest.identity.agent_id !== expected.agent_id) {
+              setContextManifest(undefined);
+              setContextEvents(undefined);
+              setContextEventsMessage("Context manifest was rejected because its bound identity differs from the workflow association.");
+            } else if (events.run_id !== contextRunId) {
+              setContextManifest(undefined);
+              setContextEvents(undefined);
+              setContextEventsMessage("Context event page was rejected because it names a different Context run.");
+            } else {
+              setContextManifest(manifest);
+              setContextEvents(events);
+              setContextEventsMessage(events.gap ? "The Context owner reports a retained-event capture gap." : undefined);
+            }
+          } catch {
+            setContextManifest(undefined);
+            setContextEvents(undefined);
+            setContextEventsMessage("Context component and event metadata is unavailable from the composed context owner.");
+          }
+        } else {
+          setContextSnapshotMessage("No retained context snapshot is available for this workflow invocation.");
+          setContextManifest(undefined);
+          setContextEvents(undefined);
+          setContextEventsMessage(undefined);
+        }
+        if (association.value.capabilities.memory_search && contextRunId) {
+          try {
+            const memory = await contextClient.memoryCapabilities();
+            const expected = association.value.context;
+            if (memory.scope.run_id !== contextRunId || memory.scope.episode_id !== expected.episode_id || memory.scope.agent_id !== expected.agent_id) {
+              setMemoryMessage("Memory projection was rejected because the Context owner returned a different scoped identity.");
+            } else setMemoryMessage(memory.enabled ? `Read-only memory search is available (${memory.supported_operations.join(", ") || "no operations disclosed"}).` : "Memory projection is explicitly unavailable.");
+          } catch { setMemoryMessage("Memory projection is unavailable from the composed context owner."); }
+        } else setMemoryMessage("Memory search is unavailable from this owner.");
+        if (association.value.capabilities.provider_session_inspect && contextRunId) {
+          try {
+            const sessions = await contextClient.providerSessions(contextRunId);
+            setSessionMessage(sessions.value.run_id === contextRunId
+              ? `Read-only session projection: ${sessions.value.bindings.length} binding(s), ${sessions.value.operations.length} operation(s).`
+              : "Provider-session projection was rejected because the Context owner returned a different run identity.");
+          } catch { setSessionMessage("Provider-session projection is unavailable from the composed context owner."); }
+        } else setSessionMessage("Provider-session inspection is unavailable from this owner.");
+      } else {
+        setContextAssociation(undefined);
+        setContextMessage(association.error instanceof Error ? association.error.message : "Context inspection is unavailable from this owner.");
+        setContextSnapshotMessage(undefined);
+        setContextManifest(undefined);
+        setContextEvents(undefined);
+        setContextEventsMessage(undefined);
+      }
       setProjection(applied.kind === "resnapshot" ? nextProjection : applied.projection);
       setState(applied.kind === "resnapshot" ? "resnapshot" : "ready");
       setMessage(applied.kind === "resnapshot" ? applied.reason : `Loaded ${page.events.length} retained event${page.events.length === 1 ? "" : "s"}.`);
@@ -45,7 +124,7 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange, linkMappin
       setState("error");
       setMessage(error instanceof Error ? error.message : "Run inspection failed.");
     }
-  }, [client, runId]);
+  }, [client, contextClient, runId]);
 
   useEffect(() => {
     void refresh();
@@ -61,6 +140,20 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange, linkMappin
     if (!next) return;
     setRunId(next);
     onRunIdChange(next);
+  };
+
+  const loadMoreContextEvents = async (): Promise<void> => {
+    const contextRunId = contextAssociation?.context.run_id;
+    const cursor = contextEvents?.next_cursor;
+    if (!contextRunId || !cursor) return;
+    try {
+      const page = await contextClient.events(contextRunId, cursor);
+      if (page.run_id !== contextRunId) throw new Error("Context owner returned a different run identity.");
+      setContextEvents((current) => current ? { ...page, events: [...current.events, ...page.events].slice(-200) } : page);
+      setContextEventsMessage(page.gap ? "The Context owner reports a retained-event capture gap." : undefined);
+    } catch {
+      setContextEventsMessage("The next Context event page is unavailable from the composed context owner.");
+    }
   };
 
   const submitAttempt = useCallback(async (next: CommandAttempt): Promise<void> => {
@@ -156,6 +249,30 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange, linkMappin
           <dl className="detail-list"><div><dt>Definition digest</dt><dd><code data-testid="run-definition-digest">{status.run.definition_digest}</code></dd></div><div><dt>Game outcome</dt><dd>{status.run.game_outcome.replaceAll("_", " ")}</dd></div><div><dt>Cleanup</dt><dd>{status.run.cleanup.replaceAll("_", " ")}</dd></div><div><dt>Waiting reason</dt><dd>{status.waiting_reason ?? "—"}</dd></div><div><dt>Pending operation</dt><dd>{status.run.pending_operation ? `${status.run.pending_operation.operation_id} · ${status.run.pending_operation.state}` : "None"}</dd></div></dl>
         </section>
       </div>
+      <section className="panel-card" aria-label="Context evidence">
+        <div className="panel-title"><div><p className="eyebrow">Bounded context evidence</p><h2>Context</h2></div><StatusBadge tone={contextAssociation?.context.availability === "available" ? "success" : "muted"}>{contextAssociation?.context.availability ?? "unavailable"}</StatusBadge></div>
+        <p className="muted">This view presents owner-provided metadata for the current workflow cursor. It does not reveal retained content, create a provider request, or change run control state.</p>
+        {contextAssociation ? <dl className="detail-list">
+          <div><dt>Context reference</dt><dd>{contextAssociation.context.context_ref ?? "—"}</dd></div>
+          <div><dt>Snapshot</dt><dd>{contextAssociation.context.snapshot_id ?? "—"}</dd></div>
+          <div><dt>Capture</dt><dd>{contextAssociation.capture.mode} · {contextAssociation.capture.state}</dd></div>
+          <div><dt>Capture attempt</dt><dd>{contextAssociation.capture.attempt_id ?? "—"}</dd></div>
+          <div><dt>Reason</dt><dd>{contextAssociation.context.reason_code ?? contextAssociation.capture.reason_code ?? "—"}</dd></div>
+        </dl> : <p className="field-unknown" role="status">{contextMessage ?? "Context inspection has not been loaded."}</p>}
+        {contextAssociation ? <p className="field-unknown" role="status">{contextSnapshotMessage ?? "Context snapshot metadata has not been loaded."}</p> : null}
+        {contextManifest ? <><dl className="detail-list"><div><dt>Bounded components</dt><dd>{contextManifest.components.length}</dd></div><div><dt>Boundary</dt><dd>{contextManifest.boundary}</dd></div></dl><ul className="plain-list">{contextManifest.components.map((component) => <li key={component.component_id}><code>{component.component_id}</code> · {component.kind} · {component.media_type} · {component.observed_bytes} bytes · {component.content_status}</li>)}</ul><p className="muted">Component metadata is shown without retained bytes, content references, or content-read actions.</p></> : null}
+        {contextEvents ? <div><p className="muted">{contextEvents.events.length} retained Context event(s){contextEvents.gap ? " · capture gap reported" : ""}.</p><ul className="plain-list">{contextEvents.events.map((event) => <li key={event.event_id}><code>{event.sequence}</code> · {event.event_type} · snapshot {event.snapshot_id}</li>)}</ul>{contextEvents.next_cursor ? <button className="button button-quiet" onClick={() => void loadMoreContextEvents()}>Load more Context events</button> : null}</div> : null}
+        {contextEventsMessage ? <p className="field-unknown" role="status">{contextEventsMessage}</p> : null}
+        {historical ? <p className="field-unknown" role="status">Historical cursor: context controls remain unavailable in this view.</p> : null}
+      </section>
+      <section className="panel-card" aria-label="Memory evidence">
+        <div className="panel-title"><div><p className="eyebrow">Memory</p><h2>Read-only provenance</h2></div><StatusBadge tone="muted">no controls</StatusBadge></div>
+        <p className="muted">{memoryMessage}</p>
+      </section>
+      <section className="panel-card" aria-label="Provider session evidence">
+        <div className="panel-title"><div><p className="eyebrow">Provider session</p><h2>Read-only continuity</h2></div><StatusBadge tone="muted">no controls</StatusBadge></div>
+        <p className="muted">{sessionMessage}</p>
+      </section>
       <section className="panel-card" aria-label="Approved reference links"><div className="panel-title"><div><p className="eyebrow">References</p><h2>Approved links</h2></div><span className="muted">mapping only</span></div>
         <p className="muted">Only operator-approved https mappings resolve here. Identifiers that are raw URLs or redirects are rejected; nothing is proxied.</p>
         <label className="field-label">Reference identifier probe<input aria-label="Reference identifier probe" value={referenceProbe} onChange={(event) => setReferenceProbe(event.target.value)} placeholder={status.run.workflow_run_id} /></label>
