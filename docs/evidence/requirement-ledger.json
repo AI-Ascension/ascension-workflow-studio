@@ -3,9 +3,9 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 59,
+    "implemented": 60,
     "partial": 24,
-    "not_started": 4
+    "not_started": 3
   },
   "requirements": [
     {
@@ -832,8 +832,8 @@
       "id": "P2-083",
       "mandatory": true,
       "work_package": "WP-27",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #64 (commit f485ed9; merge e1f0322) adds an approved-link resolver: operator-configured https mappings keyed by run/trace/artifact and pinned to an origin. Identifiers are encoded, the resolved URL must remain on the approved origin, and raw URLs, protocol-relative redirects, control characters, path traversal and non-https results are rejected. Settings exposes an explicit https-validated mapping allow-list, and the run inspector renders a link only for an approved mapping. Studio CI run 34664202204 passed all six jobs.",
       "acceptance_cases": [
         "AT-083"
       ]

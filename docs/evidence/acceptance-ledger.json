@@ -3,10 +3,10 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 46,
+    "evidenced": 47,
     "partial": 30,
     "implemented": 6,
-    "not_run": 4
+    "not_run": 3
   },
   "cases": [
     {
@@ -1076,10 +1076,19 @@
         "P2-083"
       ],
       "work_package": "WP-27",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "evidenced",
+      "actual_command": "npm test -- --run (approved-link unit tests); GitHub Actions Studio validation run 34664202204 (browser chromium/firefox/webkit, recorded-run, live-owner)",
+      "actual_source_heads": {
+        "studio": "f485ed9"
+      },
+      "evidence": "Unit tests cover approved resolution, raw-URL rejection, protocol-relative rejection, missing mappings, escaping templates and insecure origins. The browser test rejects an http mapping template at configuration, verifies the approved link href, then probes a raw URL and a protocol-relative redirect and asserts both are rejected with no link rendered (no event-supplied proxy or credential link).",
+      "actual_evidence_refs": [
+        "packages/document/src/links.ts",
+        "packages/document/src/links.test.ts",
+        "apps/studio/src/features/compatibility/CompatibilityView.tsx",
+        "apps/studio/src/features/runs/RunsView.tsx",
+        "tests/browser/studio.spec.ts"
+      ]
     },
     {
       "id": "AT-084",
