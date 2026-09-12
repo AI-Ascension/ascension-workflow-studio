@@ -235,3 +235,5 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 
 .bundle-import-preview { display: grid; gap: 10px; border-color: #7b5a30; }
 .bundle-diff-list { max-height: 200px; overflow: auto; }
+
+.card-provenance { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-family: monospace; font-size: .68rem; }
