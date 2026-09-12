@@ -4,8 +4,8 @@
   "status_summary": {
     "blocked": 33,
     "implemented": 61,
-    "partial": 24,
-    "not_started": 2
+    "partial": 25,
+    "not_started": 1
   },
   "requirements": [
     {
@@ -892,8 +892,8 @@
       "id": "P2-089",
       "mandatory": true,
       "work_package": "WP-29",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "partial",
+      "evidence": "Merged Studio PR #68 (commit 16fe161; merge 29fd88e, CI run 34666988157) stops rebuilding and reconciling every canvas node on config-only edits via a memoized projection key, and moves raw-candidate serialization off the commit path. Measured locally on the production build with headless Chromium: PERF-01 (250 nodes/500 edges) first useful render ~0.8s (target 2000ms); PERF-03 (512 nodes/1200 edges; the 1000/2000 profile is not admitted because the owner caps a graph at 512 nodes, so the envelope is narrowed and documented) ~1.3s (target 5000ms); PERF-06 retained-event bound already 2048 with an explicit resnapshot (target <= 5000). PERF-02 edit feedback is not yet demonstrated at the 100ms target: Playwright action overhead dominates the current measurement and the edit path still deep-clones the document per edit. PERF-04/05/07/08 also remain unmeasured. P2-089 stays partial until a production benchmark harness with in-page performance marks covers the profiles and the edit-path target is met.",
       "acceptance_cases": [
         "AT-089"
       ]

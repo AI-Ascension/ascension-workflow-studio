@@ -4,9 +4,9 @@
   "status_summary": {
     "blocked": 34,
     "evidenced": 48,
-    "partial": 30,
+    "partial": 31,
     "implemented": 6,
-    "not_run": 2
+    "not_run": 1
   },
   "cases": [
     {
@@ -1164,10 +1164,17 @@
         "P2-089"
       ],
       "work_package": "WP-29",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "partial",
+      "actual_command": "manual production-build measurement (headless Chromium, 250/500 and 512/1200; see evidence)",
+      "actual_source_heads": {
+        "studio": "29fd88e"
+      },
+      "evidence": "PERF-01 and PERF-03 were measured within their published targets on the production build, and the retained-event window is bounded at 2048 (target <= 5000). PERF-02 is not yet demonstrated: the current measurement is dominated by automation overhead and the edit path still clones the document per edit. No threshold was changed and no fixture was reduced. A committed production benchmark harness with in-page performance marks and the remaining PERF-04/05/07/08 profiles are outstanding.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "packages/client/src/index.ts",
+        "ascension-workflow-phase2-package/quality/benchmarks.json"
+      ]
     },
     {
       "id": "AT-090",
