@@ -1198,15 +1198,16 @@
       ],
       "work_package": "WP-29",
       "status": "partial",
-      "actual_command": "manual production-build measurement (headless Chromium, 250/500 and 512/1200; see evidence)",
+      "actual_command": "GitHub Actions Studio validation run 34678238388 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner); browser test \u201ckeeps medium-graph edits responsive in the production build\u201d",
       "actual_source_heads": {
-        "studio": "29fd88e"
+        "studio": "a672d41"
       },
-      "evidence": "PERF-01 and PERF-03 were measured within their published targets on the production build, and the retained-event window is bounded at 2048 (target <= 5000). PERF-02 is not yet demonstrated: the current measurement is dominated by automation overhead and the edit path still clones the document per edit. No threshold was changed and no fixture was reduced. A committed production benchmark harness with in-page performance marks and the remaining PERF-04/05/07/08 profiles are outstanding.",
+      "evidence": "A committed production-build benchmark harness (apps/studio/src/features/benchmark/benchmark.ts) measured PERF-01 and PERF-02 at 250 nodes / 500 edges with 100 sequential edits driven through the real node-kind control. PERF-01 is met on all engines (chromium 508ms, firefox 936ms, webkit 912ms against 2000ms). PERF-02 input-to-visible-feedback p95 is met on chromium (36.9ms) and firefox (97ms) but missed on webkit (335ms) against 100ms; the edit handler is ~1ms on every engine, so the residual cost is SVG rasterization of the 500-edge canvas layer. No threshold was changed and no fixture was reduced. The engine measurements and the scoped fix are recorded in docs/evidence/benchmark-results.json; AT-089 stays partial until the webkit path meets the target.",
       "actual_evidence_refs": [
-        "apps/studio/src/features/designer/DesignerView.tsx",
-        "packages/client/src/index.ts",
-        "ascension-workflow-phase2-package/quality/benchmarks.json"
+        "apps/studio/src/features/benchmark/benchmark.ts",
+        "apps/studio/src/features/benchmark/benchmark.test.ts",
+        "docs/evidence/benchmark-results.json",
+        "tests/browser/studio.spec.ts"
       ]
     },
     {
