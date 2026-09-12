@@ -13,6 +13,7 @@ export * from "./guard";
 export * from "./reference";
 export * from "./recovery";
 export * from "./links";
+export * from "./mapProjection";
 
 export type SemanticDocument = WorkflowDefinition;
 

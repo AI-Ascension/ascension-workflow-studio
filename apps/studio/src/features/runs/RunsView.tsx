@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import type { CommandKind, CommandResponse, EventPage, RunEvent, StatusResponse } from "@studio/contracts";
 import { ClientError, applyEventPage, createProjection, type RunProjection, type StudioClient } from "@studio/client";
-import { resolveApprovedLink, type ApprovedLinkMapping } from "@studio/document";
+import { mapProjectionSupport, pinnedMapIdentity, resolveApprovedLink, VisibleMapProjectionSchema, type ApprovedLinkMapping, type VisibleMapProjection } from "@studio/document";
 
 import { Notice } from "../../components/Notice";
 import { StatusBadge } from "../../components/StatusBadge";
@@ -25,6 +25,8 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange, linkMappin
   const [attempt, setAttempt] = useState<CommandAttempt | undefined>();
   const [cursorSequence, setCursorSequence] = useState<number | undefined>();
   const [referenceProbe, setReferenceProbe] = useState("");
+  const [mapProjection, setMapProjection] = useState<VisibleMapProjection | undefined>();
+  const [mapError, setMapError] = useState<string | undefined>();
   const commandIds = useRef(new Map<string, string>());
 
   const refresh = useCallback(async (requestedRunId = runId): Promise<void> => {
@@ -162,6 +164,40 @@ export function RunsView({ client, mode, initialRunId, onRunIdChange, linkMappin
           const resolution = resolveApprovedLink([mapping], mapping.kind, identifier);
           return <li key={mapping.id}>{resolution.status === "approved" ? <a href={resolution.url} target="_blank" rel="noreferrer noopener">{mapping.label}</a> : <span className={resolution.status === "rejected" ? "field-error" : "muted"} role={resolution.status === "rejected" ? "alert" : undefined}>{mapping.label}: {resolution.status} — {resolution.reason}</span>}</li>;
         })}</ul> : <p className="muted">No approved mappings configured in settings.</p>}
+      </section>
+      <section className="panel-card" aria-label="Gameplay map projection"><div className="panel-title"><div><p className="eyebrow">Adjacent read-only projection</p><h2>Gameplay map</h2></div>{mapProjection ? <StatusBadge tone={mapProjectionSupport(mapProjection).state === "available" ? "success" : mapProjectionSupport(mapProjection).state === "stale" ? "warning" : "muted"}>{mapProjectionSupport(mapProjection).state}</StatusBadge> : <StatusBadge tone="muted">not loaded</StatusBadge>}</div>
+        <p className="muted">This is a different graph from the workflow. The projection is inert read-only data: no hidden topology, no inferred future outcomes, and no navigation actions are offered from it.</p>
+        <label className="field-label">Approved map projection file<input type="file" accept="application/json,.json" aria-label="Map projection file" onChange={(event: ChangeEvent<HTMLInputElement>) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (!file) return;
+          void file.text().then((raw) => {
+            try {
+              setMapProjection(VisibleMapProjectionSchema.parse(JSON.parse(raw) as unknown));
+              setMapError(undefined);
+            } catch (error: unknown) {
+              setMapProjection(undefined);
+              setMapError(error instanceof Error ? error.message : "Map projection was rejected.");
+            }
+          });
+        }} /></label>
+        {mapError ? <p className="field-error" role="alert">{mapError}</p> : null}
+        {mapProjection ? (() => { const support = mapProjectionSupport(mapProjection); const pinned = pinnedMapIdentity(mapProjection); return <div className="map-projection">
+          <dl className="detail-list">
+            <div><dt>Schema</dt><dd><code>{pinned.schemaVersion}</code> · <code>{pinned.projectionVersion}</code></dd></div>
+            <div><dt>Generation</dt><dd>{pinned.generation}</dd></div>
+            <div><dt>Instance</dt><dd>{pinned.mapInstanceId ?? "unavailable"}</dd></div>
+            <div><dt>Act / scope</dt><dd>{pinned.actId ?? "—"} / {pinned.scopeId ?? "—"}</dd></div>
+            <div><dt>State</dt><dd>{pinned.stateId}</dd></div>
+            <div><dt>Availability</dt><dd>{mapProjection.availability} · {mapProjection.completeness}</dd></div>
+            <div><dt>Freshness</dt><dd>{mapProjection.freshness}</dd></div>
+            <div><dt>Position</dt><dd>{mapProjection.position.kind === "current" ? `current · ${mapProjection.position.node_id}` : mapProjection.position.kind}</dd></div>
+            <div><dt>Visible graph</dt><dd>{mapProjection.nodes.length} nodes · {mapProjection.edges.length} edges</dd></div>
+          </dl>
+          <p className="muted" role="status">{support.message}</p>
+          <p className="muted">{mapProjection.bindings.length} host navigation binding{mapProjection.bindings.length === 1 ? "" : "s"} pinned; none are exposed as actions.</p>
+          <ul className="plain-list map-node-list">{mapProjection.nodes.map((node) => <li key={node.id}><code>{node.id}</code> · {node.category}{node.visited ? " · visited" : ""}</li>)}</ul>
+        </div>; })() : <p className="muted">No approved map projection is loaded. Authoring and generic run inspection are unaffected.</p>}
       </section>
       <section className="panel-card" aria-labelledby="budget-title"><div className="panel-title"><div><p className="eyebrow">Resource projection</p><h2 id="budget-title">Budget and invocation</h2></div><span className="muted">owner snapshot</span></div><div className="budget-grid"><Metric label="Provider calls" value={`${status.run.budget.provider_calls_consumed} / ${status.run.budget.provider_calls_reserved}`} /><Metric label="Node steps" value={String(status.run.budget.node_steps_consumed)} /><Metric label="Replans" value={String(status.run.budget.replans_consumed)} /><Metric label="Node execution" value={status.run.cursor.node_execution_id} /></div></section>
       <section className="panel-card timeline-card" aria-labelledby="timeline-title">

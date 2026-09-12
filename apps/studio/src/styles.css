@@ -229,3 +229,6 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 
 .recovery-panel { display: grid; gap: 8px; margin-top: 4px; }
 .recovery-panel h2 { font-size: .95rem; }
+
+.map-projection { display: grid; gap: 8px; margin-top: 8px; }
+.map-node-list { max-height: 220px; overflow: auto; }

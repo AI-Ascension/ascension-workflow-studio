@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { expect, test } from "@playwright/test";
 
 test.describe("Studio fixture workbench", () => {
@@ -199,6 +201,39 @@ test.describe("Studio fixture workbench", () => {
     await expect(links.locator("a[href*='evil.example']")).toHaveCount(0);
     await links.getByLabel("Reference identifier probe").fill("//evil.example/x");
     await expect(links.getByText(/Raw URLs are not resolved/)).toBeVisible();
+  });
+
+  test("shows an admitted map projection separately and never as navigation", async ({ page }) => {
+    const golden = JSON.parse(readFileSync("contracts/accepted/phase1/map/visible-map.golden.json", "utf8")) as Record<string, unknown>;
+    await page.goto("/");
+    await page.getByRole("button", { name: "Runs", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
+    const map = page.getByLabel("Gameplay map projection");
+    await expect(map).toContainText("different graph from the workflow");
+    await expect(map).toContainText("No approved map projection is loaded.");
+    await expect(map.getByText(/Authoring and generic run inspection are unaffected/)).toBeVisible();
+
+    await map.getByLabel("Map projection file").setInputFiles("contracts/accepted/phase1/map/visible-map.golden.json");
+    await expect(map.locator(".status-badge").first()).toHaveText("available");
+    await expect(map).toContainText("visible-map-v1");
+    await expect(map).toContainText("runtime-map-v1");
+    await expect(map).toContainText("map-instance-1");
+    await expect(map).toContainText("4 nodes · 4 edges");
+    await expect(map).toContainText("2 host navigation bindings pinned; none are exposed as actions.");
+    await expect(map.locator(".map-node-list button")).toHaveCount(0);
+    await expect(map.getByRole("button", { name: /select|navigate|move/i })).toHaveCount(0);
+
+    await map.getByLabel("Map projection file").setInputFiles({ name: "stale.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ ...golden, freshness: "historical", reason: "captured earlier" })) });
+    await expect(map.locator(".status-badge").first()).toHaveText("stale");
+    await expect(map).toContainText("captured earlier");
+
+    await map.getByLabel("Map projection file").setInputFiles({ name: "unavailable.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ ...golden, availability: "not_observable", reason: "map not visible" })) });
+    await expect(map.locator(".status-badge").first()).toHaveText("unavailable");
+    await expect(map).toContainText("map not visible");
+
+    await map.getByLabel("Map projection file").setInputFiles({ name: "malformed.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ ...golden, nodes: [{ id: "bad" }] })) });
+    await expect(map.getByRole("alert")).toBeVisible();
+    await expect(map).toContainText("No approved map projection is loaded.");
   });
 
   test("shows safe run controls and replay compare without leaving the app", async ({ page }) => {
