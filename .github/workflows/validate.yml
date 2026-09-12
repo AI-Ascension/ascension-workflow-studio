@@ -18,12 +18,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24.16.0
           cache: npm
       - run: npm ci
+      - name: Verify pinned producer contracts
+        run: |
+          node --test tools/verify-contract-pins.test.mjs
+          node tools/verify-contract-pins.mjs
+          (cd contracts/recorded-run-candidate && sha256sum --check --strict SHA256SUMS)
       - run: npm run lint
       - run: npm test -- --run --pool=threads --maxWorkers=1
       - run: npm run build
@@ -37,8 +44,10 @@ jobs:
       matrix:
         browser: [chromium, firefox, webkit]
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24.16.0
           cache: npm
@@ -47,7 +56,7 @@ jobs:
       - run: npm run test:browser -- --project=${{ matrix.browser }}
       - name: Upload browser diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: browser-${{ matrix.browser }}-diagnostics
           path: |
@@ -61,8 +70,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v6
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24.16.0
           cache: npm
@@ -71,7 +82,7 @@ jobs:
       - run: npm run test:recorded-browser
       - name: Upload recorded-run diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: recorded-run-browser-diagnostics
           path: |
@@ -85,19 +96,33 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Read the current tested owner pin
+        id: owner
+        run: |
+          jq -e '.repository == "AI-Ascension/sts2-harness" and
+            (.revision | test("^[0-9a-f]{40}$"))' contracts/live-owner-ci.lock.json > /dev/null
+          echo "revision=$(jq -r .revision contracts/live-owner-ci.lock.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           repository: AI-Ascension/sts2-harness
-          ref: 5863c629ead8de50ac4ebe4f3888095223dbf5be
+          ref: ${{ steps.owner.outputs.revision }}
           path: harness
-      - uses: actions/setup-node@v6
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24.16.0
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: cargo build --locked --manifest-path harness/Cargo.toml --bin sts2-workflow
+      - name: Install the pinned owner's Rust toolchain
+        working-directory: harness
+        run: rustup show active-toolchain
+      - name: Build the pinned owner
+        working-directory: harness
+        run: cargo build --locked --bin sts2-workflow
       - run: STS2_WORKFLOW_TOKEN_STUDIO_LIVE=studio-live-ci-token harness/target/debug/sts2-workflow serve --listen 127.0.0.1:4185 --store /tmp/studio-live.sqlite --auth-profile studio-live > /tmp/studio-live.log 2>&1 &
       - run: |
           for attempt in {1..30}; do
@@ -112,7 +137,7 @@ jobs:
         run: cat /tmp/studio-live.log
       - name: Upload live owner browser diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: live-owner-browser-diagnostics
           path: |

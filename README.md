@@ -26,3 +26,16 @@ fixture behavior does not stand in for a live harness process.
 Run `npm ci`, `npm run typecheck`, `npm run lint`, `npm test`, and `npm run build`
 to reproduce the local checks. Phase 2 is merged; this repository does not
 deploy or auto-merge future changes.
+
+CI verifies the accepted Phase 1 artifact digests and every recorded-run Studio
+pin before the normal tests. Run `node tools/verify-contract-pins.mjs` and
+`node --test tools/verify-contract-pins.test.mjs` locally; the copied protocol
+inventory is also checked with `sha256sum --check --strict SHA256SUMS` from
+`contracts/recorded-run-candidate`. Update producer pins only alongside reviewed
+contract changes and consumer regression results. Historical owner source digests
+in the Phase 1 lock remain evidence for those recorded commits, not requirements
+that every later owner commit have identical source.
+
+The live-owner browser job builds its immutable harness revision from the harness
+directory so Rust honors that revision's `rust-toolchain.toml`. This synthetic,
+authenticated loopback check does not establish game or provider compatibility.

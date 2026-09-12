@@ -2,6 +2,13 @@
 
 The Studio consumes the merged Phase 1 owner contracts at the exact heads recorded in [phase1-integration.lock.json](../../contracts/accepted/phase1-integration.lock.json). The harness remains the only execution, compiler, persistence, command, replay, and gameplay authority. The browser package owns presentation, document editing, layout, runtime decoding, and bounded adapter behavior.
 
+The Phase 1 lock is the historical admission baseline. The newer harness revision
+actually exercised by the live-owner CI job is recorded separately in
+[live-owner-ci.lock.json](../../contracts/live-owner-ci.lock.json); the workflow
+reads that pin directly. Update this tested-owner pin alongside consumer regression
+evidence when adopting a newer owner. Do not rewrite the historical source digests
+to suggest that the original admission included later authoring routes.
+
 The admitted management surface is an authenticated loopback API under the relative `/v1` base. It includes health, capabilities, definition validation/inspection/diff, run submission, run snapshots, bounded event pages, revision-safe commands, offline replay, and redacted export. The Studio's `OwnerApiClient` sends these requests with same-origin relative paths and validates each response at runtime.
 
 The additive owner contract merged through [sts2-harness PR #57](https://github.com/AI-Ascension/sts2-harness/pull/57) as `172b41022e0de9d66ab5ee94b06ac4b99238cad2`, with the live `max_output_tokens` filtering fix merged through [PR #64](https://github.com/AI-Ascension/sts2-harness/pull/64) as `651a5225cc608303710014cc5ddf0160541662f9`. It adds `GET /v1/studio/definitions`, create/get/save draft routes, and immutable publication through the harness authoring store. The Studio adapter decodes those records, sends layout sidecars, uses revision/etag preconditions and client mutation IDs, and preserves explicit conflict states. A Phase 1-only owner at the locked admission head still does not export a definition list, node registry, draft persistence, publish, session pairing/revocation, plan inspection, command lookup, or usable artifact retrieval route; the library says when it is showing the pinned first-party catalog instead. Fixture mode is a deterministic test adapter and is labeled in every relevant workspace.

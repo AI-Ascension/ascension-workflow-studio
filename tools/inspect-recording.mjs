@@ -2,6 +2,7 @@
 import { open } from "node:fs/promises";
 import { createServer } from "vite";
 import { fileURLToPath } from "node:url";
+import react from "@vitejs/plugin-react";
 
 let server;
 try {
@@ -21,7 +22,21 @@ try {
     const after = await file.stat();
     if (before.size !== after.size || before.mtimeMs !== after.mtimeMs) throw new Error("source_changed");
   } finally { await file.close(); }
-  server = await createServer({ root: fileURLToPath(new URL("../", import.meta.url)), logLevel: "silent", server: { middlewareMode: true, watch: null }, appType: "custom" });
+  const root = fileURLToPath(new URL("../", import.meta.url));
+  // This CLI imports one decoder and has no dev-server role. Avoid loading the
+  // repository Vite config, which would create a watch for vite.config.ts and
+  // make an otherwise read-only compatibility check depend on global watcher
+  // capacity. Keep the decoder's aliases explicit and equivalent.
+  server = await createServer({
+    root, configFile: false, logLevel: "silent", appType: "custom",
+    plugins: [react()],
+    resolve: { alias: {
+      "@studio/contracts": fileURLToPath(new URL("../packages/contracts/src/index.ts", import.meta.url)),
+      "@studio/document": fileURLToPath(new URL("../packages/document/src/index.ts", import.meta.url)),
+      "@studio/client": fileURLToPath(new URL("../packages/client/src/index.ts", import.meta.url)),
+    } },
+    server: { middlewareMode: true, watch: null },
+  });
   const { importRecording } = await server.ssrLoadModule("/packages/recording/src/import.ts");
   const result = await importRecording(bytes.buffer);
   const separator = result.bundleIdentity.indexOf(":");
