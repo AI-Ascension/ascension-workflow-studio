@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 74,
-    "partial": 13
+    "implemented": 73,
+    "partial": 14
   },
   "requirements": [
     {
@@ -461,8 +461,8 @@
       "id": "P2-046",
       "mandatory": true,
       "work_package": "WP-15",
-      "status": "implemented",
-      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the synthetic live process completed draft create and reload. Studio CI run 34636988818 verified an authenticated Chromium user creates and hydrates a draft, receives a stale-revision draft-save conflict after a separate authenticated owner write, and resolves it by loading the remote owner revision. Studio PR #97 (head ec8dd67; merge pending; Studio CI run 34679245809 passed all six jobs) closes the two remaining browser gaps: `tests/browser/live-owner.spec.ts` \u201cretries a lost draft-save response with the original mutation identity\u201d verifies retry without a duplicate revision, and \u201cmerges non-overlapping semantic and layout candidates and revalidates them\u201d applies a three-way merge against the real owner and revalidates the merged candidate. Authenticated live-owner browser suite against a real owner process (`sts2-workflow serve --auth-profile studio-live`), 18 tests.",
+      "status": "partial",
+      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the synthetic live process completed draft create and reload. Studio CI run 34636988818 verified an authenticated Chromium user creates and hydrates a draft, receives a stale-revision draft-save conflict after a separate authenticated owner write, and resolves it by loading the remote owner revision. Studio PR #97 (CI run 34679245809 passed all six jobs) closed the two gaps the ledger previously listed: `tests/browser/live-owner.spec.ts` \u201cretries a lost draft-save response with the original mutation identity\u201d verifies retry without a duplicate revision, and \u201cmerges non-overlapping semantic and layout candidates and revalidates them\u201d applies a three-way merge against the real owner and revalidates the merged candidate. Remaining for AT-046: the acceptance action also requires saving an incomplete bounded draft, **restarting the owner store/service**, and reloading it through the owner ports; no browser test restarts the owner process, so that atomic-persistence-across-restart step is still unverified. P2-046 stays partial until it is.",
       "acceptance_cases": [
         "AT-046"
       ]
