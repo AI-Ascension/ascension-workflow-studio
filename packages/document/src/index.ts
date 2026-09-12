@@ -1,3 +1,6 @@
+import { sha256 as nobleSha256 } from "@noble/hashes/sha2.js";
+import { bytesToHex } from "@noble/hashes/utils.js";
+
 import {
   LayoutSidecarSchema,
   type JsonObject,
@@ -354,13 +357,15 @@ class BoundedJsonParser {
 }
 
 export async function sha256Hex(value: string): Promise<string> {
-  const subtle = globalThis.crypto?.subtle;
-  if (!subtle) {
-    throw new Error("Web Crypto SHA-256 is unavailable in this context");
-  }
   const bytes = new TextEncoder().encode(value);
-  const digest = await subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  const subtle = globalThis.crypto?.subtle;
+  if (subtle) {
+    const digest = await subtle.digest("SHA-256", bytes);
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  }
+  // Insecure LAN origins (plain http on a LAN address) do not expose Web Crypto,
+  // so fall back to the bundled implementation to keep validation and export working.
+  return bytesToHex(nobleSha256(bytes));
 }
 
 export async function semanticDigest(document: SemanticDocument): Promise<string> {
