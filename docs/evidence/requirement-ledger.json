@@ -3,9 +3,9 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 60,
+    "implemented": 61,
     "partial": 24,
-    "not_started": 3
+    "not_started": 2
   },
   "requirements": [
     {
@@ -452,8 +452,8 @@
       "id": "P2-045",
       "mandatory": true,
       "work_package": "WP-14",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #66 (commit 46594ef; merge 87225b7) makes the authored adaptive-region bounds editable while the node kind, raw configuration and removal stay locked, and states that publishing creates a new immutable definition for future runs and never applies a plan to an active run. The run inspector marks its admitted definition digest as pinned. A live-owner test edits a region bound, validates and publishes a new revision with a different digest, and confirms the run still reports its original pinned digest with no apply-to-active-run or hot-swap control. Studio CI run 34665788579 passed all six jobs.",
       "acceptance_cases": [
         "AT-045"
       ]
