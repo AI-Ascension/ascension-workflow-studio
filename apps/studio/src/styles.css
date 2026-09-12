@@ -221,3 +221,8 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 .reference-bindings { margin: 0 0 4px; font-size: .68rem; }
 
 .command-outcome .button { margin-left: auto; }
+
+.cursor-controls { display: grid; gap: 8px; border-top: 1px solid rgba(44, 65, 91, .75); padding-top: 10px; margin-bottom: 10px; }
+.cursor-controls input[type="range"] { flex: 1; }
+.event-row-current { border-left: 2px solid var(--amber); padding-left: 8px; }
+.event-cursor-button { padding: 3px 8px; font-size: .68rem; }

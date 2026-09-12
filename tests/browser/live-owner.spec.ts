@@ -445,3 +445,36 @@ test("resolves a lost command response by the original command id", async ({ pag
   await expect(outcome).toContainText(commandId);
   await expect(outcome).toContainText(/applied at revision|admitted but not applied|pending|already resolved/);
 });
+
+test("keeps historical cursor actions free of live runtime requests", async ({ page }) => {
+  await connectLiveOwner(page);
+  await openOwnedDraft(page);
+  await page.getByRole("button", { name: "Run inspection" }).click();
+  await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
+  const cursor = page.getByLabel("Historical cursor");
+  await expect(cursor).toBeVisible();
+  await expect(page.getByText(/send no runtime, provider, or game request/)).toBeVisible();
+  await page.getByRole("button", { name: "Pause" }).click();
+  await expect(page.locator(".command-outcome")).toContainText(/applied at revision|admitted but not applied|pending/);
+  await expect.poll(async () => await page.locator(".event-row").count()).toBeGreaterThan(1);
+
+  const mutations: string[] = [];
+  page.on("request", (request) => { if (request.method() !== "GET") mutations.push(`${request.method()} ${request.url()}`); });
+
+  await page.getByRole("button", { name: "Enter history" }).click();
+  await expect(page.getByRole("button", { name: "Return to live" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Pause" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  const stepBack = page.getByRole("button", { name: "Step back" });
+  await expect(stepBack).toBeEnabled();
+  await stepBack.click();
+  await page.getByRole("button", { name: "Step forward" }).click();
+  await page.getByLabel("Event cursor").press("Home");
+  const setCursor = page.getByRole("button", { name: "Set cursor" }).first();
+  if (await setCursor.count() > 0) await setCursor.click();
+  await page.getByRole("button", { name: "Return to live" }).click();
+  await expect(page.getByRole("button", { name: "Enter history" })).toBeVisible();
+
+  expect(mutations).toEqual([]);
+  await expect(page.getByRole("button", { name: /fresh game/i })).toHaveCount(0);
+});
