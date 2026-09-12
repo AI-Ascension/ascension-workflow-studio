@@ -408,3 +408,40 @@ test("two tabs: a conflicting pinned reference change requires review", async ({
   await expect(second.getByLabel("Raw workflow definition JSON")).toHaveValue(/approved.pinned.b/);
   await expect(page.getByLabel("Raw workflow definition JSON")).toHaveValue(/approved.pinned.a/);
 });
+
+test("resolves a lost command response by the original command id", async ({ page }) => {
+  await connectLiveOwner(page);
+  await openOwnedDraft(page);
+  await page.getByRole("button", { name: "Run inspection" }).click();
+  await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
+  await expect(page.getByText("live API", { exact: true })).toBeVisible();
+  const pause = page.getByRole("button", { name: "Pause" });
+  await expect(pause).toBeEnabled();
+
+  let dropped = false;
+  await page.route("**/v1/workflow-runs/**/commands", async (route) => {
+    if (!dropped && route.request().method() === "POST") {
+      dropped = true;
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      await route.abort("connectionreset");
+      return;
+    }
+    await route.continue();
+  });
+
+  await pause.click();
+  const outcome = page.locator(".command-outcome");
+  await expect(outcome).toHaveAttribute("data-command-state", "unknown");
+  await expect(outcome).toContainText("No response for command");
+  await expect(outcome).not.toContainText("applied at revision");
+  const detail = (await outcome.locator(".command-detail").textContent()) ?? "";
+  const commandId = /studio\.command\.[^\s.]+\.[0-9]+/.exec(detail)?.[0] ?? "";
+  expect(commandId).not.toBe("");
+  expect(dropped).toBe(true);
+
+  await page.getByRole("button", { name: "Check outcome" }).click();
+  await expect(outcome).toHaveAttribute("data-command-state", "settled");
+  await expect(outcome).toContainText(commandId);
+  await expect(outcome).toContainText(/applied at revision|admitted but not applied|pending|already resolved/);
+});
