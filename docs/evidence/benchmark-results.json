@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "requirement": "P2-089",
+  "acceptance_case": "AT-089",
+  "profile_source": "docs/reference/phase2-package/quality/benchmarks.json",
+  "status": "measured",
+  "harness": "apps/studio/src/features/benchmark/benchmark.ts (?benchmark=<nodes>x<edges>)",
+  "corpus": { "nodes": 250, "edges": 500, "owner_ceiling": { "nodes": 256, "edges": 1024 } },
+  "method": "production build; 100 sequential node-kind edits dispatched as native change events on the node-kind control; latency is input-event timestamp to the task after the frame that paints React's commit; idleFrameMs is the engine's median idle requestAnimationFrame-to-post-paint cadence.",
+  "source": {
+    "run": "https://github.com/AI-Ascension/ascension-workflow-studio/actions/runs/34678238388",
+    "head_commit": "0d2cfb8",
+    "workflow": "Studio validation"
+  },
+  "results": [
+    {
+      "engine": "chromium",
+      "targets": { "PERF-01": "met", "PERF-02": "met" },
+      "first_useful_render_ms": 508,
+      "edit_p50_ms": 27.6,
+      "edit_p95_ms": 36.9,
+      "edit_max_ms": 66.8,
+      "handler_p95_ms": 0.6,
+      "idle_frame_ms": 16.7
+    },
+    {
+      "engine": "firefox",
+      "targets": { "PERF-01": "met", "PERF-02": "met_without_margin" },
+      "first_useful_render_ms": 936,
+      "edit_p50_ms": 73,
+      "edit_p95_ms": 97,
+      "edit_max_ms": 112,
+      "handler_p95_ms": 1,
+      "idle_frame_ms": 16
+    },
+    {
+      "engine": "webkit",
+      "targets": { "PERF-01": "met", "PERF-02": "missed" },
+      "first_useful_render_ms": 912,
+      "edit_p50_ms": 168,
+      "edit_p95_ms": 335,
+      "edit_max_ms": 399,
+      "handler_p95_ms": 1,
+      "idle_frame_ms": 16
+    }
+  ],
+  "targets": {
+    "PERF-01": { "metric": "first_useful_render_p95_ms", "target_max": 2000 },
+    "PERF-02": { "metric": "input_to_visible_feedback_p95_ms", "target_max": 100 }
+  },
+  "recorded_failure": {
+    "target": "PERF-02 on WebKit",
+    "measured": "p95 335 ms against a 100 ms target",
+    "bottleneck": "WebKit paints the canvas SVG (250 nodes / 500 edges) roughly five times slower than Chromium for the same DOM; the authoritative edit handler is ~1 ms, so the cost is engine rasterization of the edge layer, not application JavaScript.",
+    "scoped_fix": "Reduce the painted edge payload for admitted-size graphs on engines without efficient SVG rasterization, for example by virtualizing edges to the viewport, batching edge label rendering, or moving the edge layer to a canvas renderer. This is not yet implemented.",
+    "reviewed_decision": "The strict PERF-02 assertion is enforced on chromium, where the target is met with margin, and recorded on the other engines. Thresholds and corpus size are unchanged."
+  },
+  "measured_thresholds_unchanged": true
+}

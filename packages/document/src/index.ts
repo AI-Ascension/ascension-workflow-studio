@@ -10,6 +10,7 @@ import {
   type WorkflowEdge,
   type WorkflowNode,
   WorkflowDefinitionSchema,
+  WorkflowNodeSchema,
 } from "@studio/contracts";
 
 export * from "./guard";
@@ -553,17 +554,30 @@ export function updateNode(
   nodeId: string,
   update: (node: SemanticDocument["graphs"][number]["nodes"][number]) => SemanticDocument["graphs"][number]["nodes"][number],
 ): SemanticDocument {
-  const next = cloneDocument(document);
-  const graph = next.graphs.find((candidate) => candidate.id === graphId);
-  if (!graph) {
+  // Structural copy instead of a full JSON deep clone: `WorkflowDefinitionSchema.parse`
+  // already returns a freshly built, validated document, so the extra deep clone
+  // only doubled the per-edit cost on admitted-size graphs (P2-089).
+  const graphIndex = document.graphs.findIndex((candidate) => candidate.id === graphId);
+  if (graphIndex < 0) {
     throw new Error(`graph ${graphId} does not exist`);
   }
+  const graph = document.graphs[graphIndex];
   const index = graph.nodes.findIndex((node) => node.id === nodeId);
   if (index < 0) {
     throw new Error(`node ${nodeId} does not exist in graph ${graphId}`);
   }
-  graph.nodes[index] = update(graph.nodes[index]);
-  return WorkflowDefinitionSchema.parse(next);
+  const updated = update(graph.nodes[index]);
+  if (updated.id !== nodeId) {
+    throw new Error(`updateNode cannot change the node id ${nodeId}`);
+  }
+  // Node fields are independent, so validating the single edited node preserves
+  // the document invariant without rebuilding and re-parsing the whole graph on
+  // every keystroke (P2-089).
+  const nextNodes = [...graph.nodes];
+  nextNodes[index] = WorkflowNodeSchema.parse(updated);
+  const nextGraphs = [...document.graphs];
+  nextGraphs[graphIndex] = { ...graph, nodes: nextNodes };
+  return { ...document, graphs: nextGraphs };
 }
 
 export function addNode(
@@ -887,12 +901,18 @@ export class History<T> {
     return this.copy(this.current);
   }
 
-  public commit(next: T): T {
-    this.past.push(this.copy(this.current));
+  /**
+   * Records the next state. Entries are retained by reference: callers must
+   * treat committed values as immutable, which the editor's update helpers
+   * already guarantee. Copies are produced only when a value is handed back
+   * (`present`/`undo`/`redo`), so a high-frequency edit no longer pays for
+   * repeated deep snapshots it never reads (P2-089).
+   */
+  public commit(next: T): void {
+    this.past.push(this.current);
     if (this.past.length > this.maxEntries) this.past.shift();
-    this.current = this.copy(next);
+    this.current = next;
     this.future.length = 0;
-    return this.present();
   }
 
   public undo(): T {
@@ -900,9 +920,9 @@ export class History<T> {
     if (previous === undefined) {
       return this.present();
     }
-    this.future.push(this.copy(this.current));
+    this.future.push(this.current);
     if (this.future.length > this.maxEntries) this.future.shift();
-    this.current = this.copy(previous);
+    this.current = previous;
     return this.present();
   }
 
@@ -911,9 +931,9 @@ export class History<T> {
     if (next === undefined) {
       return this.present();
     }
-    this.past.push(this.copy(this.current));
+    this.past.push(this.current);
     if (this.past.length > this.maxEntries) this.past.shift();
-    this.current = this.copy(next);
+    this.current = next;
     return this.present();
   }
 
