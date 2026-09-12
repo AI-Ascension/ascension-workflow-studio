@@ -32,6 +32,8 @@ import {
   type WorkflowNode,
 } from "@studio/contracts";
 import { CapabilityGateError, type StudioClient } from "@studio/client";
+import { IndexedDbRecoveryStore } from "./recoveryStore";
+import { buildRecoveryRecord, recoverableFor, type RecoveryRecord } from "@studio/document";
 import {
   History,
   alignLayout,
@@ -139,6 +141,9 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const [focusedGraph, setFocusedGraph] = useState<string>(() => initialDocument.entry_graph);
   const [graphTrail, setGraphTrail] = useState<string[]>(() => [initialDocument.entry_graph]);
   const [graphViewports, setGraphViewports] = useState<Record<string, { x: number; y: number; zoom: number }>>({});
+  const [recoveryEnabled, setRecoveryEnabled] = useState(false);
+  const [recoveryRecords, setRecoveryRecords] = useState<RecoveryRecord[]>([]);
+  const [recoveryNotice, setRecoveryNotice] = useState("");
   const mergeBaseRef = useRef<SemanticDocument>(cloneDocument(initialDocument));
   const mergeBaseLayoutRef = useRef<LayoutSidecar>(createLayout(initialDocument, "pending"));
   const persistedKeyRef = useRef<string | undefined>(undefined);
@@ -315,6 +320,73 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const commit = useCallback((nextDocument: SemanticDocument): void => {
     commitSnapshot(nextDocument, layout);
   }, [commitSnapshot, layout]);
+
+  const recoveryStore = useRef(new IndexedDbRecoveryStore());
+  const principal = client.principal();
+  const recoveryWorkspace = "studio";
+
+  const refreshRecovery = useCallback(async (): Promise<void> => {
+    try {
+      setRecoveryRecords(await recoveryStore.current.list());
+    } catch (error: unknown) {
+      setRecoveryRecords([]);
+      setRecoveryNotice(error instanceof Error ? error.message : "Local recovery storage is unavailable.");
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshRecovery();
+  }, [refreshRecovery, principal]);
+
+  useEffect(() => {
+    if (!recoveryEnabled) return;
+    const timer = window.setTimeout(() => {
+      let record: RecoveryRecord;
+      try {
+        record = buildRecoveryRecord({ principal, workspace: recoveryWorkspace, definitionId: definition.id, draftId, document, layout, rawText });
+      } catch {
+        setRecoveryNotice("Local recovery rejected the candidate; only bounded authoring data is stored.");
+        return;
+      }
+      void recoveryStore.current.put(record).then((result) => {
+        setRecoveryNotice(result.prunedForQuota ? "Local recovery storage is full; older records were dropped." : "");
+        return refreshRecovery();
+      }).catch((error: unknown) => {
+        setRecoveryNotice(error instanceof Error ? error.message : "Local recovery write failed.");
+      });
+    }, 600);
+    return () => window.clearTimeout(timer);
+  }, [recoveryEnabled, principal, definition.id, draftId, document, layout, rawText, refreshRecovery]);
+
+  const recoverable = useMemo(() => recoverableFor(recoveryRecords, principal, recoveryWorkspace, definition.id), [recoveryRecords, principal, definition.id]);
+  const principalRecordCount = recoveryRecords.filter((record) => record.principal === principal).length;
+
+  const recoverLocalCandidate = (): void => {
+    if (!recoverable) return;
+    commitSnapshot(recoverable.document, recoverable.layout);
+    setRawText(recoverable.raw_text ?? JSON.stringify(recoverable.document, null, 2));
+    setValidationState("idle");
+    setValidationMessage("Recovered an unsaved local candidate; review and validate before saving.");
+  };
+
+  const exportRecovery = (): void => {
+    const raw = JSON.stringify(recoveryRecords, null, 2);
+    const url = URL.createObjectURL(new Blob([raw], { type: "application/json" }));
+    const link = window.document.createElement("a");
+    link.href = url;
+    link.download = `studio-recovery-${principal.replaceAll(/[^A-Za-z0-9._-]/g, "_")}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const clearRecovery = (): void => {
+    void recoveryStore.current.clear().then(() => {
+      setRecoveryNotice("Local recovery records cleared.");
+      return refreshRecovery();
+    }).catch((error: unknown) => {
+      setRecoveryNotice(error instanceof Error ? error.message : "Local recovery clear failed.");
+    });
+  };
 
   const undo = (): void => {
     const next = history.current.undo();
@@ -731,6 +803,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       <span>Compiler <code data-testid="identity-compiler">{diagnostics?.compiler ?? "not reported"}</code></span>
     </div>
     <p className="identity-note muted">Draft revision, definition digest, layout digest, and compiler identity are independent; none substitutes for another.</p>
+    <RecoveryPanel enabled={recoveryEnabled} principal={principal} count={principalRecordCount} recoverable={recoverable} notice={recoveryNotice} onToggle={() => setRecoveryEnabled((current) => !current)} onRecover={recoverLocalCandidate} onExport={exportRecovery} onClear={clearRecovery} />
     {draft.state === "conflict" ? <Notice tone="danger" title="Draft conflict">The server revision changed while this editor was saving. Local edits are preserved until an explicit resolution.</Notice> : null}
     {draft.state === "conflict" && conflictRemoteDocument && conflictRemoteLayout && conflictOpen ? <ConflictPanel base={mergeBaseRef.current} baseLayout={mergeBaseLayoutRef.current} local={document} localLayout={layout} remote={conflictRemoteDocument} remoteLayout={conflictRemoteLayout} onKeepRemote={reloadRemoteConflict} onKeepLocal={saveLocalAsNew} onMerge={mergeConflict} onCancel={cancelConflictResolution} /> : null}
     {draft.state === "conflict" && !conflictOpen ? <section className="panel-card conflict-dismissed" aria-label="Pending conflict review"><p>Conflict resolution cancelled; local and remote candidates remain available for review.</p><button className="button button-secondary" onClick={() => setConflictOpen(true)}>Review divergence</button></section> : null}
@@ -1236,6 +1309,21 @@ interface ListEditorProps {
   onUpdate: (update: (node: WorkflowNode) => WorkflowNode) => void;
   onRemove: () => void;
   onNavigateGraph: (graphId: string) => void;
+}
+
+function RecoveryPanel({ enabled, principal, count, recoverable, notice, onToggle, onRecover, onExport, onClear }: { enabled: boolean; principal: string; count: number; recoverable: RecoveryRecord | undefined; notice: string; onToggle: () => void; onRecover: () => void; onExport: () => void; onClear: () => void }): JSX.Element {
+  return <section className="recovery-panel panel-card" aria-label="Local crash recovery">
+    <div className="panel-title"><div><p className="eyebrow">Optional local recovery</p><h2>Crash-recovery buffer</h2></div><StatusBadge tone={enabled ? "success" : "muted"}>{enabled ? "on" : "off"}</StatusBadge></div>
+    <p className="muted">Sanitized authoring data only (document, layout, raw text) with a 24-hour TTL, bound to principal <code>{principal}</code>. Tokens, live run snapshots, provider outputs and commands are never stored.</p>
+    <div className="control-grid">
+      <button className="button button-quiet" onClick={onToggle}>{enabled ? "Disable recovery" : "Enable recovery"}</button>
+      <button className="button button-secondary" onClick={onRecover} disabled={!recoverable}>Recover unsaved candidate</button>
+      <button className="button button-quiet" onClick={onExport} disabled={count === 0}>Export recovery</button>
+      <button className="button button-quiet" onClick={onClear} disabled={count === 0}>Clear local recovery</button>
+    </div>
+    <p className="muted">Stored records for this principal: {count}{recoverable ? ` · recoverable from ${recoverable.saved_at}` : ""}</p>
+    {notice ? <p className="field-unknown" role="status">{notice}</p> : null}
+  </section>;
 }
 
 function GraphNavigator({ document, activeGraphId, trail, onFocus, onSelectTrail }: { document: SemanticDocument; activeGraphId: string; trail: string[]; onFocus: (graphId: string) => void; onSelectTrail: (index: number) => void }): JSX.Element {

@@ -478,3 +478,54 @@ test("keeps historical cursor actions free of live runtime requests", async ({ p
   expect(mutations).toEqual([]);
   await expect(page.getByRole("button", { name: /fresh game/i })).toHaveCount(0);
 });
+
+test("scopes crash recovery by principal and survives quota pressure", async ({ page }) => {
+  await page.addInitScript(() => {
+    const original = IDBObjectStore.prototype.put;
+    let thrown = false;
+    IDBObjectStore.prototype.put = function (this: IDBObjectStore, value: unknown, key?: IDBValidKey) {
+      if (!thrown) {
+        thrown = true;
+        throw new DOMException("simulated quota", "QuotaExceededError");
+      }
+      return original.call(this, value, key);
+    };
+  });
+  await connectLiveOwner(page);
+  await openOwnedDraft(page);
+  const panel = page.getByLabel("Local crash recovery");
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText("Tokens, live run snapshots, provider outputs and commands are never stored.");
+  await panel.getByRole("button", { name: "Enable recovery" }).click();
+  await applyLocalEdit(page, (local) => { (local as unknown as { annotations?: Record<string, unknown> }).annotations = { recovery_probe: "alpha" }; });
+  await expect(panel).toContainText(/Stored records for this principal: 1/);
+  await expect(panel).toContainText("Local recovery storage is full; older records were dropped.");
+
+  const stored = await page.evaluate(async () => await new Promise<Record<string, unknown>[]>((resolve, reject) => {
+    const open = indexedDB.open("ascension-studio-recovery", 1);
+    open.onsuccess = () => {
+      const database = open.result;
+      const request = database.transaction("records", "readonly").objectStore("records").getAll();
+      request.onsuccess = () => resolve(request.result as Record<string, unknown>[]);
+      request.onerror = () => reject(request.error);
+    };
+    open.onerror = () => reject(open.error);
+  }));
+  expect(stored.length).toBeGreaterThan(0);
+  expect(stored[0].principal).toBe("profile:studio-live");
+  expect(JSON.stringify(stored)).not.toContain("studio-live-ci-token");
+  for (const forbidden of ["command", "run_snapshot", "provider_output", "authorization"]) {
+    expect(Object.keys(stored[0])).not.toContain(forbidden);
+  }
+
+  await page.getByRole("button", { name: "Open settings" }).click();
+  await page.getByLabel("Authenticated actor subject").fill("profile:other");
+  await page.getByRole("button", { name: "Check owner connection" }).click();
+  await page.getByRole("button", { name: /Live owner API/ }).click();
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await page.getByRole("button", { name: "Open designer" }).first().click();
+  const switched = page.getByLabel("Local crash recovery");
+  await expect(switched).toContainText("profile:other");
+  await expect(switched).toContainText(/Stored records for this principal: 0/);
+  await expect(switched.getByRole("button", { name: "Recover unsaved candidate" })).toBeDisabled();
+});

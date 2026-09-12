@@ -162,7 +162,7 @@ test.describe("Studio fixture workbench", () => {
       await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
       const [download] = await Promise.all([
         page.waitForEvent("download"),
-        page.getByRole("button", { name: "Export" }).click(),
+        page.getByRole("button", { name: "Export", exact: true }).click(),
       ]);
       const path = await download.path();
       expect(path).not.toBeNull();

@@ -11,6 +11,7 @@ import {
 
 export * from "./guard";
 export * from "./reference";
+export * from "./recovery";
 
 export type SemanticDocument = WorkflowDefinition;
 
