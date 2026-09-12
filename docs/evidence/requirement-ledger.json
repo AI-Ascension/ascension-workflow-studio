@@ -3,9 +3,9 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 57,
+    "implemented": 58,
     "partial": 24,
-    "not_started": 6
+    "not_started": 5
   },
   "requirements": [
     {
@@ -762,8 +762,8 @@
       "id": "P2-076",
       "mandatory": true,
       "work_package": "WP-25",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #60 (commit 287735a; merge 3482312) adds a sequence-anchored historical cursor to the run inspector: enter history, step back/forward, scrub, set the cursor from a retained event, and return to live. Cursor movement is pure client state and sends no runtime/provider/game request; live command controls are disabled and marked historical while a recorded cut is displayed, and no fresh-game replay affordance is added. Studio CI run 34662266331 passed all six jobs.",
       "acceptance_cases": [
         "AT-076"
       ]
