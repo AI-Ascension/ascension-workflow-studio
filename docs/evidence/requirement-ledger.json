@@ -3,9 +3,8 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 61,
-    "partial": 25,
-    "not_started": 1
+    "implemented": 62,
+    "partial": 25
   },
   "requirements": [
     {
@@ -822,8 +821,8 @@
       "id": "P2-082",
       "mandatory": true,
       "work_package": "WP-27",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #70 (commit fc0a44c; merge 4e4922d) adds a bounded visible-map-v1 projection schema and a Gameplay map panel that is explicitly a different graph from the workflow. It pins schema/projection version, generation, instance, act, scope and state from the admitted sts2-game-mod runtime-map-v1 golden artifact (byte-pinned with provenance and a digest test), shows availability/completeness/freshness with explicit stale/unavailable reasons, lists only the bounded visible nodes as inert data, and offers no navigation or topology mutation. The panel is optional: when no projection is loaded, authoring and generic run inspection are unaffected. Studio CI run 34667821882 passed all six jobs. Caveat: the owner exposes observe.map.v1 as a runtime capability but no HTTP map-projection endpoint, so the projection is supplied as the pinned approved artifact/import rather than fetched per run.",
       "acceptance_cases": [
         "AT-082"
       ]
