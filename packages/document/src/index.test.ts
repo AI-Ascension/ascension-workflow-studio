@@ -174,3 +174,25 @@ describe("sha256 fallback", () => {
     }
   });
 });
+
+describe("canonical order and null semantics", () => {
+  it("preserves array order and explicit nulls exactly", () => {
+    const value = { edges: [{ from: "b" }, { from: "a" }], note: null, values: [3, 1, 2, null] };
+    expect(canonicalJson(value)).toBe('{"edges":[{"from":"b"},{"from":"a"}],"note":null,"values":[3,1,2,null]}');
+    expect(parseBoundedJson(JSON.stringify(value))).toEqual(value);
+  });
+
+  it("changes the semantic digest when owner-ordered arrays are reordered", async () => {
+    const base = {
+      schema_version: "ascension.workflow/v1", workflow_id: "order.test", version: "1.0.0", mode: "strict", game_profile: "t", policy_ref: "p",
+      capabilities: { required: [], optional: [] }, limits: { max_steps: 4, max_subworkflow_depth: 1, max_provider_calls: 0, max_parallel_analyses: 1, max_output_tokens: 0 }, entry_graph: "main",
+      graphs: [{ id: "main", entry_node: "b", nodes: [{ id: "a", kind: "terminal", config: { outcome: "completed" } }, { id: "b", kind: "terminal", config: { outcome: "completed" } }], edges: [] }],
+    };
+    const reordered = { ...base, graphs: [{ ...base.graphs[0], nodes: [...base.graphs[0].nodes].reverse() }] };
+    expect(await semanticDigest(base as never)).not.toBe(await semanticDigest(reordered as never));
+  });
+
+  it("distinguishes an explicit null from a missing field", () => {
+    expect(canonicalJson({ value: null })).not.toBe(canonicalJson({}));
+  });
+});
