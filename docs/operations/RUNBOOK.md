@@ -10,6 +10,8 @@ Before operating a run, confirm the displayed run ID, definition digest, revisio
 
 Rollback is a static bundle replacement after a reviewed build. No deployment, database migration, harness startup, or provider/game action is performed by this repository.
 
+See [SUPPORT_JOURNEYS.md](SUPPORT_JOURNEYS.md) for the end-to-end operator journeys: pairing, drafts, conflicts, validation, publication, run control, replay, crash recovery and support export.
+
 Recorded-run ZIP import is local, read-only inspection under **Recorded runs**.
 See [import and CLI validation](../architecture/recorded-run-import.md) and the
 [prepared LAN preview procedure](RECORDED_RUN_PREVIEW.md). The reviewed packaging,
