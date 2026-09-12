@@ -274,6 +274,45 @@ test.describe("Studio fixture workbench", () => {
     await expect(map).toContainText("No approved map projection is loaded.");
   });
 
+  test("keeps core Studio functions working when optional integrations are absent", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    page.on("console", (message) => { if (message.type() === "error" && !message.text().includes("frame-ancestors")) errors.push(message.text()); });
+
+    await page.goto("/");
+    await expect(page.locator(".definition-card").first()).toBeVisible();
+
+    await page.getByRole("button", { name: "Open designer" }).first().click();
+    await page.getByRole("tab", { name: "List editor" }).click();
+    await page.locator(".node-list-row").first().click();
+    const inspector = page.getByLabel("Node inspector");
+    const projection = inspector.locator("label.field-label", { hasText: "Projection reference" }).locator("input");
+    await projection.fill("approved.state.changed");
+    await projection.blur();
+    await expect(inspector).toContainText("owner field");
+
+    await page.getByRole("button", { name: /Validate/ }).click();
+    await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
+    const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export", exact: true }).click()]);
+    expect(download.suggestedFilename()).toContain(".studio.json");
+    const path = await download.path();
+    expect(path).not.toBeNull();
+    await page.setInputFiles('input[type="file"]', path as string);
+    await expect(page.getByLabel("Imported bundle preview")).toBeVisible();
+    await page.getByLabel("Imported bundle preview").getByRole("button", { name: "Cancel import" }).click();
+
+    await page.getByRole("button", { name: "Runs", exact: true }).click();
+    await expect(page.getByLabel("Gameplay map projection")).toContainText("No approved map projection is loaded.");
+    await expect(page.getByLabel("Approved reference links")).toContainText("No approved mappings configured in settings.");
+
+    await page.getByRole("button", { name: "Open settings" }).click();
+    await expect(page.getByLabel("Approved reference mappings")).toContainText("No approved mappings configured.");
+    await page.getByRole("button", { name: "Replay / Compare", exact: true }).click();
+    await expect(page.getByRole("heading", { name: "Replay & compare" })).toBeVisible();
+
+    expect(errors).toEqual([]);
+  });
+
   test("shows safe run controls and replay compare without leaving the app", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Runs", exact: true }).click();
