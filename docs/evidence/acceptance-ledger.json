@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 49,
-    "partial": 31,
+    "evidenced": 50,
+    "partial": 30,
     "implemented": 6
   },
   "cases": [
@@ -1234,10 +1234,17 @@
         "P2-094"
       ],
       "work_package": "WP-31",
-      "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "docs/evidence/phase1-workflow-tests.json; owner strict/dynamic contract/runtime tests pass, but Studio live browser round-trip is unverified."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34668771609 (live-owner browser against the real harness owner)",
+      "actual_source_heads": {
+        "studio": "0f14893"
+      },
+      "evidence": "The live-owner browser test round-trips a strict setup definition and a dynamic combat definition through the owner: clone draft, validate, export the digest-bound bundle, re-import through the file input, re-validate, and assert the definition digest is unchanged; the dynamic case also asserts the adaptive region is still present. It exercises the real owner validate route and the client canonical digest binding.",
+      "actual_evidence_refs": [
+        "tests/browser/live-owner.spec.ts",
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "packages/document/src/index.ts"
+      ]
     },
     {
       "id": "AT-095",
