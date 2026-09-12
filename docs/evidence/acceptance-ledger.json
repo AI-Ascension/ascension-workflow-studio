@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 61,
-    "partial": 19,
+    "evidenced": 60,
+    "partial": 20,
     "implemented": 6
   },
   "cases": [
@@ -598,13 +598,13 @@
         "P2-046"
       ],
       "work_package": "WP-15",
-      "status": "evidenced",
+      "status": "partial",
       "actual_command": "GitHub Actions Studio validation run 34679245809 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner)",
       "actual_source_heads": {
         "studio": "ec8dd67",
         "owner": "PR #57"
       },
-      "evidence": "Authenticated browser coverage against a real owner process for persistence/recovery: draft create and hydration, stale-revision draft-save conflict plus remote-revision resolution (CI run 34636988818), retry of a lost draft-save response with the original mutation identity, and three-way merge application with revalidation of the merged candidate. Authenticated live-owner browser suite against a real owner process (`sts2-workflow serve --auth-profile studio-live`), 18 tests.",
+      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the synthetic live process completed draft create and reload. Studio CI run 34636988818 verified an authenticated Chromium user creates and hydrates a draft, receives a stale-revision draft-save conflict after a separate authenticated owner write, and resolves it by loading the remote owner revision. Studio PR #97 (CI run 34679245809 passed all six jobs) closed the two gaps the ledger previously listed: `tests/browser/live-owner.spec.ts` \u201cretries a lost draft-save response with the original mutation identity\u201d verifies retry without a duplicate revision, and \u201cmerges non-overlapping semantic and layout candidates and revalidates them\u201d applies a three-way merge against the real owner and revalidates the merged candidate. Remaining for AT-046: the acceptance action also requires saving an incomplete bounded draft, **restarting the owner store/service**, and reloading it through the owner ports; no browser test restarts the owner process, so that atomic-persistence-across-restart step is still unverified. P2-046 stays partial until it is.",
       "actual_evidence_refs": [
         "tests/browser/live-owner.spec.ts",
         "apps/studio/src/features/designer/DesignerView.tsx",
