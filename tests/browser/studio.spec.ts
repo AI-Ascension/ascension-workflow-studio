@@ -143,6 +143,38 @@ test.describe("Studio fixture workbench", () => {
     await expect(page.getByText(/parallel execution/)).toHaveCount(0);
   });
 
+  test("round-trips supported gameplay templates with capability gates", async ({ page }) => {
+    const templates = [
+      { id: "sts2.campaign.strict", capability: "authority.generation-fence.v1" },
+      { id: "sts2.combat.dynamic", capability: "actions.combat.v1" },
+      { id: "sts2.selection.strict", capability: "actions.selection.v1" },
+      { id: "sts2.map.dynamic", capability: "actions.map.v1" },
+    ];
+    for (const template of templates) {
+      await page.goto("/");
+      const card = page.locator(".definition-card").filter({ hasText: template.id });
+      await expect(card).toHaveCount(1);
+      await expect(card).toHaveAttribute("data-capabilities", new RegExp(template.capability));
+      await expect(card.locator(".capability-chip").first()).toBeVisible();
+      await card.getByRole("button", { name: "Open designer" }).click();
+      await expect(page.locator(".lede code")).toContainText(template.id);
+      await page.getByRole("button", { name: /Validate/ }).click();
+      await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
+      const [download] = await Promise.all([
+        page.waitForEvent("download"),
+        page.getByRole("button", { name: "Export" }).click(),
+      ]);
+      const path = await download.path();
+      expect(path).not.toBeNull();
+      await page.setInputFiles('input[type="file"]', path as string);
+      await expect(page.locator(".validation-label")).toHaveText(/Imported and verified a digest-bound Studio bundle\.|Autosaved to the active adapter\./);
+      await expect(page.locator(".lede code")).toContainText(template.id);
+    }
+    await page.goto("/");
+    const selection = page.locator(".definition-card").filter({ hasText: "sts2.selection.strict" });
+    await expect(selection).not.toHaveAttribute("data-capabilities", /actions\.combat\.v1/);
+  });
+
   test("shows safe run controls and replay compare without leaving the app", async ({ page }) => {
     await page.goto("/");
     await page.getByRole("button", { name: "Runs", exact: true }).click();
