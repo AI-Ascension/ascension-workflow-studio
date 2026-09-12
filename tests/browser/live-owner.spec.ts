@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { expect, test, type Page } from "@playwright/test";
 
 async function connectLiveOwner(page: Page): Promise<void> {
@@ -82,6 +84,19 @@ async function openRawCandidate(page: Page): Promise<import("@playwright/test").
   return page.getByLabel("Raw workflow definition JSON");
 }
 
+async function readDownloadedBundle(page: Page, trigger: () => Promise<void>): Promise<string> {
+  const [download] = await Promise.all([page.waitForEvent("download"), trigger()]);
+  const path = await download.path();
+  expect(path).not.toBeNull();
+  return readFileSync(path as string, "utf8");
+}
+
+async function validateAndReadDigest(page: Page): Promise<string> {
+  await page.getByRole("button", { name: /Validate/ }).click();
+  await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
+  return (await page.getByTestId("identity-definition-digest").textContent()) ?? "";
+}
+
 async function openExistingDraft(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Library", exact: true }).click();
   await page.getByRole("button", { name: "Open designer" }).first().click();
@@ -96,6 +111,43 @@ async function applyLocalEdit(page: Page, edit: (document: { version: string; gr
   await page.getByRole("button", { name: "Apply candidate" }).click();
 }
 
+test("round-trips strict and dynamic definitions through the owner without semantic drift", async ({ page }) => {
+  await connectLiveOwner(page);
+
+  const roundTrip = async (cardId: string, expectAdaptive: boolean): Promise<void> => {
+    await page.getByRole("button", { name: "Library", exact: true }).click();
+    const card = page.locator(".definition-card").filter({ hasText: cardId });
+    await expect(card).toHaveCount(1);
+    await card.getByRole("button", { name: "Clone draft" }).click();
+    await expect(page.getByText(/Loaded the owner-backed draft\.|Autosaved to the active adapter\./)).toBeVisible();
+    await page.getByRole("button", { name: "Library", exact: true }).click();
+    await page.locator(".definition-card").filter({ hasText: cardId }).getByRole("button", { name: "Open designer" }).click();
+    await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
+
+    const before = await validateAndReadDigest(page);
+    expect(before).not.toBe("not validated");
+    if (expectAdaptive) {
+      await page.getByRole("tab", { name: "List editor" }).click();
+      await expect(page.locator(".node-list-row", { hasText: "iteration_adaptive" })).toBeVisible();
+      await page.getByRole("tab", { name: "Canvas" }).click();
+    }
+    const bundle = await readDownloadedBundle(page, () => page.getByRole("button", { name: "Export", exact: true }).click());
+    expect(bundle).toContain("ascension.studio-bundle/v1");
+    expect(bundle).toContain(cardId);
+
+    await page.setInputFiles('input[type="file"]', { name: "round-trip.studio.json", mimeType: "application/json", buffer: Buffer.from(bundle) });
+    await expect(page.locator(".validation-label")).toHaveText(/Imported and verified a digest-bound Studio bundle\.|Autosaved to the active adapter\./);
+    const after = await validateAndReadDigest(page);
+    expect(after).toBe(before);
+    if (expectAdaptive) {
+      await page.getByRole("tab", { name: "List editor" }).click();
+      await expect(page.locator(".node-list-row", { hasText: "iteration_adaptive" })).toBeVisible();
+    }
+  };
+
+  await roundTrip("sts2.setup.strict", false);
+  await roundTrip("sts2.combat.dynamic", true);
+});
 test("publishes adaptive region edits as a new revision and leaves the active run pinned", async ({ page }) => {
   await connectLiveOwner(page);
   await page.getByRole("button", { name: "Library", exact: true }).click();

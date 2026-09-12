@@ -49,6 +49,7 @@ import {
   mergeDocuments,
   mergeLayoutSidecars,
   resolveSubworkflowReference,
+  semanticDigest,
   parseBoundedJson,
   parseDefinitionImport,
   removeNode,
@@ -584,7 +585,8 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       setDiagnostics(result);
       setValidationState(result.valid ? "valid" : "invalid");
       setValidationMessage(result.valid ? `Validated at ${result.definition_digest.slice(0, 12)}…` : `${result.diagnostics.length} diagnostic${result.diagnostics.length === 1 ? "" : "s"} reported.`);
-      setLayout((current) => ({ ...current, semanticDigest: result.definition_digest }));
+      const layoutBinding = await semanticDigest(document);
+      setLayout((current) => ({ ...current, semanticDigest: layoutBinding }));
     } catch (error: unknown) {
       setValidationState("error");
       setValidationMessage(error instanceof Error ? error.message : "Validation failed.");
@@ -772,7 +774,8 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       setValidationMessage(result.valid
         ? `Merged semantic and layout candidates revalidated at ${result.definition_digest.slice(0, 12)}…`
         : `${result.diagnostics.length} diagnostic${result.diagnostics.length === 1 ? "" : "s"} reported for the merged candidate.`);
-      setLayout((current) => ({ ...current, semanticDigest: result.definition_digest }));
+      const mergedLayoutBinding = await semanticDigest(semantic.document);
+      setLayout((current) => ({ ...current, semanticDigest: mergedLayoutBinding }));
     } catch (error: unknown) {
       setValidationState("error");
       setValidationMessage(error instanceof Error ? error.message : "Merged candidate validation failed.");
