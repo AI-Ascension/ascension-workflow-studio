@@ -169,6 +169,11 @@ test.describe("Studio fixture workbench", () => {
       const path = await download.path();
       expect(path).not.toBeNull();
       await page.setInputFiles('input[type="file"]', path as string);
+      const preview = page.getByLabel("Imported bundle preview");
+      await expect(preview).toBeVisible();
+      await expect(preview).toContainText(template.id);
+      await expect(preview).toContainText("No semantic differences from the current document.");
+      await preview.getByRole("button", { name: "Apply imported bundle" }).click();
       await expect(page.locator(".validation-label")).toHaveText(/Imported and verified a digest-bound Studio bundle\.|Autosaved to the active adapter\./);
       await expect(page.locator(".lede code")).toContainText(template.id);
     }
@@ -202,6 +207,39 @@ test.describe("Studio fixture workbench", () => {
     await links.getByLabel("Reference identifier probe").fill("//evil.example/x");
     await expect(links.getByText(/Raw URLs are not resolved/)).toBeVisible();
   });
+
+  test("previews an imported bundle with named differences and can cancel it", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Open designer" }).first().click();
+    await page.getByRole("button", { name: "JSON mode" }).click();
+    const raw = page.getByLabel("Raw workflow definition JSON");
+
+    const candidate = JSON.parse(await raw.inputValue()) as { version: string };
+    candidate.version = "1.0.1";
+    await raw.fill(JSON.stringify(candidate, null, 2));
+    await page.getByRole("button", { name: "Apply candidate" }).click();
+    await page.getByRole("button", { name: /Validate/ }).click();
+    await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
+    const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Export", exact: true }).click()]);
+    const path = await download.path();
+    expect(path).not.toBeNull();
+
+    const newer = JSON.parse(await raw.inputValue()) as { version: string };
+    newer.version = "1.0.2";
+    await raw.fill(JSON.stringify(newer, null, 2));
+    await page.getByRole("button", { name: "Apply candidate" }).click();
+
+    await page.setInputFiles('input[type="file"]', path as string);
+    const preview = page.getByLabel("Imported bundle preview");
+    await expect(preview).toBeVisible();
+    await expect(preview).toContainText("$.version");
+    await expect(preview).toContainText("Required capabilities");
+    await preview.getByRole("button", { name: "Cancel import" }).click();
+    await expect(preview).not.toBeVisible();
+    await expect(page.locator(".validation-label")).toHaveText("Bundle import cancelled; the current document is unchanged.");
+    await expect(page.getByLabel("Raw workflow definition JSON")).toHaveValue(/"version": "1.0.2"/);
+  });
+
 
   test("shows an admitted map projection separately and never as navigation", async ({ page }) => {
     const golden = JSON.parse(readFileSync("contracts/accepted/phase1/map/visible-map.golden.json", "utf8")) as Record<string, unknown>;

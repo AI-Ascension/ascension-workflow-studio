@@ -232,3 +232,6 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 
 .map-projection { display: grid; gap: 8px; margin-top: 8px; }
 .map-node-list { max-height: 220px; overflow: auto; }
+
+.bundle-import-preview { display: grid; gap: 10px; border-color: #7b5a30; }
+.bundle-diff-list { max-height: 200px; overflow: auto; }

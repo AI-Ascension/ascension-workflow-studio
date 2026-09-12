@@ -129,6 +129,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const [rawText, setRawText] = useState(() => initialRawText ?? JSON.stringify(initialDocument, null, 2));
   const [rawError, setRawError] = useState<string | undefined>();
   const [archivalImport, setArchivalImport] = useState<ArchivalImport | undefined>();
+  const [bundleImport, setBundleImport] = useState<{ semantic: SemanticDocument; layout: LayoutSidecar; digest: string; changedPaths: string[]; capabilities: string[] } | undefined>();
   const [bundlePreview, setBundlePreview] = useState<string | undefined>();
   const [diagnostics, setDiagnostics] = useState<ValidateResponse | undefined>();
   const [validationState, setValidationState] = useState<"idle" | "running" | "valid" | "invalid" | "error">("idle");
@@ -664,18 +665,16 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     const raw = await file.text();
     try {
       const bundle = await parseStudioBundle(raw);
-      history.current = new History<EditorSnapshot>({ document: bundle.semantic, layout: bundle.layout }, copyEditorSnapshot);
-      setDocument(bundle.semantic);
-      setLayout(bundle.layout);
-      syncFlowNodes(bundle.semantic, bundle.layout);
-      setSelectedId(undefined);
-      setSelectedIds([]);
-      setSelectedEdge(undefined);
-      setRawText(JSON.stringify(bundle.semantic, null, 2));
-      setArchivalImport(undefined);
-      setDiagnostics(undefined);
-      setValidationState("valid");
-      setValidationMessage("Imported and verified a digest-bound Studio bundle.");
+      const digest = await semanticDigest(bundle.semantic);
+      setBundleImport({
+        semantic: bundle.semantic,
+        layout: bundle.layout,
+        digest,
+        changedPaths: diffDocuments(document, bundle.semantic).map((change) => change.path),
+        capabilities: bundle.semantic.capabilities.required,
+      });
+      setValidationState("idle");
+      setValidationMessage("Review the digest-bound bundle preview before applying it.");
     } catch (error: unknown) {
       try {
         const imported = parseDefinitionImport(raw);
@@ -693,6 +692,29 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
         setValidationMessage(error instanceof Error ? error.message : "Bundle import failed.");
       }
     }
+  };
+
+  const applyBundleImport = (): void => {
+    if (!bundleImport) return;
+    history.current = new History<EditorSnapshot>({ document: bundleImport.semantic, layout: bundleImport.layout }, copyEditorSnapshot);
+    setDocument(bundleImport.semantic);
+    setLayout(bundleImport.layout);
+    syncFlowNodes(bundleImport.semantic, bundleImport.layout);
+    setSelectedId(undefined);
+    setSelectedIds([]);
+    setSelectedEdge(undefined);
+    setRawText(JSON.stringify(bundleImport.semantic, null, 2));
+    setArchivalImport(undefined);
+    setDiagnostics(undefined);
+    setBundleImport(undefined);
+    setValidationState("valid");
+    setValidationMessage("Imported and verified a digest-bound Studio bundle.");
+  };
+
+  const cancelBundleImport = (): void => {
+    setBundleImport(undefined);
+    setValidationState("idle");
+    setValidationMessage("Bundle import cancelled; the current document is unchanged.");
   };
 
   const updateSelected = (update: (node: WorkflowNode) => WorkflowNode): void => {
@@ -843,6 +865,15 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     <DefinitionControls document={document} onCommit={commit} />
     {rawMode ? <RawDefinitionPanel rawText={rawText} error={rawError} onChange={(value) => { setRawText(value); onRawTextChange(definition.id, value); setRawError(undefined); }} onApply={applyRawDefinition} /> : null}
     {archivalImport ? <ArchivalImportPanel archival={archivalImport} /> : null}
+    {bundleImport ? <section className="panel-card bundle-import-preview" aria-label="Imported bundle preview"><div className="panel-title"><div><p className="eyebrow">Digest-bound bundle preview</p><h2>{bundleImport.semantic.workflow_id}@{bundleImport.semantic.version}</h2></div><StatusBadge tone="warning">not applied</StatusBadge></div>
+      <dl className="detail-list">
+        <div><dt>Semantic digest</dt><dd><code>{bundleImport.digest}</code></dd></div>
+        <div><dt>Changed paths</dt><dd>{bundleImport.changedPaths.length}</dd></div>
+        <div><dt>Required capabilities</dt><dd>{bundleImport.capabilities.join(", ") || "none"}</dd></div>
+      </dl>
+      {bundleImport.changedPaths.length ? <ul className="plain-list bundle-diff-list">{bundleImport.changedPaths.slice(0, 12).map((path) => <li key={path}><code>{path}</code></li>)}</ul> : <p className="muted">No semantic differences from the current document.</p>}
+      <div className="control-grid"><button className="button button-primary" onClick={applyBundleImport}>Apply imported bundle</button><button className="button button-quiet" onClick={cancelBundleImport}>Cancel import</button></div>
+    </section> : null}
     {bundlePreview ? <details className="bundle-preview"><summary>Last portable bundle preview</summary><pre>{bundlePreview}
 …</pre></details> : null}
     <GraphNavigator document={document} activeGraphId={activeGraphId} trail={graphTrail} onFocus={focusGraph} onSelectTrail={focusTrailIndex} />
