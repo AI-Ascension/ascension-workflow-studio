@@ -274,6 +274,18 @@ test.describe("Studio fixture workbench", () => {
     await expect(map).toContainText("No approved map projection is loaded.");
   });
 
+  test("browses and clones a template with pinned provenance", async ({ page }) => {
+    await page.goto("/");
+    const card = page.locator(".definition-card").first();
+    const provenance = card.getByLabel("sts2.setup.strict provenance");
+    await expect(provenance).toContainText("v0.1.0");
+    await expect(provenance).toContainText("not published");
+    await card.getByRole("button", { name: "Clone draft" }).click();
+    await page.getByRole("button", { name: "JSON mode" }).click();
+    const raw = page.getByLabel("Raw workflow definition JSON");
+    await expect(raw).toHaveValue(/"summary": "Studio draft cloned from catalog:sts2.setup.strict@0.1.0"/);
+  });
+
   test("keeps core Studio functions working when optional integrations are absent", async ({ page }) => {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));

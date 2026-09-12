@@ -74,8 +74,11 @@ export function App(): JSX.Element {
   const createDraft = (template?: DefinitionRecord): void => {
     const base = template ?? definitions[0] ?? fixtureDefinitions[0];
     const draft = cloneDocument(base.definition);
+    // The owner admits only `summary` and `synthetic` in annotations, so the
+    // template provenance is recorded in the summary text; the pinned
+    // version/digest are shown on the library card.
     draft.annotations = {
-      summary: `Studio draft cloned from ${base.id}@${base.definition.version}`,
+      summary: `Studio draft cloned from ${base.source}:${base.id}@${base.definition.version}${base.definitionDigest ? ` digest ${base.definitionDigest}` : ""}`,
       synthetic: true,
     };
     setSelectedDefinition({ ...base, title: `${base.title} draft`, source: "draft", description: "Unsaved Studio draft with explicit adapter state." });

@@ -55,6 +55,10 @@ export function LibraryView({ definitions, loading, catalogNotice, onOpen, onCre
           {definition.capabilities.slice(0, 3).map((capability) => <span className="capability-chip" key={capability}>{capability}</span>)}
           {definition.capabilities.length > 3 ? <span className="capability-chip">+{definition.capabilities.length - 3}</span> : null}
         </div>
+        <div className="card-provenance" aria-label={`${definition.id} provenance`}>
+          <span>v{definition.definition.version}</span>
+          <span>digest {definition.definitionDigest ? `${definition.definitionDigest.slice(0, 12)}…` : "not published"}</span>
+        </div>
         <div className="card-footer">
           <span className="muted">Updated {new Date(definition.updatedAt).toLocaleDateString()}</span>
           <div className="card-actions"><button className="button button-quiet" onClick={() => onCreate(definition)}>Clone draft</button><button className="button button-secondary" onClick={() => onOpen(definition)}>Open designer</button></div>
