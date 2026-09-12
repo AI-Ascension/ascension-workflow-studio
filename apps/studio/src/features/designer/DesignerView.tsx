@@ -167,7 +167,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     history.current = new History<EditorSnapshot>({ document: initialDocument, layout: nextLayout }, copyEditorSnapshot);
     setDocument(initialDocument);
     setLayout(nextLayout);
-    setNodes(toFlowNodes(initialDocument, nextLayout));
+    syncFlowNodes(initialDocument, nextLayout);
     setSelectedId(undefined);
     setSelectedIds([]);
     setSelectedEdge(undefined);
@@ -204,7 +204,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
           if (saved.conflict) setConflictOpen(true);
           setDocument(saved.document);
           setLayout(nextLayout);
-          setNodes(toFlowNodes(saved.document, nextLayout));
+          syncFlowNodes(saved.document, nextLayout);
           if (!initialRawText) setRawText(JSON.stringify(saved.document, null, 2));
           setDraft({ revision: saved.revision, etag: saved.etag, state: saved.conflict ? "conflict" : "saved", message: saved.conflict ? "The owner returned a persisted draft conflict." : "Loaded the owner-backed draft.", server: saved.conflict ? saved : undefined });
           persistedKeyRef.current = valueKey(saved.document, nextLayout);
@@ -307,15 +307,25 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     history.current.commit({ document: nextDocument, layout: boundLayout });
     setDocument(nextDocument);
     setLayout(boundLayout);
-    setNodes(toFlowNodes(nextDocument, boundLayout));
-    const nextRawText = JSON.stringify(nextDocument, null, 2);
-    setRawText(nextRawText);
-    onRawTextChange(definition.id, nextRawText);
+    syncFlowNodes(nextDocument, boundLayout);
+    window.setTimeout(() => {
+      const nextRawText = JSON.stringify(nextDocument, null, 2);
+      setRawText(nextRawText);
+      onRawTextChange(definition.id, nextRawText);
+    }, 0);
     setRawError(undefined);
     setArchivalImport(undefined);
     setDiagnostics(undefined);
     setValidationState("idle");
   }, [definition.id, ensureLayout, onRawTextChange]);
+
+  const flowProjectionKeyRef = useRef<string>("");
+  const syncFlowNodes = useCallback((nextDocument: SemanticDocument, nextLayout: LayoutSidecar, selected: string[] = []): void => {
+    const key = `${selected.join(",")}|${nextDocument.graphs.map((graph) => `${graph.id}:${graph.nodes.map((node) => `${node.id}.${node.kind}`).join(",")}`).join("|")}|${Object.entries(nextLayout.positions).map(([id, position]) => `${id}@${position.x},${position.y}`).join(";")}`;
+    if (key === flowProjectionKeyRef.current) return;
+    flowProjectionKeyRef.current = key;
+    setNodes(toFlowNodes(nextDocument, nextLayout, selected));
+  }, []);
 
   const commit = useCallback((nextDocument: SemanticDocument): void => {
     commitSnapshot(nextDocument, layout);
@@ -392,7 +402,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     const next = history.current.undo();
     setDocument(next.document);
     setLayout(next.layout);
-    setNodes(toFlowNodes(next.document, next.layout));
+    syncFlowNodes(next.document, next.layout);
     setRawText(JSON.stringify(next.document, null, 2));
     setRawError(undefined);
   };
@@ -407,7 +417,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     const next = history.current.redo();
     setDocument(next.document);
     setLayout(next.layout);
-    setNodes(toFlowNodes(next.document, next.layout));
+    syncFlowNodes(next.document, next.layout);
     setRawText(JSON.stringify(next.document, null, 2));
     setRawError(undefined);
   };
@@ -482,7 +492,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       const nextLayout = alignLayout(layout, selectedIds, "x");
       history.current.commit({ document, layout: nextLayout });
       setLayout(nextLayout);
-      setNodes(toFlowNodes(document, nextLayout));
+      syncFlowNodes(document, nextLayout);
       setValidationState("valid");
       setValidationMessage("Aligned the selected nodes without changing semantic execution.");
     } catch (error: unknown) {
@@ -496,7 +506,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       const nextLayout = autoLayout(layout, document);
       history.current.commit({ document, layout: nextLayout });
       setLayout(nextLayout);
-      setNodes(toFlowNodes(document, nextLayout, selectedIds));
+      syncFlowNodes(document, nextLayout, selectedIds);
       setValidationState("valid");
       setValidationMessage("Auto-arranged the layout without changing semantic execution.");
     } catch (error: unknown) {
@@ -655,7 +665,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       history.current = new History<EditorSnapshot>({ document: bundle.semantic, layout: bundle.layout }, copyEditorSnapshot);
       setDocument(bundle.semantic);
       setLayout(bundle.layout);
-      setNodes(toFlowNodes(bundle.semantic, bundle.layout));
+      syncFlowNodes(bundle.semantic, bundle.layout);
       setSelectedId(undefined);
       setSelectedIds([]);
       setSelectedEdge(undefined);
@@ -711,7 +721,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     mergeBaseLayoutRef.current = remoteLayout;
     setDocument(remote);
     setLayout(remoteLayout);
-    setNodes(toFlowNodes(remote, remoteLayout));
+    syncFlowNodes(remote, remoteLayout);
     setRawText(JSON.stringify(remote, null, 2));
     persistedKeyRef.current = valueKey(remote, remoteLayout);
     setConflictOpen(true);
@@ -849,7 +859,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
             const nextLayout = updateLayout(layout, { [node.id]: node.position });
             history.current.commit({ document, layout: nextLayout });
             setLayout(nextLayout);
-            setNodes(toFlowNodes(document, nextLayout));
+            syncFlowNodes(document, nextLayout);
           }}
           fitView={graphViewports[activeGraphId] === undefined}
           fitViewOptions={{ padding: 0.2 }}
