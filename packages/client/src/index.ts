@@ -60,6 +60,8 @@ export interface PublishResult {
 
 export interface StudioClient {
   readonly mode: ClientMode;
+  /** Principal bound to this session; recovery data is keyed by it. */
+  principal(): string;
   listDefinitions(): Promise<DefinitionRecord[]>;
   getDraft(draftId: string): Promise<DraftRecord | undefined>;
   saveDraft(write: DraftWrite): Promise<DraftRecord>;
@@ -127,6 +129,10 @@ export class OwnerApiClient implements StudioClient {
 
   public setActorScope(actorScope: string | undefined): void {
     this.actorScope = actorScope?.trim() || undefined;
+  }
+
+  public principal(): string {
+    return this.actorScope ?? "unauthenticated";
   }
 
   public async listDefinitions(): Promise<DefinitionRecord[]> {
@@ -501,6 +507,10 @@ export class FixtureClient implements StudioClient {
 
   public constructor(definitions: DefinitionRecord[]) {
     this.definitions = definitions.map((record) => DefinitionRecordSchema.parse(record));
+  }
+
+  public principal(): string {
+    return "fixture";
   }
 
   public async listDefinitions(): Promise<DefinitionRecord[]> {
