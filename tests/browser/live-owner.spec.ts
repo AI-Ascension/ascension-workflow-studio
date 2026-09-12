@@ -512,6 +512,43 @@ test("two tabs: a conflicting pinned reference change requires review", async ({
   await expect(page.getByLabel("Raw workflow definition JSON")).toHaveValue(/approved.pinned.a/);
 });
 
+test("resolves a lost publication response through the original publication identity", async ({ page }) => {
+  await connectLiveOwner(page);
+  await openOwnedDraft(page);
+  await page.getByRole("button", { name: /Validate/ }).click();
+  await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
+
+  const publicationBodies: Array<Record<string, unknown>> = [];
+  let dropped = false;
+  await page.route("**/studio/drafts/**/publish", async (route) => {
+    publicationBodies.push(JSON.parse(route.request().postData() ?? "{}") as Record<string, unknown>);
+    if (!dropped) {
+      dropped = true;
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      await route.abort("connectionreset");
+      return;
+    }
+    await route.continue();
+  });
+
+  await page.getByRole("button", { name: "Publish revision" }).click();
+  await expect(page.locator(".validation-label")).not.toHaveText(/Published an immutable owner revision|already published/);
+  await expect(page.getByRole("button", { name: "Publish revision" })).toBeEnabled();
+  expect(dropped).toBe(true);
+
+  await page.getByRole("button", { name: "Publish revision" }).click();
+  await expect(page.locator(".validation-label")).toHaveText(/Published an immutable owner revision|already published/);
+
+  expect(publicationBodies.length).toBeGreaterThanOrEqual(2);
+  const first = publicationBodies[0];
+  const retry = publicationBodies[1];
+  expect(first.client_mutation_id).toMatch(/^studio\.publish\./);
+  expect(retry.client_mutation_id).toBe(first.client_mutation_id);
+  expect(retry.expected_definition_digest).toBe(first.expected_definition_digest);
+  expect(retry.expected_revision).toBe(first.expected_revision);
+});
+
 test("resolves a lost command response by the original command id", async ({ page }) => {
   await connectLiveOwner(page);
   await openOwnedDraft(page);
