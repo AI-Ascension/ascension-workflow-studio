@@ -3,9 +3,9 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 55,
+    "implemented": 56,
     "partial": 24,
-    "not_started": 8
+    "not_started": 7
   },
   "requirements": [
     {
@@ -602,8 +602,8 @@
       "id": "P2-060",
       "mandatory": true,
       "work_package": "WP-19",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #56 (commit 2ad8efc; merge 974ba65) registers all thirteen accepted Phase 1 gameplay templates (setup, strict/adaptive combat, campaign, strict/adaptive map, selection, shop, event, reward, rest, recovery, terminal) with their capability requirements, exposes the full capability set on library cards, and round-trips campaign/adaptive-combat/selection/adaptive-map through validate, digest-bound export, and re-import. Only accepted fixtures are listed, so research-only expert states are not presented as live capabilities. Studio CI run 34660297679 passed all six jobs.",
       "acceptance_cases": [
         "AT-060"
       ]

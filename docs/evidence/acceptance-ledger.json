@@ -3,10 +3,10 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 42,
+    "evidenced": 43,
     "partial": 30,
     "implemented": 6,
-    "not_run": 8
+    "not_run": 7
   },
   "cases": [
     {
@@ -777,10 +777,17 @@
         "P2-060"
       ],
       "work_package": "WP-19",
-      "status": "not_run",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "No evidence recorded yet."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34660297679 (browser chromium/firefox/webkit, recorded-run, live-owner)",
+      "actual_source_heads": {
+        "studio": "2ad8efc"
+      },
+      "evidence": "The browser test opens campaign, adaptive combat, selection, and adaptive map from the catalog, validates each, exports the digest-bound Studio bundle, re-imports it, and confirms the workflow identity survives. Capability gates are asserted per template, and selection is negatively asserted not to be gated on combat capability, so research-only expert states are not claimed as live capabilities.",
+      "actual_evidence_refs": [
+        "apps/studio/src/fixtures/catalog.ts",
+        "apps/studio/src/features/library/LibraryView.tsx",
+        "tests/browser/studio.spec.ts"
+      ]
     },
     {
       "id": "AT-061",
