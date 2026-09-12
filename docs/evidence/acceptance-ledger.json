@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 51,
-    "partial": 29,
+    "evidenced": 59,
+    "partial": 21,
     "implemented": 6
   },
   "cases": [
@@ -275,10 +275,15 @@
         "P2-023"
       ],
       "work_package": "WP-07",
-      "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "JSON arrays/order/nulls are preserved through canonicalization; complete owner round-trip evidence remains."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34675907204 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner)",
+      "actual_source_heads": {
+        "studio": "8ffcc05"
+      },
+      "evidence": "Merged Studio PR \u201ctest: pin canonical array order and null semantics\u201d (merge bba3fa2); CI run 34675907204 passed all six jobs.",
+      "actual_evidence_refs": [
+        "tests/browser/live-owner.spec.ts"
+      ]
     },
     {
       "id": "AT-024",
@@ -648,10 +653,15 @@
         "P2-050"
       ],
       "work_package": "WP-16",
-      "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Capability-gated live saves are explicit; durable offline reconciliation is not admitted."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34675915047 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner)",
+      "actual_source_heads": {
+        "studio": "24c72d5"
+      },
+      "evidence": "Merged Studio PR \u201cfeat: reconcile owner revision before retrying an offline save\u201d (merge 675f73c); CI run 34675915047 passed all six jobs.",
+      "actual_evidence_refs": [
+        "tests/browser/live-owner.spec.ts"
+      ]
     },
     {
       "id": "AT-051",
@@ -762,16 +772,14 @@
         "P2-058"
       ],
       "work_package": "WP-19",
-      "status": "partial",
-      "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34675905892 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner)",
       "actual_source_heads": {
-        "studio": "4b4788c"
+        "studio": "7551df1"
       },
-      "evidence": "Chromium smoke clones a checked-in template and source records provenance; owner catalog digest and immutability checks are unavailable.",
+      "evidence": "Merged Studio PR \u201cfeat: template version/digest provenance on browse and clone\u201d (merge 55ea046); CI run 34675905892 passed all six jobs.",
       "actual_evidence_refs": [
-        "tests/browser/studio.spec.ts",
-        "apps/studio/src/app/App.tsx",
-        "apps/studio/src/features/library/LibraryView.tsx"
+        "tests/browser/studio.spec.ts"
       ]
     },
     {
@@ -1028,15 +1036,13 @@
         "P2-078"
       ],
       "work_package": "WP-25",
-      "status": "partial",
-      "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34675903366 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner)",
       "actual_source_heads": {
-        "studio": "4b4788c"
+        "studio": "ff6d65e"
       },
-      "evidence": "Replay invokes two fixture runs and reports definition paths; stable owner artifact/run-context matching is unavailable.",
+      "evidence": "Merged Studio PR \u201cfeat: compare runs by pinned context without causal overclaims\u201d (merge dc85af4); CI run 34675903366 passed all six jobs.",
       "actual_evidence_refs": [
-        "apps/studio/src/features/replay/ReplayView.tsx",
-        "packages/document/src/index.ts",
         "tests/browser/studio.spec.ts"
       ]
     },
@@ -1119,10 +1125,15 @@
         "P2-084"
       ],
       "work_package": "WP-27",
-      "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Missing optional integrations are gated without breaking fixture core flows."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34675539110 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner)",
+      "actual_source_heads": {
+        "studio": "311cc02"
+      },
+      "evidence": "Merged Studio PR \u201ctest: core Studio flows survive absent optional integrations\u201d (merge 37ca118); CI run 34675539110 passed all six jobs.",
+      "actual_evidence_refs": [
+        "tests/browser/studio.spec.ts"
+      ]
     },
     {
       "id": "AT-085",
@@ -1152,15 +1163,14 @@
         "P2-087"
       ],
       "work_package": "WP-28",
-      "status": "partial",
-      "actual_command": "LD_LIBRARY_PATH=... ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --project=chromium --workers=1",
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34675909224 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner)",
       "actual_source_heads": {
-        "studio": "4b4788c"
+        "studio": "aed5de3"
       },
-      "evidence": "Source includes responsive, light/dark and reduced-motion rules, and one Chromium screenshot was reviewed; the required viewport/zoom/keyboard matrix was not run.",
+      "evidence": "Merged Studio PR \u201cfix: narrow-layout overflow + visual matrix coverage\u201d (merge a9df292); CI run 34675909224 passed all six jobs.",
       "actual_evidence_refs": [
-        "apps/studio/src/styles.css",
-        "docs/evidence/screenshots/studio-designer-chromium.png"
+        "tests/browser/studio.spec.ts"
       ]
     },
     {
@@ -1169,10 +1179,17 @@
         "P2-088"
       ],
       "work_package": "WP-29",
-      "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Route and event page bounds are honored; worker/history quotas remain."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34675901450 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner)",
+      "actual_source_heads": {
+        "studio": "a4f563e"
+      },
+      "evidence": "Merged Studio PR \u201cfeat: reject obsolete async validation results\u201d (merge 37eec84); CI run 34675901450 passed all six jobs.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "packages/document/src/generation.ts",
+        "packages/document/src/generation.test.ts"
+      ]
     },
     {
       "id": "AT-089",
@@ -1428,10 +1445,16 @@
         "P2-109"
       ],
       "work_package": "WP-36",
-      "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Support docs describe the owner subject, draft revision/etag conflict choices, and publication flow; browser pairing and live owner process evidence remain unavailable."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34675911290 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner)",
+      "actual_source_heads": {
+        "studio": "94a24ff"
+      },
+      "evidence": "Merged Studio PR \u201cdocs: end-to-end support journeys\u201d (merge 5287ff1); CI run 34675911290 passed all six jobs.",
+      "actual_evidence_refs": [
+        "docs/operations/SUPPORT_JOURNEYS.md",
+        "docs/operations/RUNBOOK.md"
+      ]
     },
     {
       "id": "AT-110",
