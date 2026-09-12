@@ -44,7 +44,7 @@ export function LibraryView({ definitions, loading, catalogNotice, onOpen, onCre
     {loading ? <div className="loading-line">Loading admitted catalog…</div> : null}
     {!loading && filtered.length === 0 ? <EmptyState title="No matching definitions" detail="Change the filter or create a draft from the admitted contract." action={{ label: "Create draft", onClick: () => onCreate() }} /> : null}
     <div className="library-grid">
-      {filtered.map((definition) => <article className="definition-card" key={definition.id}>
+      {filtered.map((definition) => <article className="definition-card" key={definition.id} data-capabilities={definition.capabilities.join(" ")}>
         <div className="card-topline">
           <StatusBadge tone={definition.source === "catalog" ? "success" : "warning"}>{definition.source}</StatusBadge>
           <span className="card-id">{definition.id}</span>
