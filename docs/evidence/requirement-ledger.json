@@ -3,9 +3,9 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 56,
+    "implemented": 57,
     "partial": 24,
-    "not_started": 7
+    "not_started": 6
   },
   "requirements": [
     {
@@ -742,8 +742,8 @@
       "id": "P2-074",
       "mandatory": true,
       "work_package": "WP-24",
-      "status": "not_started",
-      "evidence": "No evidence recorded yet.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #58 (commit 46feb91; merge e6fa57d) makes the run command controller own one command attempt (identity, run ID, expected revision, sending/unknown/settled). A transport failure enters Unknown instead of failed-to-apply: the original command ID is shown, conflicting command buttons are locked, and Check outcome re-sends the identical request so the owner's idempotency returns the stored outcome with no new ID. Outcomes distinguish admission (accepted/pending) from application (applied/duplicate), and definite 4xx rejections are labelled rejected before application. Studio CI run 34661271273 passed all six jobs.",
       "acceptance_cases": [
         "AT-074"
       ]
