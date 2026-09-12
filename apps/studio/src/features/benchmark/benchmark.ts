@@ -37,12 +37,14 @@ export interface BenchmarkReport {
   maxMs: number | null;
   handlerMs: number[];
   handlerP95Ms: number | null;
+  idleFrameMs: number | null;
 }
 
 export interface BenchmarkHarness {
   workload: BenchmarkWorkload;
   report: () => BenchmarkReport;
   reset: () => void;
+  calibrate: () => Promise<number>;
 }
 
 declare global {
@@ -61,6 +63,7 @@ let cachedCatalog: DefinitionRecord[] | undefined;
 let cachedWorkload: BenchmarkWorkload | undefined;
 let samples: number[] = [];
 let handlerSamples: number[] = [];
+let idleFrameMs: number | null = null;
 let firstUsefulRenderMs: number | null = null;
 let lastInputAt: number | undefined;
 let listenersInstalled = false;
@@ -155,7 +158,8 @@ function installRecorder(workload: BenchmarkWorkload): void {
   window.__studioBenchmark = {
     workload,
     report: () => buildReport(workload),
-    reset: () => { samples = []; handlerSamples = []; firstUsefulRenderMs = null; },
+    reset: () => { samples = []; handlerSamples = []; firstUsefulRenderMs = null; idleFrameMs = null; },
+    calibrate: () => calibrateIdleFrames(),
   };
 }
 
@@ -188,6 +192,26 @@ export function endBenchmarkEdit(start: number | undefined): void {
       samples.push(end - start);
     }, 0);
   });
+}
+
+/**
+ * Measures the engine's idle frame cadence (requestAnimationFrame to the task
+ * after paint). This separates engine/frame overhead from the edit's own work:
+ * an engine whose floor already exceeds a latency target cannot be measured
+ * against that target.
+ */
+export async function calibrateIdleFrames(frames = 20): Promise<number> {
+  const measured: number[] = [];
+  for (let index = 0; index < frames; index += 1) {
+    const start = performance.now();
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => { window.setTimeout(resolve, 0); });
+    });
+    measured.push(performance.now() - start);
+  }
+  const median = percentile(measured, 50);
+  idleFrameMs = Number.isNaN(median) ? null : median;
+  return idleFrameMs ?? 0;
 }
 
 /** Records time from navigation start to the first painted designer graph. */
@@ -230,5 +254,6 @@ function buildReport(workload: BenchmarkWorkload): BenchmarkReport {
     maxMs: samples.length === 0 ? null : Math.max(...samples),
     handlerMs: [...handlerSamples],
     handlerP95Ms: Number.isNaN(percentile(handlerSamples, 95)) ? null : percentile(handlerSamples, 95),
+    idleFrameMs,
   };
 }
