@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 64,
-    "partial": 23
+    "implemented": 72,
+    "partial": 15
   },
   "requirements": [
     {
@@ -231,8 +231,8 @@
       "id": "P2-023",
       "mandatory": true,
       "work_package": "WP-07",
-      "status": "partial",
-      "evidence": "JSON arrays/order/nulls are preserved through canonicalization; complete owner round-trip evidence remains.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR \u201ctest: pin canonical array order and null semantics\u201d (head 8ffcc05; merge bba3fa2); Studio CI run 34675907204 passed all six jobs. See the PR description and the referenced files for the exact behavior and tests.",
       "acceptance_cases": [
         "AT-023"
       ]
@@ -501,8 +501,8 @@
       "id": "P2-050",
       "mandatory": true,
       "work_package": "WP-16",
-      "status": "partial",
-      "evidence": "Capability-gated live saves are explicit; durable offline reconciliation is not admitted.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR \u201cfeat: reconcile owner revision before retrying an offline save\u201d (head 24c72d5; merge 675f73c); Studio CI run 34675915047 passed all six jobs. See the PR description and the referenced files for the exact behavior and tests.",
       "acceptance_cases": [
         "AT-050"
       ]
@@ -581,8 +581,8 @@
       "id": "P2-058",
       "mandatory": true,
       "work_package": "WP-19",
-      "status": "partial",
-      "evidence": "Library cloning records template_source and template_version provenance and has Chromium smoke coverage; live catalog immutability/digest acceptance is unavailable.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR \u201cfeat: template version/digest provenance on browse and clone\u201d (head 7551df1; merge 55ea046); Studio CI run 34675905892 passed all six jobs. See the PR description and the referenced files for the exact behavior and tests.",
       "acceptance_cases": [
         "AT-058"
       ]
@@ -781,8 +781,8 @@
       "id": "P2-078",
       "mandatory": true,
       "work_package": "WP-25",
-      "status": "partial",
-      "evidence": "Replay invokes two fixture runs and reports definition differences by changed paths; layout/run-context comparison and owner artifact evidence remain unavailable.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR \u201cfeat: compare runs by pinned context without causal overclaims\u201d (head ff6d65e; merge dc85af4); Studio CI run 34675903366 passed all six jobs. See the PR description and the referenced files for the exact behavior and tests.",
       "acceptance_cases": [
         "AT-078"
       ]
@@ -841,8 +841,8 @@
       "id": "P2-084",
       "mandatory": true,
       "work_package": "WP-27",
-      "status": "partial",
-      "evidence": "Missing optional integrations are gated without breaking fixture core flows.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR \u201ctest: core Studio flows survive absent optional integrations\u201d (head 311cc02; merge 37ca118); Studio CI run 34675539110 passed all six jobs. See the PR description and the referenced files for the exact behavior and tests.",
       "acceptance_cases": [
         "AT-084"
       ]
@@ -871,8 +871,8 @@
       "id": "P2-087",
       "mandatory": true,
       "work_package": "WP-28",
-      "status": "partial",
-      "evidence": "Responsive grids, light/dark color variables and reduced-motion rules are present, with one reviewed Chromium screenshot; the full viewport/zoom matrix is not run.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR \u201cfix: narrow-layout overflow + visual matrix coverage\u201d (head aed5de3; merge a9df292); Studio CI run 34675909224 passed all six jobs. See the PR description and the referenced files for the exact behavior and tests.",
       "acceptance_cases": [
         "AT-087"
       ]
@@ -881,8 +881,8 @@
       "id": "P2-088",
       "mandatory": true,
       "work_package": "WP-29",
-      "status": "partial",
-      "evidence": "Route and event page bounds are honored; worker/history quotas remain.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR \u201cfeat: reject obsolete async validation results\u201d (head a4f563e; merge 37eec84); Studio CI run 34675901450 passed all six jobs. See the PR description and the referenced files for the exact behavior and tests.",
       "acceptance_cases": [
         "AT-088"
       ]
@@ -1091,8 +1091,8 @@
       "id": "P2-109",
       "mandatory": true,
       "work_package": "WP-36",
-      "status": "partial",
-      "evidence": "Support docs describe the owner subject, draft revision/etag conflict choices, and publication flow; browser pairing and live owner process evidence remain unavailable.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR \u201cdocs: end-to-end support journeys\u201d (head 94a24ff; merge 5287ff1); Studio CI run 34675911290 passed all six jobs. See the PR description and the referenced files for the exact behavior and tests.",
       "acceptance_cases": [
         "AT-109"
       ]
