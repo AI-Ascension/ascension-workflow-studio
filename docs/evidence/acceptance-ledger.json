@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 50,
-    "partial": 30,
+    "evidenced": 51,
+    "partial": 29,
     "implemented": 6
   },
   "cases": [
@@ -517,10 +517,18 @@
         "P2-041"
       ],
       "work_package": "WP-13",
-      "status": "partial",
-      "actual_command": null,
-      "actual_source_heads": {},
-      "evidence": "Redacted owner export exists; Studio bundle import/export remains."
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34669889672 (browser chromium/firefox/webkit, recorded-run, live-owner)",
+      "actual_source_heads": {
+        "studio": "4ea3b66"
+      },
+      "evidence": "A browser test exports a bundle, edits the document, imports the bundle, asserts the preview shows the named $.version difference and required capabilities, cancels, and confirms the newer document is preserved. The template round-trip (fixture) and strict/dynamic live-owner round-trip tests export, preview, apply, and re-validate with an unchanged digest. Bounded raw JSON behavior remains covered by the duplicate-key and malformed-input tests.",
+      "actual_evidence_refs": [
+        "apps/studio/src/features/designer/DesignerView.tsx",
+        "packages/document/src/index.ts",
+        "tests/browser/studio.spec.ts",
+        "tests/browser/live-owner.spec.ts"
+      ]
     },
     {
       "id": "AT-042",

@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
     "blocked": 33,
-    "implemented": 63,
-    "partial": 24
+    "implemented": 64,
+    "partial": 23
   },
   "requirements": [
     {
@@ -411,8 +411,8 @@
       "id": "P2-041",
       "mandatory": true,
       "work_package": "WP-13",
-      "status": "partial",
-      "evidence": "Redacted owner export exists; Studio bundle import/export remains.",
+      "status": "implemented",
+      "evidence": "Merged Studio PR #75 (commit 4ea3b66; merge 613b2b7) completes bounded import/export with previews. Raw canonical JSON import stays bounded with duplicate-key rejection and future-schema read-only retention (P2-040); export emits a digest-bound Studio bundle with an inline preview; importing a bundle now shows a review panel with the bundle identity, canonical semantic digest, named changed paths against the current document, and required capabilities, and requires explicit Apply or Cancel (cancel preserves the current document). Malformed or digest-mismatched input falls back to the bounded raw/archival handling. Studio CI run 34669889672 passed all six jobs.",
       "acceptance_cases": [
         "AT-041"
       ]
