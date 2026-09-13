@@ -1580,7 +1580,12 @@ function EdgeInspector({ document, selectedEdge, onReconnect, onUpdate }: { docu
     <label className="field-label">Outcome<select aria-label="Edge outcome" value={outcome} onChange={(event) => setOutcome(event.target.value)}>{OWNER_EDGE_OUTCOMES.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
     <label className="field-label">Priority<input aria-label="Edge priority" type="number" min={0} max={1024} value={priority} onChange={(event) => setPriority(event.target.value)} /></label>
     <label className="field-label">Guard reference<span className="muted">optional owner guard</span><select aria-label="Edge guard reference" value={guardRef} onChange={(event) => setGuardRef(event.target.value)}><option value="">No guard</option>{(graph.guards ?? []).map((guard) => <option key={guard.id} value={guard.id}>{guard.id}</option>)}</select></label>
-    <div className="control-grid"><button className="button button-secondary" onClick={() => onReconnect(from, to)}>Apply reconnection</button><button className="button button-primary" disabled={!Number.isSafeInteger(parsedPriority) || parsedPriority < 0 || parsedPriority > 1024 || !OWNER_EDGE_OUTCOMES.includes(outcome as typeof OWNER_EDGE_OUTCOMES[number])} onClick={() => onUpdate((current) => ({ ...current, from, to, on: outcome, priority: parsedPriority, ...(guardRef ? { guard_ref: guardRef } : {}) }))}>Apply edge fields</button></div>
+    <div className="control-grid"><button className="button button-secondary" onClick={() => onReconnect(from, to)}>Apply reconnection</button><button className="button button-primary" disabled={!Number.isSafeInteger(parsedPriority) || parsedPriority < 0 || parsedPriority > 1024 || !OWNER_EDGE_OUTCOMES.includes(outcome as typeof OWNER_EDGE_OUTCOMES[number])} onClick={() => onUpdate((current) => {
+      const next = { ...current, from, to, on: outcome, priority: parsedPriority };
+      if (guardRef) next.guard_ref = guardRef;
+      else delete next.guard_ref;
+      return next;
+    })}>Apply edge fields</button></div>
   </aside>;
 }
 

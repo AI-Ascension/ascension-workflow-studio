@@ -84,6 +84,12 @@ describe("workflow document identity", () => {
     const updated = updateEdge(document, "main", 0, (edge) => ({ ...edge, on: "true", priority: 2, guard_ref: "ready" }));
     expect(updated.graphs[0].edges[0]).toMatchObject({ on: "true", priority: 2, guard_ref: "ready" });
     expect(updated.graphs[0].edges[0]).not.toBe(document.graphs[0].edges[0]);
+    const cleared = updateEdge(updated, "main", 0, (edge) => {
+      const next = { ...edge };
+      delete next.guard_ref;
+      return next;
+    });
+    expect(cleared.graphs[0].edges[0]).not.toHaveProperty("guard_ref");
   });
 
   it("sorts object keys and excludes annotations from semantic JSON", () => {
