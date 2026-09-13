@@ -1075,8 +1075,14 @@ function InspectorPanel({ document, catalog, contextBindings, selected, selected
     <div className="panel-title"><div><p className="eyebrow">Node inspector</p><h2>{selected.node.id}</h2></div><StatusBadge tone={locked ? "warning" : "success"}>{locked ? "protected region" : selected.node.kind}</StatusBadge></div>
     <label className="field-label">Node kind
       <select value={pendingKind ?? selected.node.kind} disabled={locked} onChange={(event) => {
+        const editStart = beginBenchmarkEdit();
         const nextKind = event.target.value;
         setPendingKind(nextKind === selected.node.kind ? undefined : nextKind);
+        // A kind selection first opens the explicit conversion preview. Keep
+        // the benchmark's input-to-paint sample attached to that visible edit
+        // even though the semantic commit waits for confirmation.
+        recordBenchmarkHandler(editStart);
+        endBenchmarkEdit(editStart);
       }}>
         {OWNER_NODE_KINDS.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
       </select>
