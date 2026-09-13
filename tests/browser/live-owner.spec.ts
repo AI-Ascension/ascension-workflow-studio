@@ -180,11 +180,12 @@ test("imports, edits, exports, and owner-validates every admitted node kind", as
     .graphs[0].nodes.find((node: { id: string }) => node.id === "execute").config.proposal_from)
     .toEqual({ node_id: "decide", output: "proposal" });
 
-  await page.getByRole("button", { name: "JSON mode" }).click();
-  const stale = JSON.parse(await page.getByLabel("Raw workflow definition JSON").inputValue());
+  const rawAfterRoundTrip = page.getByLabel("Raw workflow definition JSON");
+  await expect(rawAfterRoundTrip).toBeVisible();
+  const stale = JSON.parse(await rawAfterRoundTrip.inputValue());
   const action = stale.graphs[0].nodes.find((node: { id: string }) => node.id === "execute");
   action.config.proposal_from = { node_id: "stale.node", output: "proposal" };
-  await page.getByLabel("Raw workflow definition JSON").fill(JSON.stringify(stale));
+  await rawAfterRoundTrip.fill(JSON.stringify(stale));
   await page.getByRole("button", { name: "Apply candidate" }).click();
   await page.getByRole("button", { name: /Validate/ }).click();
   await expect(page.locator(".diagnostics-panel")).toContainText("Binding source node stale.node is missing");
