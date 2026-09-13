@@ -168,6 +168,7 @@ test("imports, edits, exports, and owner-validates every admitted node kind", as
   const digest = await validateAndReadDigest(page);
   expect(digest).not.toBe("not validated");
 
+  await page.getByRole("tab", { name: "Canvas" }).click();
   const bundle = await readDownloadedBundle(page, () => page.getByRole("button", { name: "Export", exact: true }).click());
   const exported = JSON.parse(bundle);
   expect(exported.semantic.graphs[0].nodes.find((node: { id: string }) => node.id === "execute").config.proposal_from)

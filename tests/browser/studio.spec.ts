@@ -58,7 +58,9 @@ test.describe("Studio fixture workbench", () => {
     await page.getByRole("button", { name: "＋ Node" }).click();
     await expect(bodyGraph.locator(".node-list-row")).toHaveCount(bodyRowsBefore + 1);
 
-    await rows.filter({ hasText: "observe" }).first().click();
+    await page.getByRole("button", { name: "main", exact: true }).click();
+    const mainGraph = page.locator(".graph-list").filter({ hasText: "main" });
+    await mainGraph.locator(".node-list-row").filter({ hasText: "observe" }).click();
     await page.getByLabel("Node kind").selectOption("decide");
     const conversion = page.getByLabel("Node kind conversion preview");
     await expect(conversion).toContainText("Fields removed");
