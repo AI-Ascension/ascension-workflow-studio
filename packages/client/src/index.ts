@@ -52,7 +52,7 @@ import {
   type ValidateResponse,
   type WorkflowDefinition,
 } from "@studio/contracts";
-import { canonicalJson, cloneDocument, diffDocuments, semanticDigest } from "@studio/document";
+import { canonicalJson, cloneDocument, diffDocuments, semanticDigest, validateNodeBindings } from "@studio/document";
 
 export type ClientMode = "fixture" | "live";
 
@@ -294,7 +294,18 @@ export class OwnerApiClient implements StudioClient {
         capabilities: capabilityResponse.capabilities,
       }),
     });
-    return decodeWith(ValidateResponseSchema, response, "definition validation");
+    const owner = decodeWith(ValidateResponseSchema, response, "definition validation");
+    const bindingDiagnostics = validateNodeBindings(definition).map((diagnostic) => ({
+      code: diagnostic.code,
+      severity: "error" as const,
+      path: diagnostic.path,
+      message: diagnostic.message,
+    }));
+    return {
+      ...owner,
+      valid: owner.valid && bindingDiagnostics.length === 0,
+      diagnostics: [...owner.diagnostics, ...bindingDiagnostics],
+    };
   }
 
   public async inspect(definition: WorkflowDefinition): Promise<InspectResponse> {
@@ -676,16 +687,24 @@ export class FixtureClient implements StudioClient {
 
   public async validate(definition: WorkflowDefinition): Promise<ValidateResponse> {
     const diagnostics: ValidateResponse["diagnostics"] = [];
-    for (const graph of definition.graphs) {
+    for (const [graphIndex, graph] of definition.graphs.entries()) {
       const nodeIds = new Set(graph.nodes.map((node) => node.id));
       if (!nodeIds.has(graph.entry_node)) {
-        diagnostics.push({ code: "entry_node_missing", severity: "error", path: `$.graphs.${graph.id}.entry_node`, message: "Entry node is not present in the graph." });
+        diagnostics.push({ code: "entry_node_missing", severity: "error", path: `$.graphs[${graphIndex}].entry_node`, message: "Entry node is not present in the graph." });
       }
       for (const edge of graph.edges) {
         if (!nodeIds.has(edge.from) || !nodeIds.has(edge.to)) {
-          diagnostics.push({ code: "edge_endpoint_missing", severity: "error", path: `$.graphs.${graph.id}.edges`, message: "Every edge endpoint must name a node in the same graph." });
+          diagnostics.push({ code: "edge_endpoint_missing", severity: "error", path: `$.graphs[${graphIndex}].edges`, message: "Every edge endpoint must name a node in the same graph." });
         }
       }
+    }
+    for (const diagnostic of validateNodeBindings(definition)) {
+      diagnostics.push({
+        code: diagnostic.code,
+        severity: "error",
+        path: diagnostic.path,
+        message: diagnostic.message,
+      });
     }
     const digest = await semanticDigest(definition);
     return {

@@ -26,6 +26,91 @@ declare global {
 }
 
 test.describe("Studio fixture workbench", () => {
+  test("round-trips every owner node kind with typed bindings and selected-graph insertion", async ({ page }) => {
+    const golden = readFileSync("contracts/accepted/phase1/conformance/valid-all-node-kinds.json", "utf8");
+    await page.goto("/");
+    await page.getByRole("button", { name: "Open designer" }).first().click();
+    await page.getByRole("button", { name: "JSON mode" }).click();
+    const raw = page.getByRole("textbox", { name: "Raw workflow definition JSON" });
+    await raw.fill(golden);
+    await page.getByRole("button", { name: "Apply candidate" }).click();
+    await page.getByRole("tab", { name: "List editor" }).click();
+
+    const rows = page.locator(".node-list-row");
+    await expect(rows).toHaveCount(16);
+    for (const kind of ["observe", "await_stability", "route", "analyze", "decide", "adaptive_region", "execute_action", "subworkflow", "loop", "checkpoint", "emit_artifact", "pause", "terminal"]) {
+      await expect(rows.filter({ hasText: kind }).first()).toBeVisible();
+    }
+
+    await rows.filter({ hasText: "analyze" }).first().click();
+    await expect(page.getByLabel("analyze Analysis context")).toHaveValue("context.synthetic.v1");
+    await rows.filter({ hasText: "adaptive" }).first().click();
+    await expect(page.getByLabel("adaptive allowed operation operation.synthetic.v1")).toBeChecked();
+
+    await rows.filter({ hasText: "execute" }).first().click();
+    await expect(page.getByLabel("execute Action proposal source source node")).toHaveValue("adaptive");
+    await expect(page.getByLabel("execute Action proposal source output")).toHaveValue("proposal");
+    await expect(page.getByLabel("execute Action proposal source source node").locator("option[value='execute']")).toHaveCount(0);
+
+    const bodyGraph = page.locator(".graph-list").filter({ hasText: "all-kinds.body" });
+    const bodyRowsBefore = await bodyGraph.locator(".node-list-row").count();
+    await page.getByRole("button", { name: "all-kinds.body", exact: true }).click();
+    await page.getByRole("button", { name: "＋ Node" }).click();
+    await expect(bodyGraph.locator(".node-list-row")).toHaveCount(bodyRowsBefore + 1);
+
+    await page.getByRole("button", { name: "main", exact: true }).click();
+    const mainGraph = page.locator(".graph-list").filter({ hasText: "main" });
+    await mainGraph.locator(".node-list-row").filter({ hasText: "observe" }).click();
+    await page.getByLabel("Node kind").selectOption("decide");
+    const conversion = page.getByLabel("Node kind conversion preview");
+    await expect(conversion).toContainText("Fields removed");
+    await expect(conversion.getByRole("list", { name: "Kind conversion diff" })).toContainText("projection_ref");
+    await conversion.getByRole("button", { name: "Apply kind change" }).click();
+    const findMainObserve = async (): Promise<unknown> => JSON.parse(await raw.inputValue())
+      .graphs[0].nodes.find((node: { id: string }) => node.id === "observe");
+    await expect.poll(findMainObserve).toEqual({
+      id: "observe",
+      kind: "decide",
+      config: { decision_profile_ref: "studio.decision", context_ref: "studio.context" },
+    });
+    await page.getByRole("button", { name: "Undo" }).click();
+    await expect.poll(findMainObserve).toEqual({
+      id: "observe",
+      kind: "observe",
+      config: { projection_ref: "fair-play.synthetic.v1" },
+    });
+  });
+
+  test("surfaces stale proposal bindings and repairs them through the owner-port selector", async ({ page }) => {
+    const golden = JSON.parse(readFileSync("contracts/accepted/phase1/conformance/valid-all-node-kinds.json", "utf8")) as {
+      graphs: Array<{ nodes: Array<{ id: string; kind: string; config: Record<string, unknown> }> }>;
+    };
+    const execute = golden.graphs[0].nodes.find((node) => node.id === "execute");
+    if (!execute) throw new Error("golden fixture is missing execute_action");
+    execute.config.proposal_from = { node_id: "stale.node", output: "proposal" };
+
+    await page.goto("/");
+    await page.getByRole("button", { name: "Open designer" }).first().click();
+    await page.getByRole("button", { name: "JSON mode" }).click();
+    const raw = page.getByRole("textbox", { name: "Raw workflow definition JSON" });
+    await raw.fill(JSON.stringify(golden));
+    await page.getByRole("button", { name: "Apply candidate" }).click();
+    await page.getByRole("tab", { name: "List editor" }).click();
+    await page.locator(".node-list-row").filter({ hasText: "execute" }).first().click();
+
+    const source = page.getByLabel("execute Action proposal source source node");
+    await expect(source).toHaveValue("stale.node");
+    await expect(source.locator("option:checked")).toHaveText("stale.node (stale)");
+    await expect(page.getByRole("alert")).toContainText(/missing or incompatible/i);
+    await page.getByRole("button", { name: /Validate/ }).click();
+    await expect(page.locator(".diagnostics-panel")).toContainText("Binding source node stale.node is missing");
+
+    await source.selectOption("adaptive");
+    await expect(page.getByLabel("execute Action proposal source output")).toHaveValue("proposal");
+    await page.getByRole("button", { name: /Validate/ }).click();
+    await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
+  });
+
   test("opens a template, uses the non-canvas editor, and keeps fixture mode explicit", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: "Workflow library" })).toBeVisible();

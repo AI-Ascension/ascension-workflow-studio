@@ -62,6 +62,7 @@ import {
   updateEdge,
   convertNodeKind,
   compatibleNodeOutputs,
+  validateNodeBindings,
   defaultNodeConfig,
   nodeOutputs,
   OWNER_EDGE_OUTCOMES,
@@ -339,32 +340,37 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     // Derive missing positions straight from the semantic graphs. Building the
     // full flow projection (nodes *and* edges) just to find new ids cost more
     // than the edit itself on admitted-size graphs (P2-089).
-    const next = { ...currentLayout.positions };
-    let added = false;
+    const next: LayoutSidecar["positions"] = {};
+    let changed = false;
     let index = 0;
     for (const graph of nextDocument.graphs) {
       for (const node of graph.nodes) {
         const qualified = qualifiedNodeId(graph.id, node.id);
-        if (!(qualified in next)) {
-          next[qualified] = { x: 92 + (index % 4) * 248, y: 96 + Math.floor(index / 4) * 168 };
-          added = true;
-        }
+        const position = currentLayout.positions[qualified];
+        next[qualified] = position ?? { x: 92 + (index % 4) * 248, y: 96 + Math.floor(index / 4) * 168 };
+        changed ||= position === undefined;
         index += 1;
       }
     }
-    if (!added) return currentLayout;
+    changed ||= Object.keys(currentLayout.positions).length !== Object.keys(next).length;
+    if (!changed) return currentLayout;
     return { ...currentLayout, positions: next };
   }, []);
 
   const commitSnapshot = useCallback((nextDocument: SemanticDocument, nextLayout: LayoutSidecar): void => {
     const editStart = beginBenchmarkEdit();
     editGeneration.current.bump();
+    const snapshotGeneration = editGeneration.current.current();
     const boundLayout = { ...ensureLayout(nextDocument, nextLayout), semanticDigest: "pending" } as LayoutSidecar;
     history.current.commit({ document: nextDocument, layout: boundLayout });
     setDocument(nextDocument);
     setLayout(boundLayout);
     syncFlowNodes(nextDocument, boundLayout);
     window.setTimeout(() => {
+      // A rapid undo/redo or subsequent semantic edit must win over this
+      // deferred serialization; otherwise an old conversion can overwrite the
+      // current raw-text view after the user has already restored it.
+      if (!editGeneration.current.isCurrent(snapshotGeneration)) return;
       const nextRawText = JSON.stringify(nextDocument, null, 2);
       setRawText(nextRawText);
       onRawTextChange(definition.id, nextRawText);
@@ -456,13 +462,22 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     });
   };
 
-  const undo = (): void => {
-    const next = history.current.undo();
+  const restoreHistorySnapshot = useCallback((next: EditorSnapshot): void => {
+    editGeneration.current.bump();
     setDocument(next.document);
     setLayout(next.layout);
-    syncFlowNodes(next.document, next.layout);
-    setRawText(JSON.stringify(next.document, null, 2));
+    syncFlowNodes(next.document, next.layout, selectedIds);
+    const nextRawText = JSON.stringify(next.document, null, 2);
+    setRawText(nextRawText);
+    onRawTextChange(definition.id, nextRawText);
     setRawError(undefined);
+    setDiagnostics(undefined);
+    setValidationState("idle");
+    setValidationMessage("");
+  }, [definition.id, onRawTextChange, selectedIds, syncFlowNodes]);
+
+  const undo = (): void => {
+    restoreHistorySnapshot(history.current.undo());
   };
 
   const retrySave = async (): Promise<void> => {
@@ -491,12 +506,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   };
 
   const redo = (): void => {
-    const next = history.current.redo();
-    setDocument(next.document);
-    setLayout(next.layout);
-    syncFlowNodes(next.document, next.layout);
-    setRawText(JSON.stringify(next.document, null, 2));
-    setRawError(undefined);
+    restoreHistorySnapshot(history.current.redo());
   };
 
   const selectNode = useCallback((id: string, additive = false): void => {
@@ -776,7 +786,9 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       link.href = url;
       link.download = `${document.workflow_id.replaceAll(/[^A-Za-z0-9._-]/g, "_")}.studio.json`;
       link.click();
-      URL.revokeObjectURL(url);
+      // A larger bundle can still be resolving when a browser handles the
+      // synthetic anchor click. Keep the blob URL alive through that handoff.
+      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
       setValidationState("valid");
       setValidationMessage("Exported a digest-bound Studio bundle.");
     } catch (error: unknown) {
@@ -848,8 +860,14 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
 
   const updateSelected = (update: (node: WorkflowNode) => WorkflowNode): void => {
     if (!selected) return;
-    if (selected.node.kind === "adaptive_region" && update(selected.node).kind !== "adaptive_region") return;
-    commit(updateNode(document, selected.graphId, selected.node.id, update));
+    try {
+      const preview = update(selected.node);
+      if (selected.node.kind === "adaptive_region" && preview.kind !== "adaptive_region") return;
+      commit(updateNode(document, selected.graphId, selected.node.id, () => preview));
+    } catch (error: unknown) {
+      setValidationState("error");
+      setValidationMessage(error instanceof Error ? error.message : "Node update was rejected.");
+    }
   };
 
   const removeSelected = (): void => {
@@ -1067,6 +1085,12 @@ interface SelectedNode {
   node: WorkflowNode;
 }
 
+function formatConversionValue(value: JsonValue | undefined): string {
+  if (value === undefined) return "∅";
+  const serialized = JSON.stringify(value);
+  return serialized === undefined ? "∅" : serialized;
+}
+
 interface InspectorPanelProps {
   document: SemanticDocument;
   catalog: DefinitionRecord[];
@@ -1093,6 +1117,17 @@ function InspectorPanel({ document, catalog, contextBindings, selected, selected
     try { return convertNodeKind(selected.node, pendingKind, graph); } catch { return undefined; }
   })() : undefined;
   const removedFields = pendingNode ? Object.keys(selected.node.config).filter((key) => !(key in pendingNode.config)) : [];
+  const conversionChanges = pendingNode ? diffDocuments(selected.node.config, pendingNode.config, "config") : [];
+  const pendingDocument = pendingNode && graph ? {
+    ...document,
+    graphs: document.graphs.map((candidate) => candidate.id !== graph.id ? candidate : {
+      ...candidate,
+      nodes: candidate.nodes.map((candidateNode) => candidateNode.id === selected.node.id ? pendingNode : candidateNode),
+    }),
+  } : undefined;
+  const pendingBindingIssues = pendingDocument
+    ? validateNodeBindings(pendingDocument).filter((issue) => issue.graphId === selected.graphId && issue.nodeId === selected.node.id)
+    : [];
   return <aside className="inspector-panel" aria-label="Node inspector">
     <div className="panel-title"><div><p className="eyebrow">Node inspector</p><h2>{selected.node.id}</h2></div><StatusBadge tone={locked ? "warning" : "success"}>{locked ? "protected region" : selected.node.kind}</StatusBadge></div>
     <label className="field-label">Node kind
@@ -1113,6 +1148,10 @@ function InspectorPanel({ document, catalog, contextBindings, selected, selected
       <strong>Kind conversion preview</strong>
       <p className="muted">Changing {selected.node.kind} to {pendingNode.kind} replaces its configuration with the fields admitted for the new kind. Undo restores the complete prior node.</p>
       {removedFields.length ? <p className="field-unknown">Fields removed: <code>{removedFields.join(", ")}</code></p> : <p className="muted">No existing configuration fields overlap the new kind.</p>}
+      {conversionChanges.length ? <ul className="plain-list kind-conversion-diff" aria-label="Kind conversion diff">
+        {conversionChanges.slice(0, 24).map((change, index) => <li key={`${change.path}-${index}`}><code>{change.path}</code> <span className="muted">{formatConversionValue(change.before)} → {formatConversionValue(change.after)}</span></li>)}
+      </ul> : null}
+      {pendingBindingIssues.length ? <p className="field-error" role="alert">This conversion needs a compatible owner binding before validation: {pendingBindingIssues.map((issue) => issue.message).join(" ")}</p> : null}
       <div className="control-grid"><button className="button button-primary" onClick={() => { onUpdate(() => pendingNode); setPendingKind(undefined); }}>Apply kind change</button><button className="button button-quiet" onClick={() => setPendingKind(undefined)}>Cancel kind change</button></div>
     </section> : null}
     {selected.node.kind === "loop" ? <LoopBodyGraphNavigation document={document} node={selected.node} onNavigateGraph={onNavigateGraph} /> : null}
@@ -1266,10 +1305,10 @@ function ProposalBindingField({ document, graphId, node, requiredType, label, di
   const binding = raw !== null && typeof raw === "object" && !Array.isArray(raw) ? raw as JsonObject : {};
   const sourceId = typeof binding.node_id === "string" ? binding.node_id : "";
   const sourceOutput = typeof binding.output === "string" ? binding.output : "";
-  const candidates = compatibleNodeOutputs(document, graphId, requiredType);
+  const candidates = compatibleNodeOutputs(document, graphId, requiredType, node.id);
   const graph = document.graphs.find((candidate) => candidate.id === graphId);
   const sourceNode = graph?.nodes.find((candidate) => candidate.id === sourceId);
-  const outputOptions = sourceNode ? nodeOutputs(sourceNode) : [];
+  const outputOptions = sourceNode ? nodeOutputs(sourceNode).filter((output) => candidates.some((candidate) => candidate.nodeId === output.nodeId && candidate.output === output.output)) : [];
   const sourceValues = [...new Set([...(sourceId ? [sourceId] : []), ...candidates.map((candidate) => candidate.nodeId)])];
   const outputValues = [...new Set([...(sourceOutput ? [sourceOutput] : []), ...outputOptions.map((candidate) => candidate.output)])];
   const update = (nextNodeId: string, nextOutput: string): void => {
