@@ -24,6 +24,10 @@ import {
   StudioOwnerDefinitionsResponseSchema,
   StudioOwnerDraftSchema,
   StudioOwnerPublishResponseSchema,
+  TargetAdmissionBindingSchema,
+  TargetAdmissionRequestSchema,
+  TargetCatalogResponseSchema,
+  TargetPreflightResponseSchema,
   ValidateResponseSchema,
   WorkflowDefinitionSchema,
   decodeWith,
@@ -48,11 +52,15 @@ import {
   type RunSnapshot,
   type RunSubmissionResponse,
   type StatusResponse,
+  type TargetAdmissionBinding,
+  type TargetAdmissionRequest,
+  type TargetCatalogResponse,
+  type TargetPreflightResponse,
   type JsonObject,
   type ValidateResponse,
   type WorkflowDefinition,
 } from "@studio/contracts";
-import { canonicalJson, cloneDocument, diffDocuments, semanticDigest, validateNodeBindings } from "@studio/document";
+import { canonicalJson, cloneDocument, diffDocuments, semanticDigest, sha256Hex, validateNodeBindings } from "@studio/document";
 
 export type ClientMode = "fixture" | "live";
 
@@ -70,6 +78,33 @@ export interface PublishResult {
   outcome: "published" | "already_published" | "conflict";
   definition?: DefinitionRecord;
   draft?: DraftRecord;
+}
+
+export interface RunSubmissionOptions {
+  /** Stable identity reused for preflight, submit, and explicit retry. */
+  requestId?: string;
+  /** Exact owner-issued binding returned by target preflight. */
+  admission?: TargetAdmissionBinding;
+}
+
+function fixtureTargetCatalog(): TargetCatalogResponse {
+  return TargetCatalogResponseSchema.parse({
+    schema_version: "ascension.workflow-targets/v1",
+    catalog_revision: "fixture-target-catalog.v1",
+    targets: [{
+      instance_id: "studio-inspection",
+      execution_profiles: ["synthetic"],
+      execution_mode: "synthetic",
+      compatibility_revision: "fixture.compatibility.v1",
+      capability_revision: "fixture.capabilities.v1",
+      availability: "available",
+      supported_operations: ["workflow:live"],
+      capabilities: ["studio.fixture.v1"],
+      game_profiles: ["sts2-synthetic-v1"],
+      save_profiles: [],
+      inference_profiles: [],
+    }],
+  });
 }
 
 export interface StudioClient {
@@ -90,7 +125,9 @@ export interface StudioClient {
     semantic_change: boolean;
     changed_paths: string[];
   }>;
-  submitRun(definition: WorkflowDefinition, instanceId: string, profile: string): Promise<RunSubmissionResponse>;
+  listTargets(): Promise<TargetCatalogResponse>;
+  preflightTarget(request: TargetAdmissionRequest): Promise<TargetPreflightResponse>;
+  submitRun(definition: WorkflowDefinition, instanceId: string, profile: string, options?: RunSubmissionOptions): Promise<RunSubmissionResponse>;
   status(runId: string): Promise<StatusResponse>;
   events(runId: string, afterSequence: number, limit?: number): Promise<EventPage>;
   contextAssociation(runId: string): Promise<ContextAssociation>;
@@ -334,16 +371,54 @@ export class OwnerApiClient implements StudioClient {
     return decodeWith(DiffResponseSchema, response, "definition diff");
   }
 
-  public async submitRun(definition: WorkflowDefinition, instanceId: string, profile: string): Promise<RunSubmissionResponse> {
+  public async listTargets(): Promise<TargetCatalogResponse> {
+    const response = await this.request("/workflow-targets", { method: "GET" });
+    return decodeWith(TargetCatalogResponseSchema, response, "workflow target catalog");
+  }
+
+  public async preflightTarget(request: TargetAdmissionRequest): Promise<TargetPreflightResponse> {
+    const body = TargetAdmissionRequestSchema.parse(request);
+    const response = await this.request("/workflow-targets/preflight", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    const result = decodeWith(TargetPreflightResponseSchema, response, "workflow target preflight");
+    if (result.admission.request_id !== body.request_id
+      || result.admission.workflow_definition_digest !== body.workflow_definition_digest
+      || result.admission.target.instance_id !== body.target.instance_id
+      || result.admission.target.execution_profile !== body.target.execution_profile) {
+      throw new ClientError("Owner returned a target admission for a different request", "target_admission_mismatch");
+    }
+    return result;
+  }
+
+  public async submitRun(
+    definition: WorkflowDefinition,
+    instanceId: string,
+    profile: string,
+    options: RunSubmissionOptions = {},
+  ): Promise<RunSubmissionResponse> {
+    const admission = options.admission ? TargetAdmissionBindingSchema.parse(options.admission) : undefined;
+    const requestId = options.requestId ?? admission?.request_id ?? `studio.${cryptoRandomId()}`;
+    if (admission && admission.request_id !== requestId) {
+      throw new ClientError("Run request identity does not match its target admission", "target_request_mismatch");
+    }
+    if (isLiveExecutionProfile(profile) && !admission) {
+      throw new CapabilityGateError(
+        "Live workflow runs require an owner target preflight before submission",
+        "target_admission_required",
+      );
+    }
     const response = await this.request("/workflow-runs", {
       method: "POST",
       body: JSON.stringify({
         schema_version: "ascension.management/v1",
-        request_id: `studio.${cryptoRandomId()}`,
+        request_id: requestId,
         definition,
         artifact_id: null,
         instance_id: instanceId,
         profile,
+        ...(admission ? { admission } : {}),
       }),
     });
     return decodeWith(RunSubmissionResponseSchema, response, "run submission");
@@ -454,6 +529,10 @@ function cryptoRandomId(): string {
   const bytes = new Uint8Array(12);
   globalThis.crypto?.getRandomValues(bytes);
   return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+function isLiveExecutionProfile(profile: string): boolean {
+  return profile === "live" || profile.startsWith("live.");
 }
 
 function ownerDefinitionToRecord(owner: import("@studio/contracts").StudioOwnerDefinition): DefinitionRecord {
@@ -669,6 +748,39 @@ export class FixtureClient implements StudioClient {
     return { outcome: "published", definition: DefinitionRecordSchema.parse(JSON.parse(JSON.stringify(definition)) as unknown) };
   }
 
+  public async listTargets(): Promise<TargetCatalogResponse> {
+    return fixtureTargetCatalog();
+  }
+
+  public async preflightTarget(request: TargetAdmissionRequest): Promise<TargetPreflightResponse> {
+    const body = TargetAdmissionRequestSchema.parse(request);
+    const catalog = fixtureTargetCatalog();
+    const descriptor = catalog.targets.find((target) => target.instance_id === body.target.instance_id);
+    if (!descriptor) {
+      throw new CapabilityGateError("The selected fixture target is unavailable.", "target_unavailable");
+    }
+    if (descriptor.execution_mode !== body.target.execution_mode
+      || !descriptor.execution_profiles.includes(body.target.execution_profile)
+      || !descriptor.game_profiles.includes(body.target.game_profile)
+      || descriptor.compatibility_revision !== body.target.compatibility_revision
+      || descriptor.capability_revision !== body.target.capability_revision) {
+      throw new ClientError("The selected fixture target does not admit this configuration", "target_configuration_mismatch", 409);
+    }
+    const descriptorDigest = await sha256Hex(canonicalJson(descriptor as unknown as JsonObject));
+    const admission = TargetAdmissionBindingSchema.parse({
+      schema_version: "ascension.workflow-admission/v1",
+      request_id: body.request_id,
+      workflow_definition_digest: body.workflow_definition_digest,
+      target: body.target,
+      descriptor_digest: descriptorDigest,
+      catalog_revision: catalog.catalog_revision,
+    });
+    return TargetPreflightResponseSchema.parse({
+      schema_version: "ascension.workflow-admission/v1",
+      admission,
+    });
+  }
+
   public async health(): Promise<{ status: string }> {
     return { status: "fixture" };
   }
@@ -743,7 +855,7 @@ export class FixtureClient implements StudioClient {
     };
   }
 
-  public async submitRun(definition: WorkflowDefinition, _instanceId: string, _profile: string): Promise<RunSubmissionResponse> {
+  public async submitRun(definition: WorkflowDefinition, _instanceId: string, _profile: string, _options?: RunSubmissionOptions): Promise<RunSubmissionResponse> {
     const digest = await semanticDigest(definition);
     const runId = `run.fixture.${this.runs.size + 1}`;
     const snapshot = makeFixtureSnapshot(runId, digest, "running", 1);

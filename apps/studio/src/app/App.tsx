@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ClientMode, OwnerApiClient } from "@studio/client";
 import { ContextServiceClient, FixtureClient } from "@studio/client";
 import { OwnerApiClient as LiveOwnerApiClient } from "@studio/client";
-import { cloneDocument, type ApprovedLinkMapping } from "@studio/document";
+import { cloneDocument, semanticDigest, type ApprovedLinkMapping } from "@studio/document";
 import type { DefinitionRecord, WorkflowDefinition } from "@studio/contracts";
 
 import { StatusBadge } from "../components/StatusBadge";
@@ -93,7 +93,39 @@ export function App(): JSX.Element {
 
   const runDocument = async (document: WorkflowDefinition): Promise<void> => {
     try {
-      const result = await client.submitRun(document, "studio-inspection", "synthetic");
+      const catalog = await client.listTargets();
+      const target = catalog.targets.find((candidate) => candidate.availability === "available");
+      if (!target) {
+        throw new Error("No available owner target can admit this workflow.");
+      }
+      const profile = target.execution_profiles[0];
+      const gameProfile = target.game_profiles[0];
+      if (!profile || !gameProfile) {
+        throw new Error("The selected owner target has no compatible execution or game profile.");
+      }
+      const requestId = `studio-run-${crypto.randomUUID()}`;
+      const preflight = await client.preflightTarget({
+        schema_version: "ascension.workflow-admission/v1",
+        request_id: requestId,
+        workflow_definition_digest: await semanticDigest(document),
+        target: {
+          instance_id: target.instance_id,
+          execution_profile: profile,
+          execution_mode: target.execution_mode,
+          workflow_revision: document.version,
+          compatibility_revision: target.compatibility_revision,
+          capability_revision: target.capability_revision,
+          game_profile: gameProfile,
+          save_profile: target.save_profiles[0] ?? null,
+          inference_profile: target.inference_profiles[0] ?? null,
+          context_capability: null,
+          provider_capability: null,
+        },
+      });
+      const result = await client.submitRun(document, target.instance_id, profile, {
+        requestId,
+        admission: preflight.admission,
+      });
       setRunId(result.workflow_run_id);
       setView("runs");
       setAppMessage(`Owner accepted ${result.workflow_run_id} at revision ${result.run_revision}.`);

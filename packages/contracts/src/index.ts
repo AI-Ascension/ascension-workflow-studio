@@ -125,6 +125,7 @@ export const RunSnapshotSchema = z.object({
     replans_consumed: z.number().int().nonnegative(),
   }).strict(),
   cleanup: z.enum(["not_started", "pending", "complete", "failed", "needs_operator"]),
+  admission: z.lazy(() => TargetAdmissionBindingSchema).optional(),
 }).strict();
 export type RunSnapshot = z.infer<typeof RunSnapshotSchema>;
 
@@ -348,6 +349,77 @@ export const CapabilityResponseSchema = z.object({
   capabilities: JsonValueSchema,
 }).strict();
 export type CapabilityResponse = z.infer<typeof CapabilityResponseSchema>;
+
+export const ExecutionModeSchema = z.enum(["synthetic", "live"]);
+export type ExecutionMode = z.infer<typeof ExecutionModeSchema>;
+
+export const TargetAvailabilitySchema = z.enum(["available", "unavailable", "revoked", "expired"]);
+export type TargetAvailability = z.infer<typeof TargetAvailabilitySchema>;
+
+export const TargetDescriptorSchema = z.object({
+  instance_id: z.string().min(1).max(128),
+  execution_profiles: z.array(z.string().min(1).max(128)).max(32),
+  execution_mode: ExecutionModeSchema,
+  compatibility_revision: z.string().min(1).max(128),
+  capability_revision: z.string().min(1).max(128),
+  availability: TargetAvailabilitySchema,
+  supported_operations: z.array(z.string().min(1).max(128)).max(64),
+  capabilities: z.array(z.string().min(1).max(128)).max(256),
+  game_profiles: z.array(z.string().min(1).max(128)).max(32),
+  save_profiles: z.array(z.string().min(1).max(128)).max(32),
+  inference_profiles: z.array(z.string().min(1).max(128)).max(32),
+}).strict();
+export type TargetDescriptor = z.infer<typeof TargetDescriptorSchema>;
+
+export const TargetCatalogResponseSchema = z.object({
+  schema_version: z.literal("ascension.workflow-targets/v1"),
+  catalog_revision: z.string().min(1).max(128),
+  targets: z.array(TargetDescriptorSchema).max(32),
+}).strict();
+export type TargetCatalogResponse = z.infer<typeof TargetCatalogResponseSchema>;
+
+/**
+ * Exact target/profile namespaces selected for a run. This is deliberately
+ * separate from the workflow's game_profile and from owner-issued admission.
+ */
+export const RunTargetConfigurationSchema = z.object({
+  instance_id: z.string().min(1).max(128),
+  execution_profile: z.string().min(1).max(128),
+  execution_mode: ExecutionModeSchema,
+  workflow_revision: z.string().min(1).max(128),
+  compatibility_revision: z.string().min(1).max(128),
+  capability_revision: z.string().min(1).max(128),
+  game_profile: z.string().min(1).max(128),
+  save_profile: z.string().min(1).max(128).nullable(),
+  inference_profile: z.string().min(1).max(128).nullable(),
+  context_capability: z.string().min(1).max(128).nullable(),
+  provider_capability: z.string().min(1).max(128).nullable(),
+}).strict();
+export type RunTargetConfiguration = z.infer<typeof RunTargetConfigurationSchema>;
+
+export const TargetAdmissionRequestSchema = z.object({
+  schema_version: z.literal("ascension.workflow-admission/v1"),
+  request_id: z.string().min(1).max(128),
+  workflow_definition_digest: z.string().regex(/^[a-f0-9]{64}$/),
+  target: RunTargetConfigurationSchema,
+}).strict();
+export type TargetAdmissionRequest = z.infer<typeof TargetAdmissionRequestSchema>;
+
+export const TargetAdmissionBindingSchema = z.object({
+  schema_version: z.literal("ascension.workflow-admission/v1"),
+  request_id: z.string().min(1).max(128),
+  workflow_definition_digest: z.string().regex(/^[a-f0-9]{64}$/),
+  target: RunTargetConfigurationSchema,
+  descriptor_digest: z.string().regex(/^[a-f0-9]{64}$/),
+  catalog_revision: z.string().min(1).max(128),
+}).strict();
+export type TargetAdmissionBinding = z.infer<typeof TargetAdmissionBindingSchema>;
+
+export const TargetPreflightResponseSchema = z.object({
+  schema_version: z.literal("ascension.workflow-admission/v1"),
+  admission: TargetAdmissionBindingSchema,
+}).strict();
+export type TargetPreflightResponse = z.infer<typeof TargetPreflightResponseSchema>;
 
 export const ContextBindingSchema = z.object({
   context_ref: z.string().min(1).max(128),
