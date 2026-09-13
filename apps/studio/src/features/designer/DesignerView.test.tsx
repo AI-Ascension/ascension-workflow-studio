@@ -75,4 +75,21 @@ describe("unsupported definition isolation", () => {
     expect(publish).not.toHaveBeenCalled();
     expect(screen.getByRole("region", { name: "Read-only archival import" })).toBeInTheDocument();
   });
+
+  it("does not let a delayed supported file import replace an archive", async () => {
+    await openDesigner();
+    const supported = JSON.stringify(fixtureDefinitions[0].definition);
+    let resolveText!: (value: string) => void;
+    const file = new File([""], "supported.json", { type: "application/json" });
+    Object.defineProperty(file, "text", {
+      value: vi.fn(() => new Promise<string>((resolve) => { resolveText = resolve; })),
+    });
+    const input = document.querySelector<HTMLInputElement>('input[type="file"][accept="application/json,.json"]');
+    expect(input).not.toBeNull();
+    fireEvent.change(input!, { target: { files: [file] } });
+    const archived = '{\n  "schema_version": "ascension.workflow/v2", "graphs": []\n}\n';
+    applyRaw(archived);
+    await act(async () => { resolveText(supported); });
+    expect(screen.getByRole("textbox", { name: "Archived unsupported workflow definition JSON" })).toHaveValue(archived);
+  });
 });

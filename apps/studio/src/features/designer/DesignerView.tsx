@@ -789,10 +789,13 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file) return;
+    const generation = editGeneration.current.current();
     const raw = await file.text();
+    if (!editGeneration.current.isCurrent(generation)) return;
     try {
       const bundle = await parseStudioBundle(raw);
       const digest = await semanticDigest(bundle.semantic);
+      if (!editGeneration.current.isCurrent(generation)) return;
       setBundleImport({
         semantic: bundle.semantic,
         layout: bundle.layout,
@@ -803,6 +806,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       setValidationState("idle");
       setValidationMessage("Review the digest-bound bundle preview before applying it.");
     } catch (error: unknown) {
+      if (!editGeneration.current.isCurrent(generation)) return;
       try {
         const imported = parseDefinitionImport(raw);
         if (imported.kind === "archival") {
