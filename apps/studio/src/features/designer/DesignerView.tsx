@@ -340,20 +340,20 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     // Derive missing positions straight from the semantic graphs. Building the
     // full flow projection (nodes *and* edges) just to find new ids cost more
     // than the edit itself on admitted-size graphs (P2-089).
-    const next = { ...currentLayout.positions };
-    let added = false;
+    const next: LayoutSidecar["positions"] = {};
+    let changed = false;
     let index = 0;
     for (const graph of nextDocument.graphs) {
       for (const node of graph.nodes) {
         const qualified = qualifiedNodeId(graph.id, node.id);
-        if (!(qualified in next)) {
-          next[qualified] = { x: 92 + (index % 4) * 248, y: 96 + Math.floor(index / 4) * 168 };
-          added = true;
-        }
+        const position = currentLayout.positions[qualified];
+        next[qualified] = position ?? { x: 92 + (index % 4) * 248, y: 96 + Math.floor(index / 4) * 168 };
+        changed ||= position === undefined;
         index += 1;
       }
     }
-    if (!added) return currentLayout;
+    changed ||= Object.keys(currentLayout.positions).length !== Object.keys(next).length;
+    if (!changed) return currentLayout;
     return { ...currentLayout, positions: next };
   }, []);
 
