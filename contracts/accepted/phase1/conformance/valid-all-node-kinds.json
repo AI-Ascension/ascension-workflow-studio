@@ -1,0 +1,395 @@
+{
+  "schema_version": "ascension.workflow/v1",
+  "workflow_id": "fixture.all-node-kinds.dynamic",
+  "version": "0.1.0",
+  "mode": "dynamic",
+  "game_profile": "synthetic-sts2-v1",
+  "policy_ref": "policy.synthetic.v1",
+  "capabilities": {
+    "required": [],
+    "optional": []
+  },
+  "limits": {
+    "max_steps": 64,
+    "max_subworkflow_depth": 3,
+    "max_provider_calls": 8,
+    "max_parallel_analyses": 1,
+    "max_output_tokens": 4096
+  },
+  "entry_graph": "main",
+  "graphs": [
+    {
+      "id": "main",
+      "entry_node": "observe",
+      "guards": [
+        {
+          "id": "route_true",
+          "expression": {
+            "kind": "exists",
+            "value": "state.ready"
+          }
+        },
+        {
+          "id": "route_false",
+          "expression": {
+            "kind": "not_equal",
+            "value": {
+              "left": "state.ready",
+              "right": {
+                "kind": "literal",
+                "value": {
+                  "kind": "boolean",
+                  "value": true
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "route_unknown",
+          "expression": {
+            "kind": "equal",
+            "value": {
+              "left": "state.ready",
+              "right": {
+                "kind": "literal",
+                "value": {
+                  "kind": "null"
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "loop_exit",
+          "expression": {
+            "kind": "exists",
+            "value": "state.done"
+          }
+        }
+      ],
+      "nodes": [
+        {
+          "id": "observe",
+          "kind": "observe",
+          "config": {
+            "projection_ref": "fair-play.synthetic.v1"
+          }
+        },
+        {
+          "id": "await",
+          "kind": "await_stability",
+          "config": {
+            "deadline_ms": 1000
+          }
+        },
+        {
+          "id": "route",
+          "kind": "route",
+          "config": {
+            "selector_ref": "selector.synthetic.v1"
+          }
+        },
+        {
+          "id": "analyze",
+          "kind": "analyze",
+          "config": {
+            "operation_ref": "operation.synthetic.v1",
+            "context_ref": "context.synthetic.v1"
+          }
+        },
+        {
+          "id": "decide",
+          "kind": "decide",
+          "config": {
+            "decision_profile_ref": "decision.synthetic.v1",
+            "context_ref": "context.synthetic.v1"
+          }
+        },
+        {
+          "id": "adaptive",
+          "kind": "adaptive_region",
+          "config": {
+            "region_id": "region.synthetic.v1",
+            "planner_profile_ref": "planner.synthetic.v1",
+            "allowed_operations": [
+              "operation.synthetic.v1"
+            ],
+            "max_plan_nodes": 4,
+            "max_plan_edges": 4,
+            "max_replans": 1,
+            "output_type": "DecisionProposal"
+          }
+        },
+        {
+          "id": "execute",
+          "kind": "execute_action",
+          "config": {
+            "proposal_from": {
+              "node_id": "adaptive",
+              "output": "proposal"
+            }
+          }
+        },
+        {
+          "id": "subworkflow",
+          "kind": "subworkflow",
+          "config": {
+            "artifact_ref": {
+              "id": "workflow.synthetic.child",
+              "version": "0.1.0",
+              "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+            }
+          }
+        },
+        {
+          "id": "loop",
+          "kind": "loop",
+          "config": {
+            "body_graph": "all-kinds.body",
+            "max_iterations": 2,
+            "exit_guard_ref": "loop_exit"
+          }
+        },
+        {
+          "id": "checkpoint",
+          "kind": "checkpoint",
+          "config": {
+            "label": "checkpoint.synthetic.v1"
+          }
+        },
+        {
+          "id": "emit",
+          "kind": "emit_artifact",
+          "config": {
+            "artifact_kind_ref": "artifact.synthetic.v1",
+            "input_from": {
+              "node_id": "analyze",
+              "output": "analysis"
+            }
+          }
+        },
+        {
+          "id": "pause",
+          "kind": "pause",
+          "config": {
+            "reason_code": "pause.synthetic.v1"
+          }
+        },
+        {
+          "id": "completed",
+          "kind": "terminal",
+          "config": {
+            "outcome": "completed"
+          }
+        },
+        {
+          "id": "blocked",
+          "kind": "terminal",
+          "config": {
+            "outcome": "needs_operator"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "observe",
+          "to": "await",
+          "on": "ok",
+          "priority": 0
+        },
+        {
+          "from": "observe",
+          "to": "blocked",
+          "on": "error",
+          "priority": 0
+        },
+        {
+          "from": "await",
+          "to": "route",
+          "on": "ok",
+          "priority": 0
+        },
+        {
+          "from": "await",
+          "to": "blocked",
+          "on": "error",
+          "priority": 0
+        },
+        {
+          "from": "route",
+          "to": "analyze",
+          "on": "true",
+          "priority": 0,
+          "guard_ref": "route_true"
+        },
+        {
+          "from": "route",
+          "to": "blocked",
+          "on": "false",
+          "priority": 0,
+          "guard_ref": "route_false"
+        },
+        {
+          "from": "route",
+          "to": "blocked",
+          "on": "unknown",
+          "priority": 0,
+          "guard_ref": "route_unknown"
+        },
+        {
+          "from": "route",
+          "to": "blocked",
+          "on": "error",
+          "priority": 0
+        },
+        {
+          "from": "analyze",
+          "to": "decide",
+          "on": "ok",
+          "priority": 0
+        },
+        {
+          "from": "analyze",
+          "to": "blocked",
+          "on": "error",
+          "priority": 0
+        },
+        {
+          "from": "decide",
+          "to": "adaptive",
+          "on": "ok",
+          "priority": 0
+        },
+        {
+          "from": "decide",
+          "to": "blocked",
+          "on": "error",
+          "priority": 0
+        },
+        {
+          "from": "adaptive",
+          "to": "execute",
+          "on": "ok",
+          "priority": 0
+        },
+        {
+          "from": "adaptive",
+          "to": "blocked",
+          "on": "error",
+          "priority": 0
+        },
+        {
+          "from": "execute",
+          "to": "subworkflow",
+          "on": "ok",
+          "priority": 0
+        },
+        {
+          "from": "execute",
+          "to": "blocked",
+          "on": "error",
+          "priority": 0
+        },
+        {
+          "from": "subworkflow",
+          "to": "loop",
+          "on": "ok",
+          "priority": 0
+        },
+        {
+          "from": "subworkflow",
+          "to": "blocked",
+          "on": "error",
+          "priority": 0
+        },
+        {
+          "from": "loop",
+          "to": "checkpoint",
+          "on": "ok",
+          "priority": 0
+        },
+        {
+          "from": "loop",
+          "to": "blocked",
+          "on": "error",
+          "priority": 0
+        },
+        {
+          "from": "checkpoint",
+          "to": "emit",
+          "on": "ok",
+          "priority": 0
+        },
+        {
+          "from": "checkpoint",
+          "to": "blocked",
+          "on": "error",
+          "priority": 0
+        },
+        {
+          "from": "emit",
+          "to": "pause",
+          "on": "ok",
+          "priority": 0
+        },
+        {
+          "from": "emit",
+          "to": "blocked",
+          "on": "error",
+          "priority": 0
+        },
+        {
+          "from": "pause",
+          "to": "completed",
+          "on": "ok",
+          "priority": 0
+        },
+        {
+          "from": "pause",
+          "to": "blocked",
+          "on": "error",
+          "priority": 0
+        }
+      ]
+    },
+    {
+      "id": "all-kinds.body",
+      "entry_node": "body_observe",
+      "nodes": [
+        {
+          "id": "body_observe",
+          "kind": "observe",
+          "config": {
+            "projection_ref": "fair-play.synthetic.v1"
+          }
+        },
+        {
+          "id": "body_done",
+          "kind": "terminal",
+          "config": {
+            "outcome": "completed"
+          }
+        }
+      ],
+      "edges": [
+        {
+          "from": "body_observe",
+          "to": "body_done",
+          "on": "ok",
+          "priority": 0
+        },
+        {
+          "from": "body_observe",
+          "to": "body_done",
+          "on": "error",
+          "priority": 0
+        }
+      ]
+    }
+  ],
+  "annotations": {
+    "summary": "Synthetic owner round-trip vector covering every admitted node kind and guarded route.",
+    "synthetic": true
+  }
+}

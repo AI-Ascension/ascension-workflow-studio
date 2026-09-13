@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it, vi } from "vitest";
 
 import type { WorkflowDefinition } from "@studio/contracts";
@@ -6,6 +8,7 @@ import {
   History,
   OWNER_EDGE_OUTCOMES,
   OWNER_NODE_KINDS,
+  addEdge,
   alignLayout,
   autoLayout,
   canonicalJson,
@@ -26,6 +29,7 @@ import {
   serializeStudioBundle,
   semanticDigest,
   sha256Hex,
+  validateNodeBindings,
   updateEdge,
 } from "./index";
 
@@ -76,6 +80,45 @@ describe("workflow document identity", () => {
     const converted = convertNodeKind(original, "await_stability", definition().graphs[0]);
     expect(converted).toEqual({ id: "node", kind: "await_stability", config: { deadline_ms: 1000 } });
     expect(converted.config).not.toHaveProperty("projection_ref");
+  });
+
+  it("rejects stale and incompatible owner bindings while exposing all compatible ports", () => {
+    const document = definition();
+    document.graphs[0].nodes.splice(1, 0,
+      { id: "execute", kind: "execute_action", config: { proposal_from: { node_id: "start", output: "observation" } } },
+      { id: "emit", kind: "emit_artifact", config: { artifact_kind_ref: "artifact", input_from: { node_id: "missing", output: "analysis" } } },
+    );
+    expect(validateNodeBindings(document)).toEqual([
+      expect.objectContaining({ nodeId: "execute", code: "type_mismatch" }),
+      expect.objectContaining({ nodeId: "emit", code: "missing_source" }),
+    ]);
+    expect(compatibleNodeOutputs(document, "main", "DecisionProposal", "execute")).toEqual([]);
+  });
+
+  it("preserves owner route idempotency but rejects a priority tie", () => {
+    const document = definition();
+    const withFallback = addEdge(document, "main", { from: "start", to: "done", on: "ok", priority: 1 });
+    expect(withFallback.graphs[0].edges).toHaveLength(2);
+    expect(addEdge(withFallback, "main", { from: "start", to: "done", on: "ok", priority: 1 }).graphs[0].edges).toHaveLength(2);
+    expect(() => addEdge(withFallback, "main", { from: "start", to: "start", on: "ok", priority: 1 })).toThrow("priority tie");
+  });
+
+  it("round-trips the golden owner corpus covering all 13 kinds and guarded edges", async () => {
+    const raw = readFileSync("contracts/accepted/phase1/conformance/valid-all-node-kinds.json", "utf8");
+    const imported = parseDefinitionImport(raw);
+    expect(imported.kind).toBe("supported");
+    if (imported.kind !== "supported") return;
+    const document = imported.document;
+    const kinds = new Set(document.graphs.flatMap((graph) => graph.nodes.map((node) => node.kind)));
+    expect(kinds).toEqual(new Set(OWNER_NODE_KINDS));
+    expect(validateNodeBindings(document)).toEqual([]);
+    expect(document.graphs.flatMap((graph) => graph.edges).some((edge) => edge.guard_ref)).toBe(true);
+
+    const digest = await semanticDigest(document);
+    const bundleRaw = await serializeStudioBundle({ semantic: document, layout: createLayout(document, digest) });
+    const roundTrip = await parseStudioBundle(bundleRaw);
+    expect(await semanticDigest(roundTrip.semantic)).toBe(digest);
+    expect(roundTrip.semantic).toEqual(document);
   });
 
   it("round-trips guarded edge fields without dropping the owner guard reference", () => {

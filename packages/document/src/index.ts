@@ -55,6 +55,14 @@ export interface NodeOutputDescriptor {
   type: "Observation" | "Text" | "Analysis" | "DecisionProposal" | "Null" | "SubworkflowSelection" | "Unknown" | "Artifact";
 }
 
+export interface NodeBindingDiagnostic {
+  graphId: string;
+  nodeId: string;
+  path: string;
+  code: "missing_binding" | "missing_source" | "unknown_output" | "type_mismatch";
+  message: string;
+}
+
 const OWNER_NODE_OUTPUTS: Record<OwnerNodeKind, readonly Omit<NodeOutputDescriptor, "nodeId">[]> = {
   observe: [{ output: "observation", type: "Observation" }],
   await_stability: [{ output: "observation", type: "Observation" }],
@@ -98,6 +106,90 @@ export function compatibleNodeOutputs(
     .filter((node) => node.id !== excludeNodeId)
     .flatMap((node) => nodeOutputs(node))
     .filter((output) => requiredType === "any" || output.type === requiredType);
+}
+
+/**
+ * Validate the data bindings that the owner compiler resolves against the
+ * current graph. This is intentionally separate from WorkflowDefinitionSchema:
+ * drafts may be structurally editable before authoritative validation, while
+ * binding controls and fixture validation still need the owner's typed-port
+ * rules to reject stale or incompatible references.
+ */
+export function validateNodeBindings(document: SemanticDocument): NodeBindingDiagnostic[] {
+  const diagnostics: NodeBindingDiagnostic[] = [];
+  for (const graph of document.graphs) {
+    for (const node of graph.nodes) {
+      if (node.kind !== "execute_action" && node.kind !== "emit_artifact") continue;
+      const key = node.kind === "execute_action" ? "proposal_from" : "input_from";
+      const raw = node.config[key];
+      const path = `$.graphs.${graph.id}.nodes.${node.id}.config.${key}`;
+      if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+        diagnostics.push({
+          graphId: graph.id,
+          nodeId: node.id,
+          path,
+          code: "missing_binding",
+          message: `${node.kind} requires a ${key} binding to an upstream node output.`,
+        });
+        continue;
+      }
+      const binding = raw as JsonObject;
+      const sourceId = binding.node_id;
+      const output = binding.output;
+      if (typeof sourceId !== "string" || sourceId.length === 0) {
+        diagnostics.push({
+          graphId: graph.id,
+          nodeId: node.id,
+          path,
+          code: "missing_source",
+          message: "Binding source node is missing.",
+        });
+        continue;
+      }
+      const source = graph.nodes.find((candidate) => candidate.id === sourceId);
+      if (!source || source.id === node.id) {
+        diagnostics.push({
+          graphId: graph.id,
+          nodeId: node.id,
+          path,
+          code: "missing_source",
+          message: `Binding source node ${sourceId} is missing or refers to the input node itself.`,
+        });
+        continue;
+      }
+      if (typeof output !== "string" || output.length === 0) {
+        diagnostics.push({
+          graphId: graph.id,
+          nodeId: node.id,
+          path,
+          code: "unknown_output",
+          message: `Node ${sourceId} does not declare a selected output.`,
+        });
+        continue;
+      }
+      const descriptor = nodeOutputs(source).find((candidate) => candidate.output === output);
+      if (!descriptor) {
+        diagnostics.push({
+          graphId: graph.id,
+          nodeId: node.id,
+          path,
+          code: "unknown_output",
+          message: `Node ${sourceId} does not expose output ${output}.`,
+        });
+        continue;
+      }
+      if (node.kind === "execute_action" && descriptor.type !== "DecisionProposal") {
+        diagnostics.push({
+          graphId: graph.id,
+          nodeId: node.id,
+          path,
+          code: "type_mismatch",
+          message: `Action proposal must come from a DecisionProposal output; ${sourceId}.${output} is ${descriptor.type}.`,
+        });
+      }
+    }
+  }
+  return diagnostics;
 }
 
 function defaultBinding(
@@ -789,8 +881,14 @@ export function addEdge(
   if (!graph || !graph.nodes.some((node) => node.id === edge.from) || !graph.nodes.some((node) => node.id === edge.to)) {
     throw new Error("edges must connect nodes in the same graph");
   }
-  if (graph.edges.some((candidate) => candidate.from === edge.from && candidate.to === edge.to && candidate.on === edge.on)) {
-    return next;
+  // The owner orders control edges by `(from, on, priority, target)` and
+  // rejects a priority tie for the same source/outcome. Guard references do
+  // not make a tied route distinct, while different priorities are valid
+  // ordered fallbacks. Preserve idempotency for an exact edge re-add.
+  const priorityTie = graph.edges.find((candidate) => candidate.from === edge.from && candidate.on === edge.on && candidate.priority === edge.priority);
+  if (priorityTie) {
+    if (priorityTie.to === edge.to && priorityTie.guard_ref === edge.guard_ref) return next;
+    throw new Error("edge would create an owner priority tie");
   }
   graph.edges.push(edge);
   return WorkflowDefinitionSchema.parse(next);
@@ -812,8 +910,8 @@ export function reconnectEdge(
   if (!edge) {
     throw new Error(`edge ${edgeIndex} does not exist in graph ${graphId}`);
   }
-  if (graph.edges.some((candidate, index) => index !== edgeIndex && candidate.from === from && candidate.to === to && candidate.on === edge.on)) {
-    throw new Error("reconnection would create a duplicate guarded edge");
+  if (graph.edges.some((candidate, index) => index !== edgeIndex && candidate.from === from && candidate.on === edge.on && candidate.priority === edge.priority)) {
+    throw new Error("reconnection would create an owner priority tie");
   }
   graph.edges[edgeIndex] = { ...edge, from, to };
   return WorkflowDefinitionSchema.parse(next);
@@ -835,8 +933,8 @@ export function updateEdge(
   if (!graph.nodes.some((node) => node.id === updated.from) || !graph.nodes.some((node) => node.id === updated.to)) {
     throw new Error("edges must connect nodes in the same graph");
   }
-  if (graph.edges.some((candidate, index) => index !== edgeIndex && candidate.from === updated.from && candidate.to === updated.to && candidate.on === updated.on)) {
-    throw new Error("edge update would create a duplicate guarded edge");
+  if (graph.edges.some((candidate, index) => index !== edgeIndex && candidate.from === updated.from && candidate.on === updated.on && candidate.priority === updated.priority)) {
+    throw new Error("edge update would create an owner priority tie");
   }
   graph.edges[edgeIndex] = updated;
   return WorkflowDefinitionSchema.parse(next);
