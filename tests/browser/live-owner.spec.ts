@@ -188,9 +188,10 @@ test("imports, edits, exports, and owner-validates every admitted node kind", as
   await rawAfterRoundTrip.fill(JSON.stringify(stale));
   await page.getByRole("button", { name: "Apply candidate" }).click();
   await expect(page.locator(".validation-label")).toHaveText("Applied the bounded canonical JSON definition as a new semantic candidate.");
+  await page.getByRole("tab", { name: "List editor" }).click();
+  await page.locator(".node-list-row", { hasText: "execute" }).first().click();
   await expect(page.getByLabel("execute Action proposal source source node")).toHaveValue("stale.node");
   await page.getByRole("button", { name: /Validate/ }).click();
-  await page.getByRole("tab", { name: "List editor" }).click();
   await expect(page.locator(".diagnostics-panel")).toContainText("Binding source node stale.node is missing");
 });
 test("publishes adaptive region edits as a new revision and leaves the active run pinned", async ({ page }) => {
