@@ -471,12 +471,40 @@ test.describe("Studio fixture workbench", () => {
     await page.goto("/");
     await page.getByRole("button", { name: "Open designer" }).first().click();
     await page.getByRole("button", { name: "JSON mode" }).click();
+    const previousDraft = await page.getByRole("textbox", { name: "Raw workflow definition JSON" }).inputValue();
     await page.getByRole("textbox", { name: "Raw workflow definition JSON" }).fill(original);
     await page.getByRole("button", { name: "Apply candidate" }).click();
     const archived = page.getByRole("textbox", { name: "Archived unsupported workflow definition JSON" });
     await expect(archived).toHaveValue(original);
     await expect(archived).toHaveAttribute("readonly", "");
     await expect(page.getByText(/not applied to this draft, autosaved, validated, or published/i)).toBeVisible();
+    await expect(page.getByRole("button", { name: "Run inspection" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Publish revision" })).toHaveCount(0);
+    await expect(page.getByRole("toolbar", { name: "Designer tools" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Return to previous draft" }).focus();
+    await page.keyboard.press("Control+z");
+    await expect(archived).toHaveValue(original);
+    await page.keyboard.press("Enter");
+    expect(JSON.parse(await page.getByRole("textbox", { name: "Raw workflow definition JSON" }).inputValue())).toEqual(JSON.parse(previousDraft));
+    await expect(page.getByRole("button", { name: "Run inspection" })).toBeEnabled();
+  });
+
+  test("isolates a file import containing an unknown owner node", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("button", { name: "Open designer" }).first().click();
+    await page.getByRole("button", { name: "JSON mode" }).click();
+    const previousDraft = await page.getByRole("textbox", { name: "Raw workflow definition JSON" }).inputValue();
+    const unsupported = JSON.parse(previousDraft);
+    unsupported.graphs[0].nodes[0].kind = "future_owner_kind";
+    const original = `${JSON.stringify(unsupported, null, 4)}\n`;
+    await page.locator('input[type="file"][accept="application/json,.json"]').setInputFiles({
+      name: "future-node.json", mimeType: "application/json", buffer: Buffer.from(original),
+    });
+    await expect(page.getByRole("textbox", { name: "Archived unsupported workflow definition JSON" })).toHaveValue(original);
+    await expect(page.getByRole("button", { name: "Run inspection" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Publish revision" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Return to previous draft" }).click();
+    expect(JSON.parse(await page.getByRole("textbox", { name: "Raw workflow definition JSON" }).inputValue())).toEqual(JSON.parse(previousDraft));
   });
 
   test("rejects duplicate-key JSON without mutating the draft", async ({ page }) => {
