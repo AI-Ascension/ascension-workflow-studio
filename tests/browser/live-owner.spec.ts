@@ -190,6 +190,7 @@ test("imports, edits, exports, and owner-validates every admitted node kind", as
   await expect(page.locator(".validation-label")).toHaveText("Applied the bounded canonical JSON definition as a new semantic candidate.");
   await expect(page.getByLabel("execute Action proposal source source node")).toHaveValue("stale.node");
   await page.getByRole("button", { name: /Validate/ }).click();
+  await page.getByRole("tab", { name: "List editor" }).click();
   await expect(page.locator(".diagnostics-panel")).toContainText("Binding source node stale.node is missing");
 });
 test("publishes adaptive region edits as a new revision and leaves the active run pinned", async ({ page }) => {
