@@ -260,7 +260,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   }, [client, draftId]);
 
   useEffect(() => {
-    if (!draftHydrated || draftRef.current.state === "conflict") return;
+    if (archivalImport || !draftHydrated || draftRef.current.state === "conflict") return;
     const currentDraft = draftRef.current;
     const currentKey = valueKey(document, layout);
     if (persistedKeyRef.current === currentKey) return;
@@ -300,7 +300,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       });
     }, 700);
     return () => window.clearTimeout(timer);
-  }, [client, definition.id, draftHydrated, document, layout, draftId, saveRetry]);
+  }, [client, definition.id, draftHydrated, document, layout, draftId, saveRetry, archivalImport]);
 
   const selected = useMemo(() => findSelectedNode(document, selectedId), [document, selectedId]);
   const flowEdgesCache = useRef<{ key: string; edges: Edge<{ qualifiedSource: string; qualifiedTarget: string }>[] }>({ key: "", edges: [] });
@@ -407,7 +407,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   }, [refreshRecovery, principal]);
 
   useEffect(() => {
-    if (!recoveryEnabled) return;
+    if (archivalImport || !recoveryEnabled) return;
     const timer = window.setTimeout(() => {
       let record: RecoveryRecord;
       try {
@@ -424,7 +424,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       });
     }, 600);
     return () => window.clearTimeout(timer);
-  }, [recoveryEnabled, principal, definition.id, draftId, document, layout, rawText, refreshRecovery]);
+  }, [recoveryEnabled, principal, definition.id, draftId, document, layout, rawText, refreshRecovery, archivalImport]);
 
   const recoverable = useMemo(() => recoverableFor(recoveryRecords, principal, recoveryWorkspace, definition.id), [recoveryRecords, principal, definition.id]);
   const principalRecordCount = recoveryRecords.filter((record) => record.principal === principal).length;
@@ -547,7 +547,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
 
   useEffect(() => {
     const handleShortcut = (event: KeyboardEvent): void => {
-      if (event.defaultPrevented || !(event.ctrlKey || event.metaKey) || isEditableShortcutTarget(event.target)) return;
+      if (archivalImport || event.defaultPrevented || !(event.ctrlKey || event.metaKey) || isEditableShortcutTarget(event.target)) return;
       const key = event.key.toLowerCase();
       if (key === "z") {
         event.preventDefault();
@@ -595,13 +595,21 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     }
   };
 
+  const openArchive = (imported: ArchivalImport): void => {
+    // Invalidate pending validation/publication before suspending the editor.
+    editGeneration.current.bump();
+    setArchivalImport(imported);
+    setDiagnostics(undefined);
+    setValidationState("idle");
+    setValidationMessage("");
+    setBundleImport(undefined);
+  };
+
   const applyRawDefinition = (): void => {
     try {
       const imported = parseDefinitionImport(rawText);
       if (imported.kind === "archival") {
-        setArchivalImport(imported);
-        setValidationState("error");
-        setValidationMessage("Future-schema content is retained read-only and cannot be submitted.");
+        openArchive(imported);
         return;
       }
       commit(imported.document);
@@ -720,8 +728,10 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     setPublicationState("publishing");
     setValidationState("running");
     setValidationMessage("");
+    const generation = editGeneration.current.current();
     try {
       const validation = await client.validate(document);
+      if (!editGeneration.current.isCurrent(generation)) return;
       setDiagnostics(validation);
       if (!validation.valid) {
         setValidationState("invalid");
@@ -796,9 +806,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       try {
         const imported = parseDefinitionImport(raw);
         if (imported.kind === "archival") {
-          setArchivalImport(imported);
-          setValidationState("error");
-          setValidationMessage("Future-schema content was retained in read-only archival mode.");
+          openArchive(imported);
         } else {
           commit(imported.document);
           setValidationState("valid");
@@ -930,6 +938,17 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     ? (() => { const parsed = LayoutSidecarSchema.safeParse(draft.server?.conflict?.serverLayout ?? draft.server?.layout); return parsed.success ? parsed.data : createLayout(conflictRemoteDocument, "pending"); })()
     : undefined;
 
+  if (archivalImport) return <section className="view-stack designer-view" aria-label="Archived workflow">
+    <ArchivalImportPanel archival={archivalImport} />
+    <button className="button button-secondary" onClick={() => {
+      const previousText = JSON.stringify(document, null, 2);
+      setRawText(previousText);
+      onRawTextChange(definition.id, previousText);
+      setRawError(undefined);
+      setArchivalImport(undefined);
+    }}>Return to previous draft</button>
+  </section>;
+
   return <section className="view-stack designer-view" aria-labelledby="designer-title">
     <div className="view-heading compact-heading">
       <div>
@@ -987,7 +1006,6 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     </div>
     <DefinitionControls document={document} onCommit={commit} />
     {rawMode ? <RawDefinitionPanel rawText={rawText} error={rawError} onChange={(value) => { setRawText(value); onRawTextChange(definition.id, value); setRawError(undefined); }} onApply={applyRawDefinition} /> : null}
-    {archivalImport ? <ArchivalImportPanel archival={archivalImport} /> : null}
     {bundleImport ? <section className="panel-card bundle-import-preview" aria-label="Imported bundle preview"><div className="panel-title"><div><p className="eyebrow">Digest-bound bundle preview</p><h2>{bundleImport.semantic.workflow_id}@{bundleImport.semantic.version}</h2></div><StatusBadge tone="warning">not applied</StatusBadge></div>
       <dl className="detail-list">
         <div><dt>Semantic digest</dt><dd><code>{bundleImport.digest}</code></dd></div>
