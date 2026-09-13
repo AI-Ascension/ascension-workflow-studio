@@ -8,6 +8,7 @@ import {
   type LayoutSidecar,
   type WorkflowDefinition,
   type WorkflowEdge,
+  WorkflowEdgeSchema,
   type WorkflowNode,
   WorkflowDefinitionSchema,
   WorkflowNodeSchema,
@@ -21,6 +22,145 @@ export * from "./mapProjection";
 export * from "./generation";
 
 export type SemanticDocument = WorkflowDefinition;
+
+/**
+ * Node kinds admitted by the pinned owner workflow contract. Keeping this list
+ * beside the edit helpers makes the canvas and list editor use the same
+ * bounded vocabulary instead of silently creating an owner-invalid kind.
+ */
+export const OWNER_NODE_KINDS = [
+  "observe",
+  "await_stability",
+  "route",
+  "analyze",
+  "decide",
+  "adaptive_region",
+  "execute_action",
+  "subworkflow",
+  "loop",
+  "checkpoint",
+  "emit_artifact",
+  "pause",
+  "terminal",
+] as const;
+
+export type OwnerNodeKind = typeof OWNER_NODE_KINDS[number];
+
+export const OWNER_EDGE_OUTCOMES = ["ok", "error", "timeout", "unavailable", "true", "false", "unknown"] as const;
+export type OwnerEdgeOutcome = typeof OWNER_EDGE_OUTCOMES[number];
+
+export interface NodeOutputDescriptor {
+  nodeId: string;
+  output: string;
+  type: "Observation" | "Text" | "Analysis" | "DecisionProposal" | "Null" | "SubworkflowSelection" | "Unknown" | "Artifact";
+}
+
+const OWNER_NODE_OUTPUTS: Record<OwnerNodeKind, readonly Omit<NodeOutputDescriptor, "nodeId">[]> = {
+  observe: [{ output: "observation", type: "Observation" }],
+  await_stability: [{ output: "observation", type: "Observation" }],
+  route: [{ output: "route", type: "Text" }],
+  analyze: [{ output: "analysis", type: "Analysis" }],
+  decide: [{ output: "proposal", type: "DecisionProposal" }],
+  adaptive_region: [{ output: "proposal", type: "DecisionProposal" }],
+  execute_action: [{ output: "result", type: "Null" }],
+  subworkflow: [{ output: "selection", type: "SubworkflowSelection" }],
+  loop: [{ output: "result", type: "Unknown" }],
+  checkpoint: [{ output: "result", type: "Null" }],
+  emit_artifact: [{ output: "artifact", type: "Artifact" }],
+  pause: [{ output: "result", type: "Null" }],
+  terminal: [],
+};
+
+export function isOwnerNodeKind(kind: string): kind is OwnerNodeKind {
+  return OWNER_NODE_KINDS.includes(kind as OwnerNodeKind);
+}
+
+/** Return the output ports the owner exposes for a node kind. */
+export function nodeOutputs(node: Pick<WorkflowNode, "id" | "kind">): NodeOutputDescriptor[] {
+  if (!isOwnerNodeKind(node.kind)) return [];
+  return OWNER_NODE_OUTPUTS[node.kind].map((output) => ({ nodeId: node.id, ...output }));
+}
+
+/**
+ * Return bindings that can be selected for a node input in one graph. The
+ * owner validates these same output types; the optional `requiredType` keeps
+ * proposal inputs from being wired to an observation or arbitrary text port.
+ */
+export function compatibleNodeOutputs(
+  document: SemanticDocument,
+  graphId: string,
+  requiredType: NodeOutputDescriptor["type"] | "any" = "any",
+  excludeNodeId?: string,
+): NodeOutputDescriptor[] {
+  const graph = document.graphs.find((candidate) => candidate.id === graphId);
+  if (!graph) return [];
+  return graph.nodes
+    .filter((node) => node.id !== excludeNodeId)
+    .flatMap((node) => nodeOutputs(node))
+    .filter((output) => requiredType === "any" || output.type === requiredType);
+}
+
+function defaultBinding(
+  document: SemanticDocument | undefined,
+  graphId: string | undefined,
+  requiredType: NodeOutputDescriptor["type"] | "any",
+  currentNodeId?: string,
+): { node_id: string; output: string } {
+  const candidate = document && graphId
+    ? compatibleNodeOutputs(document, graphId, requiredType, currentNodeId)[0]
+    : undefined;
+  if (candidate) return { node_id: candidate.nodeId, output: candidate.output };
+  return { node_id: requiredType === "DecisionProposal" ? "studio.proposal" : "studio.input", output: requiredType === "DecisionProposal" ? "proposal" : "observation" };
+}
+
+/**
+ * Create a shape-correct config for every currently admitted owner kind. The
+ * returned references are deliberately bounded placeholders when a graph does
+ * not yet expose a compatible source; owner validation still decides whether a
+ * candidate is executable.
+ */
+export function defaultNodeConfig(
+  kind: string,
+  graph?: { id: string; nodes: WorkflowNode[]; guards?: { id: string }[] },
+  currentNodeId?: string,
+): JsonObject {
+  const document = graph ? ({ graphs: [graph] } as SemanticDocument) : undefined;
+  const graphId = graph?.id;
+  switch (kind) {
+    case "observe": return { projection_ref: "studio.projection" };
+    case "await_stability": return { deadline_ms: 1000 };
+    case "route": return { selector_ref: "studio.selector" };
+    case "analyze": return { operation_ref: "studio.operation", context_ref: "studio.context" };
+    case "decide": return { decision_profile_ref: "studio.decision", context_ref: "studio.context" };
+    case "adaptive_region": return {
+      region_id: "studio.region",
+      planner_profile_ref: "studio.planner",
+      allowed_operations: ["studio.operation"],
+      max_plan_nodes: 1,
+      max_plan_edges: 0,
+      max_replans: 0,
+      output_type: "DecisionProposal",
+    };
+    case "execute_action": return { proposal_from: defaultBinding(document, graphId, "DecisionProposal", currentNodeId) };
+    case "subworkflow": return { artifact_ref: { id: "studio.subworkflow", version: "0.1.0", digest: "0".repeat(64) } };
+    case "loop": return { body_graph: graphId ?? "studio.body", max_iterations: 1, exit_guard_ref: graph?.guards?.[0]?.id ?? "studio.guard" };
+    case "checkpoint": return { label: "studio.checkpoint" };
+    case "emit_artifact": return { artifact_kind_ref: "studio.artifact", input_from: defaultBinding(document, graphId, "any", currentNodeId) };
+    case "pause": return { reason_code: "studio.pause" };
+    case "terminal": return { outcome: "completed" };
+    default: throw new Error(`unsupported owner node kind: ${kind}`);
+  }
+}
+
+/** Convert a node with an explicit, shape-correct config reset. */
+export function convertNodeKind(
+  node: WorkflowNode,
+  kind: string,
+  graph?: { id: string; nodes: WorkflowNode[]; guards?: { id: string }[] },
+): WorkflowNode {
+  if (!isOwnerNodeKind(kind)) throw new Error(`unsupported owner node kind: ${kind}`);
+  return { id: node.id, kind, config: defaultNodeConfig(kind, graph, node.id) };
+}
 
 export interface StudioFlowNode {
   id: string;
@@ -178,7 +318,34 @@ export function parseDefinitionImport(raw: string, requestedLimits: Partial<Json
       reason: "This schema version is unsupported by the active owner contract; the raw bytes remain read-only.",
     };
   }
+  const unknownKinds = unknownNodeKinds(parsed);
+  if (unknownKinds.length > 0) {
+    return {
+      kind: "archival",
+      schemaVersion,
+      raw: parsed,
+      rawText: raw,
+      reason: `This definition contains unsupported owner node kind${unknownKinds.length === 1 ? "" : "s"} (${unknownKinds.join(", ")}); the raw bytes remain read-only.`,
+    };
+  }
   return { kind: "supported", document: WorkflowDefinitionSchema.parse(parsed) };
+}
+
+function unknownNodeKinds(value: JsonObject): string[] {
+  const graphs = value.graphs;
+  if (!Array.isArray(graphs)) return [];
+  const kinds = new Set<string>();
+  for (const graph of graphs) {
+    if (graph === null || typeof graph !== "object" || Array.isArray(graph)) continue;
+    const nodes = (graph as JsonObject).nodes;
+    if (!Array.isArray(nodes)) continue;
+    for (const node of nodes) {
+      if (node === null || typeof node !== "object" || Array.isArray(node)) continue;
+      const kind = (node as JsonObject).kind;
+      if (typeof kind === "string" && !isOwnerNodeKind(kind)) kinds.add(kind);
+    }
+  }
+  return [...kinds].sort();
 }
 
 function isJsonRecord(value: unknown): value is JsonObject {
@@ -398,6 +565,10 @@ export async function parseStudioBundle(raw: string): Promise<DocumentBundle> {
   if (record.bundleVersion !== "ascension.studio-bundle/v1") {
     throw new Error("Studio bundle version is unsupported");
   }
+  const semanticRecord = isJsonRecord(record.semantic) ? record.semantic : undefined;
+  if (semanticRecord && unknownNodeKinds(semanticRecord).length > 0) {
+    throw new Error("Studio bundle contains an unsupported owner node kind");
+  }
   const semantic = WorkflowDefinitionSchema.parse(record.semantic);
   const layout = LayoutSidecarSchema.parse(record.layout);
   assertNoSecretLikeKeys(semantic);
@@ -475,7 +646,7 @@ export function createFlowProjection(bundle: DocumentBundle): {
       const source = qualifiedNodeId(graph.id, edge.from);
       const target = qualifiedNodeId(graph.id, edge.to);
       edges.push({
-        id: `${source}->${target}:${edge.on}:${edge.priority}`,
+        id: `${source}->${target}:${edge.on}:${edge.priority}:${edge.guard_ref ?? ""}`,
         source,
         target,
         label: edge.on,
@@ -645,6 +816,29 @@ export function reconnectEdge(
     throw new Error("reconnection would create a duplicate guarded edge");
   }
   graph.edges[edgeIndex] = { ...edge, from, to };
+  return WorkflowDefinitionSchema.parse(next);
+}
+
+/** Update an edge's owner-visible outcome, priority, or guard reference. */
+export function updateEdge(
+  document: SemanticDocument,
+  graphId: string,
+  edgeIndex: number,
+  update: (edge: WorkflowEdge) => WorkflowEdge,
+): SemanticDocument {
+  const next = cloneDocument(document);
+  const graph = next.graphs.find((candidate) => candidate.id === graphId);
+  if (!graph) throw new Error(`graph ${graphId} does not exist`);
+  const edge = graph.edges[edgeIndex];
+  if (!edge) throw new Error(`edge ${edgeIndex} does not exist in graph ${graphId}`);
+  const updated = WorkflowEdgeSchema.parse(update(edge));
+  if (!graph.nodes.some((node) => node.id === updated.from) || !graph.nodes.some((node) => node.id === updated.to)) {
+    throw new Error("edges must connect nodes in the same graph");
+  }
+  if (graph.edges.some((candidate, index) => index !== edgeIndex && candidate.from === updated.from && candidate.to === updated.to && candidate.on === updated.on)) {
+    throw new Error("edge update would create a duplicate guarded edge");
+  }
+  graph.edges[edgeIndex] = updated;
   return WorkflowDefinitionSchema.parse(next);
 }
 
