@@ -786,7 +786,9 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       link.href = url;
       link.download = `${document.workflow_id.replaceAll(/[^A-Za-z0-9._-]/g, "_")}.studio.json`;
       link.click();
-      URL.revokeObjectURL(url);
+      // A larger bundle can still be resolving when a browser handles the
+      // synthetic anchor click. Keep the blob URL alive through that handoff.
+      window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
       setValidationState("valid");
       setValidationMessage("Exported a digest-bound Studio bundle.");
     } catch (error: unknown) {

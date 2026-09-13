@@ -66,15 +66,15 @@ test.describe("Studio fixture workbench", () => {
     await expect(conversion).toContainText("Fields removed");
     await expect(conversion.getByRole("list", { name: "Kind conversion diff" })).toContainText("projection_ref");
     await conversion.getByRole("button", { name: "Apply kind change" }).click();
-    const converted = JSON.parse(await raw.inputValue());
-    expect(converted.graphs[0].nodes.find((node: { id: string }) => node.id === "observe")).toEqual({
+    const findMainObserve = async (): Promise<unknown> => JSON.parse(await raw.inputValue())
+      .graphs[0].nodes.find((node: { id: string }) => node.id === "observe");
+    await expect.poll(findMainObserve).toEqual({
       id: "observe",
       kind: "decide",
       config: { decision_profile_ref: "studio.decision", context_ref: "studio.context" },
     });
     await page.getByRole("button", { name: "Undo" }).click();
-    const restored = JSON.parse(await raw.inputValue());
-    expect(restored.graphs[0].nodes.find((node: { id: string }) => node.id === "observe")).toEqual({
+    await expect.poll(findMainObserve).toEqual({
       id: "observe",
       kind: "observe",
       config: { projection_ref: "fair-play.synthetic.v1" },
