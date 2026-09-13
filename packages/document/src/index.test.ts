@@ -4,10 +4,15 @@ import type { WorkflowDefinition } from "@studio/contracts";
 
 import {
   History,
+  OWNER_EDGE_OUTCOMES,
+  OWNER_NODE_KINDS,
   alignLayout,
   autoLayout,
   canonicalJson,
   copyNodes,
+  compatibleNodeOutputs,
+  convertNodeKind,
+  defaultNodeConfig,
   createLayout,
   diffDocuments,
   layoutOnlyChange,
@@ -21,6 +26,7 @@ import {
   serializeStudioBundle,
   semanticDigest,
   sha256Hex,
+  updateEdge,
 } from "./index";
 
 function definition(): WorkflowDefinition {
@@ -48,6 +54,44 @@ function definition(): WorkflowDefinition {
 }
 
 describe("workflow document identity", () => {
+  it("covers every owner node kind with a shape-correct default and preserves compatible proposal ports", () => {
+    const document = definition();
+    document.graphs[0].nodes.splice(1, 0,
+      { id: "decide", kind: "decide", config: { decision_profile_ref: "profile", context_ref: "context" } },
+      { id: "emit", kind: "emit_artifact", config: { artifact_kind_ref: "artifact", input_from: { node_id: "start", output: "observation" } } },
+    );
+    expect(OWNER_NODE_KINDS).toHaveLength(13);
+    expect(OWNER_EDGE_OUTCOMES).toEqual(["ok", "error", "timeout", "unavailable", "true", "false", "unknown"]);
+    for (const kind of OWNER_NODE_KINDS) {
+      const node = { id: `new_${kind}`, kind, config: defaultNodeConfig(kind, document.graphs[0]) };
+      expect(node.config).toBeTypeOf("object");
+      if (kind === "execute_action") expect(node.config.proposal_from).toEqual({ node_id: "decide", output: "proposal" });
+      if (kind === "emit_artifact") expect(node.config.input_from).toMatchObject({ node_id: "start", output: "observation" });
+    }
+    expect(compatibleNodeOutputs(document, "main", "DecisionProposal")).toEqual([{ nodeId: "decide", output: "proposal", type: "DecisionProposal" }]);
+  });
+
+  it("resets incompatible fields only through explicit kind conversion and keeps it undoable by callers", () => {
+    const original = { id: "node", kind: "observe", config: { projection_ref: "approved.state" } };
+    const converted = convertNodeKind(original, "await_stability", definition().graphs[0]);
+    expect(converted).toEqual({ id: "node", kind: "await_stability", config: { deadline_ms: 1000 } });
+    expect(converted.config).not.toHaveProperty("projection_ref");
+  });
+
+  it("round-trips guarded edge fields without dropping the owner guard reference", () => {
+    const document = definition();
+    document.graphs[0].guards = [{ id: "ready", expression: { kind: "exists", value: "state.ready" } }];
+    const updated = updateEdge(document, "main", 0, (edge) => ({ ...edge, on: "true", priority: 2, guard_ref: "ready" }));
+    expect(updated.graphs[0].edges[0]).toMatchObject({ on: "true", priority: 2, guard_ref: "ready" });
+    expect(updated.graphs[0].edges[0]).not.toBe(document.graphs[0].edges[0]);
+    const cleared = updateEdge(updated, "main", 0, (edge) => {
+      const next = { ...edge };
+      delete next.guard_ref;
+      return next;
+    });
+    expect(cleared.graphs[0].edges[0]).not.toHaveProperty("guard_ref");
+  });
+
   it("sorts object keys and excludes annotations from semantic JSON", () => {
     const document = definition();
     const reordered = { ...document, annotations: { another: true } };
@@ -109,6 +153,24 @@ describe("workflow document identity", () => {
       expect(archival.schemaVersion).toBe("ascension.workflow/v2");
       expect(archival.rawText).toBe(original);
     }
+  });
+
+  it("keeps an unknown v1 node kind byte-exact and read-only", () => {
+    const original = JSON.stringify({
+      schema_version: "ascension.workflow/v1",
+      workflow_id: "future.node",
+      version: "1.0.0",
+      mode: "strict",
+      game_profile: "test",
+      policy_ref: "test.policy",
+      capabilities: { required: [], optional: [] },
+      limits: { max_steps: 4, max_subworkflow_depth: 1, max_provider_calls: 0, max_parallel_analyses: 1, max_output_tokens: 128 },
+      entry_graph: "main",
+      graphs: [{ id: "main", entry_node: "future", nodes: [{ id: "future", kind: "owner_future", config: {} }], edges: [] }],
+    });
+    const archival = parseDefinitionImport(original);
+    expect(archival.kind).toBe("archival");
+    if (archival.kind === "archival") expect(archival.rawText).toBe(original);
   });
 
   it("remaps copied node IDs and retains only internal edges", () => {

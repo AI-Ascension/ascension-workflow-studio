@@ -59,6 +59,13 @@ import {
   parseDefinitionImport,
   removeNode,
   reconnectEdge,
+  updateEdge,
+  convertNodeKind,
+  compatibleNodeOutputs,
+  defaultNodeConfig,
+  nodeOutputs,
+  OWNER_EDGE_OUTCOMES,
+  OWNER_NODE_KINDS,
   parseStudioBundle,
   pasteNodes,
   qualifiedNodeId,
@@ -298,7 +305,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const selected = useMemo(() => findSelectedNode(document, selectedId), [document, selectedId]);
   const flowEdgesCache = useRef<{ key: string; edges: Edge<{ qualifiedSource: string; qualifiedTarget: string }>[] }>({ key: "", edges: [] });
   const flowEdges = useMemo(() => {
-    const key = document.graphs.map((graph) => `${graph.id}:${graph.edges.map((edge) => `${edge.from}>${edge.to}:${edge.on}:${edge.priority}`).join(",")}`).join("|");
+    const key = document.graphs.map((graph) => `${graph.id}:${graph.edges.map((edge) => `${edge.from}>${edge.to}:${edge.on}:${edge.priority}:${edge.guard_ref ?? ""}`).join(",")}`).join("|");
     if (key === flowEdgesCache.current.key) return flowEdgesCache.current.edges;
     const edges = toFlowEdges(document);
     flowEdgesCache.current = { key, edges };
@@ -670,6 +677,18 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     }
   };
 
+  const applyEdgeUpdate = (update: (edge: SemanticDocument["graphs"][number]["edges"][number]) => SemanticDocument["graphs"][number]["edges"][number]): void => {
+    if (!selectedEdge) return;
+    try {
+      commit(updateEdge(document, selectedEdge.graphId, selectedEdge.edgeIndex, update));
+      setValidationState("valid");
+      setValidationMessage("Updated the guarded edge as a semantic edit.");
+    } catch (error: unknown) {
+      setValidationState("error");
+      setValidationMessage(error instanceof Error ? error.message : "Edge update was rejected.");
+    }
+  };
+
   const validate = async (): Promise<void> => {
     setValidationState("running");
     setValidationMessage("");
@@ -730,10 +749,10 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   };
 
   const addNewNode = (): void => {
-    const graph = document.graphs[0];
+    const graph = document.graphs.find((candidate) => candidate.id === activeGraphId);
     if (!graph) return;
     const id = nextNodeId(graph.nodes.map((node) => node.id));
-    const node: WorkflowNode = { id, kind: "observe", config: { projection_ref: "studio.new" } };
+    const node: WorkflowNode = { id, kind: "observe", config: defaultNodeConfig("observe") };
     commit(addNode(document, graph.id, node));
     selectNode(`${graph.id}:${id}`);
   };
@@ -1007,10 +1026,10 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
         </ReactFlow>
       </div>
       <div className="inspector-stack">
-        <InspectorPanel document={document} catalog={catalog} selected={selected} selectedConfigText={selectedConfigText} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />
-        {selectedEdge ? <EdgeInspector document={document} selectedEdge={selectedEdge} onReconnect={applyReconnect} /> : null}
+        <InspectorPanel document={document} catalog={catalog} contextBindings={contextBindings} selected={selected} selectedConfigText={selectedConfigText} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />
+        {selectedEdge ? <EdgeInspector document={document} selectedEdge={selectedEdge} onReconnect={applyReconnect} onUpdate={applyEdgeUpdate} /> : null}
       </div>
-    </div> : <ListEditor document={document} catalog={catalog} selectedId={selectedId} selectedIds={selectedIds} onSelect={selectNode} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />}
+    </div> : <ListEditor document={document} catalog={catalog} contextBindings={contextBindings} selectedId={selectedId} selectedIds={selectedIds} onSelect={selectNode} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />}
     {diagnostics ? <DiagnosticsPanel result={diagnostics} onFocusPath={(path) => {
       const target = document.graphs.flatMap((graph) => graph.nodes.map((node) => ({ graphId: graph.id, nodeId: node.id }))).find((candidate) => path.includes(candidate.nodeId));
       if (target) {
@@ -1029,6 +1048,7 @@ interface SelectedNode {
 interface InspectorPanelProps {
   document: SemanticDocument;
   catalog: DefinitionRecord[];
+  contextBindings?: ContextBinding[];
   selected: SelectedNode | undefined;
   selectedConfigText: string;
   onUpdate: (update: (node: WorkflowNode) => WorkflowNode) => void;
@@ -1036,27 +1056,49 @@ interface InspectorPanelProps {
   onNavigateGraph: (graphId: string) => void;
 }
 
-function InspectorPanel({ document, catalog, selected, selectedConfigText, onUpdate, onRemove, onNavigateGraph }: InspectorPanelProps): JSX.Element {
+function InspectorPanel({ document, catalog, contextBindings, selected, selectedConfigText, onUpdate, onRemove, onNavigateGraph }: InspectorPanelProps): JSX.Element {
   const [configText, setConfigText] = useState(selectedConfigText);
   const [configError, setConfigError] = useState<string | undefined>();
+  const [pendingKind, setPendingKind] = useState<string | undefined>();
   useEffect(() => setConfigText(selectedConfigText), [selectedConfigText]);
+  useEffect(() => setPendingKind(undefined), [selected?.graphId, selected?.node.id, selected?.node.kind]);
   if (!selected) {
     return <aside className="inspector-panel"><div className="inspector-empty"><span aria-hidden="true">◇</span><strong>Select a node</strong><p>Choose a graph node to inspect its typed fields and safe edit boundary.</p></div></aside>;
   }
   const locked = selected.node.kind === "adaptive_region";
+  const graph = document.graphs.find((candidate) => candidate.id === selected.graphId);
+  const pendingNode = pendingKind && graph ? (() => {
+    try { return convertNodeKind(selected.node, pendingKind, graph); } catch { return undefined; }
+  })() : undefined;
+  const removedFields = pendingNode ? Object.keys(selected.node.config).filter((key) => !(key in pendingNode.config)) : [];
   return <aside className="inspector-panel" aria-label="Node inspector">
     <div className="panel-title"><div><p className="eyebrow">Node inspector</p><h2>{selected.node.id}</h2></div><StatusBadge tone={locked ? "warning" : "success"}>{locked ? "protected region" : selected.node.kind}</StatusBadge></div>
     <label className="field-label">Node kind
-      <select value={selected.node.kind} disabled={locked} onChange={(event) => onUpdate((node) => ({ ...node, kind: event.target.value }))}>
-        {nodeKinds.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
+      <select value={pendingKind ?? selected.node.kind} disabled={locked} onChange={(event) => {
+        const editStart = beginBenchmarkEdit();
+        const nextKind = event.target.value;
+        setPendingKind(nextKind === selected.node.kind ? undefined : nextKind);
+        // A kind selection first opens the explicit conversion preview. Keep
+        // the benchmark's input-to-paint sample attached to that visible edit
+        // even though the semantic commit waits for confirmation.
+        recordBenchmarkHandler(editStart);
+        endBenchmarkEdit(editStart);
+      }}>
+        {OWNER_NODE_KINDS.map((kind) => <option key={kind} value={kind}>{kind}</option>)}
       </select>
     </label>
+    {pendingNode ? <section className="kind-conversion-preview" aria-label="Node kind conversion preview">
+      <strong>Kind conversion preview</strong>
+      <p className="muted">Changing {selected.node.kind} to {pendingNode.kind} replaces its configuration with the fields admitted for the new kind. Undo restores the complete prior node.</p>
+      {removedFields.length ? <p className="field-unknown">Fields removed: <code>{removedFields.join(", ")}</code></p> : <p className="muted">No existing configuration fields overlap the new kind.</p>}
+      <div className="control-grid"><button className="button button-primary" onClick={() => { onUpdate(() => pendingNode); setPendingKind(undefined); }}>Apply kind change</button><button className="button button-quiet" onClick={() => setPendingKind(undefined)}>Cancel kind change</button></div>
+    </section> : null}
     {selected.node.kind === "loop" ? <LoopBodyGraphNavigation document={document} node={selected.node} onNavigateGraph={onNavigateGraph} /> : null}
     {selected.node.kind === "subworkflow" ? <SubworkflowReference node={selected.node} catalog={catalog} disabled={locked} onUpdate={onUpdate} /> : null}
     {locked ? <p className="muted" role="note">Authored region bounds are editable. The generated plan, allowed operations and runtime execution stay read-only and are never applied to an active run.</p> : null}
-    <TypedConfigFields node={selected.node} disabled={false} onUpdate={onUpdate} />
+    <TypedConfigFields document={document} graphId={selected.graphId} node={selected.node} disabled={false} contextBindings={contextBindings} onUpdate={onUpdate} />
     <label className="field-label">Configuration <span className="muted">JSON object</span>
-      <textarea value={configText} disabled={locked} rows={12} onChange={(event) => { setConfigText(event.target.value); setConfigError(undefined); }} onBlur={() => {
+      <textarea value={configText} disabled={locked || Boolean(pendingNode)} rows={12} onChange={(event) => { setConfigText(event.target.value); setConfigError(undefined); }} onBlur={() => {
         try {
           const parsed: unknown = JSON.parse(configText);
           const result = JsonObjectSchema.safeParse(parsed);
@@ -1078,17 +1120,32 @@ function InspectorPanel({ document, catalog, selected, selectedConfigText, onUpd
 }
 
 interface TypedConfigFieldsProps {
+  document: SemanticDocument;
+  graphId: string;
   node: WorkflowNode;
   disabled: boolean;
+  contextBindings?: ContextBinding[];
   onUpdate: (update: (node: WorkflowNode) => WorkflowNode) => void;
 }
 
-function TypedConfigFields({ node, disabled, onUpdate }: TypedConfigFieldsProps): JSX.Element {
+function TypedConfigFields({ document, graphId, node, disabled, contextBindings, onUpdate }: TypedConfigFieldsProps): JSX.Element {
   const fields = typedFieldsByKind[node.kind] ?? [];
+  const contextOptions = contextBindings?.filter((binding) => binding.node_kinds.includes(node.kind as "analyze" | "decide")).map((binding) => binding.context_ref) ?? [];
+  const operationOptions = [...new Set(document.graphs.flatMap((graph) => graph.nodes.flatMap((candidate) => {
+    const allowed = candidate.kind === "adaptive_region" ? candidate.config.allowed_operations : undefined;
+    return Array.isArray(allowed) ? allowed.filter((value): value is string => typeof value === "string") : [];
+  })) )];
   return <div className="typed-config-fields" aria-label="Typed node fields">
     <p className="eyebrow">Typed fields</p>
     {fields.map((field) => <TypedConfigField key={field.key} node={node} field={field} disabled={disabled} onUpdate={onUpdate} />)}
-    {fields.length === 0 ? <p className="field-unknown">No admitted typed form for this node kind. Use bounded JSON mode.</p> : null}
+    {node.kind === "analyze" ? <ReferenceSelectField node={node} fieldKey="context_ref" label="Analysis context" options={contextOptions} disabled={disabled} onUpdate={onUpdate} /> : null}
+    {node.kind === "decide" ? <ReferenceSelectField node={node} fieldKey="context_ref" label="Decision context" options={contextOptions} disabled={disabled} onUpdate={onUpdate} /> : null}
+    {node.kind === "adaptive_region" ? <AllowedOperationsField node={node} options={operationOptions} disabled={disabled} onUpdate={onUpdate} /> : null}
+    {node.kind === "adaptive_region" ? <TypedConfigSelectField node={node} fieldKey="output_type" label="Adaptive output type" options={["DecisionProposal"]} disabled={true} onUpdate={onUpdate} /> : null}
+    {node.kind === "execute_action" ? <ProposalBindingField document={document} graphId={graphId} node={node} requiredType="DecisionProposal" label="Action proposal source" disabled={disabled} onUpdate={onUpdate} /> : null}
+    {node.kind === "emit_artifact" ? <ProposalBindingField document={document} graphId={graphId} node={node} requiredType="any" label="Artifact input source" disabled={disabled} onUpdate={onUpdate} /> : null}
+    {node.kind === "terminal" ? <TypedConfigSelectField node={node} fieldKey="outcome" label="Terminal outcome" options={["completed", "failed", "needs_operator"]} disabled={disabled} onUpdate={onUpdate} /> : null}
+    {fields.length === 0 && node.kind !== "execute_action" && node.kind !== "emit_artifact" && node.kind !== "terminal" && node.kind !== "adaptive_region" ? <p className="field-unknown">No admitted typed form for this node kind. Use bounded JSON mode.</p> : null}
   </div>;
 }
 
@@ -1097,6 +1154,7 @@ interface TypedConfigFieldDefinition {
   label: string;
   type: "text" | "number";
   min?: number;
+  max?: number;
 }
 
 function TypedConfigField({ node, field, disabled, onUpdate }: { node: WorkflowNode; field: TypedConfigFieldDefinition; disabled: boolean; onUpdate: TypedConfigFieldsProps["onUpdate"] }): JSX.Element {
@@ -1109,8 +1167,8 @@ function TypedConfigField({ node, field, disabled, onUpdate }: { node: WorkflowN
     <input type={field.type === "number" ? "number" : "text"} value={draft} disabled={disabled} placeholder={current === undefined ? "Unavailable until configured" : undefined} onChange={(event) => { setDraft(event.target.value); setError(undefined); }} onBlur={() => {
       if (field.type === "number") {
         const value = Number(draft);
-        if (!Number.isSafeInteger(value) || (field.min !== undefined && value < field.min)) {
-          setError(`Enter a safe integer${field.min === undefined ? "" : ` greater than or equal to ${field.min}`}.`);
+        if (!Number.isSafeInteger(value) || (field.min !== undefined && value < field.min) || (field.max !== undefined && value > field.max)) {
+          setError(`Enter a safe integer${field.min === undefined ? "" : ` ≥ ${field.min}`}${field.max === undefined ? "" : ` and ≤ ${field.max}`}.`);
           return;
         }
         setError(undefined);
@@ -1128,16 +1186,92 @@ function TypedConfigField({ node, field, disabled, onUpdate }: { node: WorkflowN
   </label>;
 }
 
+function TypedConfigSelectField({ node, fieldKey, label, options, disabled, onUpdate }: { node: WorkflowNode; fieldKey: string; label: string; options: string[]; disabled: boolean; onUpdate: TypedConfigFieldsProps["onUpdate"] }): JSX.Element {
+  const current = typeof node.config[fieldKey] === "string" ? node.config[fieldKey] as string : options[0];
+  return <label className="field-label">{label}<span className="muted">owner enum</span><select aria-label={`${node.id} ${label}`} value={current} disabled={disabled} onChange={(event) => onUpdate((candidate) => ({ ...candidate, config: { ...candidate.config, [fieldKey]: event.target.value } }))}>{options.map((option) => <option key={option} value={option}>{option}</option>)}</select></label>;
+}
+
 const typedFieldsByKind: Record<string, TypedConfigFieldDefinition[]> = {
   observe: [{ key: "projection_ref", label: "Projection reference", type: "text" }],
-  decide: [{ key: "decision_profile_ref", label: "Decision profile", type: "text" }, { key: "context_ref", label: "Decision context", type: "text" }],
-  execute_action: [{ key: "output", label: "Action output", type: "text" }],
+  await_stability: [{ key: "deadline_ms", label: "Stability deadline (ms)", type: "number", min: 1, max: 3600000 }],
+  decide: [{ key: "decision_profile_ref", label: "Decision profile", type: "text" }],
+  analyze: [{ key: "operation_ref", label: "Analysis operation", type: "text" }],
+  execute_action: [],
   route: [{ key: "selector_ref", label: "Selector reference", type: "text" }],
   loop: [{ key: "body_graph", label: "Body graph", type: "text" }, { key: "max_iterations", label: "Maximum iterations", type: "number", min: 1 }, { key: "exit_guard_ref", label: "Exit guard", type: "text" }],
   subworkflow: [],
-  adaptive_region: [{ key: "region_id", label: "Protected region", type: "text" }, { key: "max_plan_nodes", label: "Maximum plan nodes", type: "number", min: 1 }, { key: "max_plan_edges", label: "Maximum plan edges", type: "number", min: 1 }, { key: "max_replans", label: "Maximum replans", type: "number", min: 0 }],
-  terminal: [{ key: "outcome", label: "Terminal outcome", type: "text" }],
+  adaptive_region: [{ key: "region_id", label: "Protected region", type: "text" }, { key: "planner_profile_ref", label: "Planner profile", type: "text" }, { key: "max_plan_nodes", label: "Maximum plan nodes", type: "number", min: 1, max: 32 }, { key: "max_plan_edges", label: "Maximum plan edges", type: "number", min: 0, max: 128 }, { key: "max_replans", label: "Maximum replans", type: "number", min: 0, max: 8 }],
+  checkpoint: [{ key: "label", label: "Checkpoint label", type: "text" }],
+  emit_artifact: [{ key: "artifact_kind_ref", label: "Artifact kind", type: "text" }],
+  pause: [{ key: "reason_code", label: "Pause reason", type: "text" }],
+  terminal: [],
 };
+
+function ReferenceSelectField({ node, fieldKey, label, options, disabled, onUpdate }: { node: WorkflowNode; fieldKey: string; label: string; options: string[]; disabled: boolean; onUpdate: TypedConfigFieldsProps["onUpdate"] }): JSX.Element {
+  const current = typeof node.config[fieldKey] === "string" ? node.config[fieldKey] as string : "";
+  const values = [...new Set([...(current ? [current] : []), ...options])];
+  return <label className="field-label">{label}<span className="muted">owner-disclosed context reference</span>
+    <select aria-label={`${node.id} ${label}`} value={current} disabled={disabled || values.length === 0} onChange={(event) => {
+      if (!event.target.value) return;
+      onUpdate((candidate) => ({ ...candidate, config: { ...candidate.config, [fieldKey]: event.target.value } }));
+    }}>
+      {!current ? <option value="">Select a disclosed reference</option> : null}
+      {values.map((value) => <option key={value} value={value}>{value}{options.includes(value) ? "" : " (current, not disclosed)"}</option>)}
+    </select>
+    {!options.length ? <span className="field-unknown">The owner did not disclose compatible context references; use JSON mode for a deliberate candidate.</span> : null}
+  </label>;
+}
+
+function AllowedOperationsField({ node, options, disabled, onUpdate }: { node: WorkflowNode; options: string[]; disabled: boolean; onUpdate: TypedConfigFieldsProps["onUpdate"] }): JSX.Element {
+  const raw = node.config.allowed_operations;
+  const current = Array.isArray(raw) ? raw.filter((value): value is string => typeof value === "string") : [];
+  const values = [...new Set([...current, ...options])];
+  const toggle = (operation: string): void => {
+    const next = current.includes(operation) ? current.filter((value) => value !== operation) : [...current, operation];
+    if (next.length === 0 || next.length > 32) return;
+    onUpdate((candidate) => ({ ...candidate, config: { ...candidate.config, allowed_operations: next } }));
+  };
+  return <fieldset className="allowed-operations-field" disabled={disabled}>
+    <legend className="field-label">Allowed operations<span className="muted">owner-disclosed operation references · max 32</span></legend>
+    {values.length ? <div className="checkbox-grid">{values.map((operation) => <label key={operation}><input type="checkbox" aria-label={`${node.id} allowed operation ${operation}`} checked={current.includes(operation)} onChange={() => toggle(operation)} /> <code>{operation}</code>{options.includes(operation) ? null : <span className="muted"> current</span>}</label>)}</div> : <p className="field-unknown">No operation references were disclosed by the owner. Existing values remain visible through JSON mode and validation remains authoritative.</p>}
+    {current.length === 0 ? <p className="field-error" role="alert">At least one allowed operation is required by the owner.</p> : null}
+  </fieldset>;
+}
+
+function ProposalBindingField({ document, graphId, node, requiredType, label, disabled, onUpdate }: { document: SemanticDocument; graphId: string; node: WorkflowNode; requiredType: "DecisionProposal" | "any"; label: string; disabled: boolean; onUpdate: TypedConfigFieldsProps["onUpdate"] }): JSX.Element {
+  const key = node.kind === "emit_artifact" ? "input_from" : "proposal_from";
+  const raw = node.config[key];
+  const binding = raw !== null && typeof raw === "object" && !Array.isArray(raw) ? raw as JsonObject : {};
+  const sourceId = typeof binding.node_id === "string" ? binding.node_id : "";
+  const sourceOutput = typeof binding.output === "string" ? binding.output : "";
+  const candidates = compatibleNodeOutputs(document, graphId, requiredType);
+  const graph = document.graphs.find((candidate) => candidate.id === graphId);
+  const sourceNode = graph?.nodes.find((candidate) => candidate.id === sourceId);
+  const outputOptions = sourceNode ? nodeOutputs(sourceNode) : [];
+  const sourceValues = [...new Set([...(sourceId ? [sourceId] : []), ...candidates.map((candidate) => candidate.nodeId)])];
+  const outputValues = [...new Set([...(sourceOutput ? [sourceOutput] : []), ...outputOptions.map((candidate) => candidate.output)])];
+  const update = (nextNodeId: string, nextOutput: string): void => {
+    const candidate = candidates.find((value) => value.nodeId === nextNodeId && value.output === nextOutput);
+    if (!candidate) return;
+    onUpdate((current) => ({ ...current, config: { ...current.config, [key]: { node_id: candidate.nodeId, output: candidate.output } } }));
+  };
+  const invalid = !candidates.some((candidate) => candidate.nodeId === sourceId && candidate.output === sourceOutput);
+  return <div className="binding-field" aria-label={`${node.id} ${label}`}>
+    <p className="field-label">{label}<span className="muted">owner output binding</span></p>
+    <label className="field-label">Source node<select aria-label={`${node.id} ${label} source node`} value={sourceId} disabled={disabled || sourceValues.length === 0} onChange={(event) => {
+      const nextNode = candidates.find((candidate) => candidate.nodeId === event.target.value);
+      update(event.target.value, nextNode?.output ?? "");
+    }}>
+      {!sourceId ? <option value="">Select a compatible source</option> : null}
+      {sourceValues.map((value) => <option key={value} value={value}>{value}{candidates.some((candidate) => candidate.nodeId === value) ? "" : " (stale)"}</option>)}
+    </select></label>
+    <label className="field-label">Output<select aria-label={`${node.id} ${label} output`} value={sourceOutput} disabled={disabled || outputValues.length === 0} onChange={(event) => update(sourceId, event.target.value)}>
+      {!sourceOutput ? <option value="">Select a compatible output</option> : null}
+      {outputValues.map((value) => <option key={value} value={value}>{value}</option>)}
+    </select></label>
+    {invalid ? <p className="field-error" role="alert">This binding is missing or incompatible with an owner output. Select an admitted source and output before validation.</p> : null}
+  </div>;
+}
 
 function DefinitionControls({ document, onCommit }: { document: SemanticDocument; onCommit: (next: SemanticDocument) => void }): JSX.Element {
   const update = (change: (next: SemanticDocument) => void): void => {
@@ -1435,19 +1569,36 @@ function ConflictPanel({ base, baseLayout, local, localLayout, remote, remoteLay
   </section>;
 }
 
-function EdgeInspector({ document, selectedEdge, onReconnect }: { document: SemanticDocument; selectedEdge: { graphId: string; edgeIndex: number }; onReconnect: (from: string, to: string) => void }): JSX.Element {
+function EdgeInspector({ document, selectedEdge, onReconnect, onUpdate }: { document: SemanticDocument; selectedEdge: { graphId: string; edgeIndex: number }; onReconnect: (from: string, to: string) => void; onUpdate: (update: (edge: SemanticDocument["graphs"][number]["edges"][number]) => SemanticDocument["graphs"][number]["edges"][number]) => void }): JSX.Element {
   const graph = document.graphs.find((candidate) => candidate.id === selectedEdge.graphId);
   const edge = graph?.edges[selectedEdge.edgeIndex];
   const [from, setFrom] = useState(edge?.from ?? "");
   const [to, setTo] = useState(edge?.to ?? "");
-  useEffect(() => { setFrom(edge?.from ?? ""); setTo(edge?.to ?? ""); }, [edge?.from, edge?.to]);
+  const [outcome, setOutcome] = useState(edge?.on ?? "ok");
+  const [priority, setPriority] = useState(String(edge?.priority ?? 0));
+  const [guardRef, setGuardRef] = useState(edge?.guard_ref ?? "");
+  useEffect(() => { setFrom(edge?.from ?? ""); setTo(edge?.to ?? ""); setOutcome(edge?.on ?? "ok"); setPriority(String(edge?.priority ?? 0)); setGuardRef(edge?.guard_ref ?? ""); }, [edge?.from, edge?.to, edge?.on, edge?.priority, edge?.guard_ref]);
   if (!graph || !edge) return <aside className="inspector-panel"><p className="muted">The selected edge is no longer present.</p></aside>;
-  return <aside className="inspector-panel edge-inspector" aria-label="Edge inspector"><div className="panel-title"><div><p className="eyebrow">Edge inspector</p><h2>{edge.on} / priority {edge.priority}</h2></div><StatusBadge tone="warning">semantic edit</StatusBadge></div><label className="field-label">Source<select value={from} onChange={(event) => setFrom(event.target.value)}>{graph.nodes.map((node) => <option key={node.id} value={node.id}>{node.id}</option>)}</select></label><label className="field-label">Target<select value={to} onChange={(event) => setTo(event.target.value)}>{graph.nodes.map((node) => <option key={node.id} value={node.id}>{node.id}</option>)}</select></label><button className="button button-secondary" onClick={() => onReconnect(from, to)}>Apply reconnection</button></aside>;
+  const parsedPriority = Number(priority);
+  return <aside className="inspector-panel edge-inspector" aria-label="Edge inspector"><div className="panel-title"><div><p className="eyebrow">Edge inspector</p><h2>{edge.on} / priority {edge.priority}</h2></div><StatusBadge tone="warning">semantic edit</StatusBadge></div>
+    <label className="field-label">Source<select aria-label="Edge source" value={from} onChange={(event) => setFrom(event.target.value)}>{graph.nodes.map((node) => <option key={node.id} value={node.id}>{node.id}</option>)}</select></label>
+    <label className="field-label">Target<select aria-label="Edge target" value={to} onChange={(event) => setTo(event.target.value)}>{graph.nodes.map((node) => <option key={node.id} value={node.id}>{node.id}</option>)}</select></label>
+    <label className="field-label">Outcome<select aria-label="Edge outcome" value={outcome} onChange={(event) => setOutcome(event.target.value)}>{OWNER_EDGE_OUTCOMES.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
+    <label className="field-label">Priority<input aria-label="Edge priority" type="number" min={0} max={1024} value={priority} onChange={(event) => setPriority(event.target.value)} /></label>
+    <label className="field-label">Guard reference<span className="muted">optional owner guard</span><select aria-label="Edge guard reference" value={guardRef} onChange={(event) => setGuardRef(event.target.value)}><option value="">No guard</option>{(graph.guards ?? []).map((guard) => <option key={guard.id} value={guard.id}>{guard.id}</option>)}</select></label>
+    <div className="control-grid"><button className="button button-secondary" onClick={() => onReconnect(from, to)}>Apply reconnection</button><button className="button button-primary" disabled={!Number.isSafeInteger(parsedPriority) || parsedPriority < 0 || parsedPriority > 1024 || !OWNER_EDGE_OUTCOMES.includes(outcome as typeof OWNER_EDGE_OUTCOMES[number])} onClick={() => onUpdate((current) => {
+      const next = { ...current, from, to, on: outcome, priority: parsedPriority };
+      if (guardRef) next.guard_ref = guardRef;
+      else delete next.guard_ref;
+      return next;
+    })}>Apply edge fields</button></div>
+  </aside>;
 }
 
 interface ListEditorProps {
   document: SemanticDocument;
   catalog: DefinitionRecord[];
+  contextBindings?: ContextBinding[];
   selectedId: string | undefined;
   selectedIds: string[];
   onSelect: (id: string, additive?: boolean) => void;
@@ -1544,7 +1695,7 @@ function SubworkflowReference({ node, catalog, disabled, onUpdate }: { node: Wor
   </div>;
 }
 
-function ListEditor({ document, catalog, selectedId, selectedIds, onSelect, onUpdate, onRemove, onNavigateGraph }: ListEditorProps): JSX.Element {
+function ListEditor({ document, catalog, contextBindings, selectedId, selectedIds, onSelect, onUpdate, onRemove, onNavigateGraph }: ListEditorProps): JSX.Element {
   const selected = findSelectedNode(document, selectedId);
   return <div className="list-editor">
     <div className="list-editor-main">
@@ -1561,7 +1712,7 @@ function ListEditor({ document, catalog, selectedId, selectedIds, onSelect, onUp
         })}
       </div>)}
     </div>
-    <InspectorPanel document={document} catalog={catalog} selected={selected} selectedConfigText={selected ? JSON.stringify(selected.node.config, null, 2) : ""} onUpdate={onUpdate} onRemove={onRemove} onNavigateGraph={onNavigateGraph} />
+    <InspectorPanel document={document} catalog={catalog} contextBindings={contextBindings} selected={selected} selectedConfigText={selected ? JSON.stringify(selected.node.config, null, 2) : ""} onUpdate={onUpdate} onRemove={onRemove} onNavigateGraph={onNavigateGraph} />
   </div>;
 }
 
@@ -1575,8 +1726,6 @@ function DiagnosticsPanel({ result, onFocusPath }: { result: ValidateResponse; o
 const FIT_VIEW_OPTIONS = { padding: 0.2 } as const;
 const PRO_OPTIONS = { hideAttribution: true } as const;
 const BACKGROUND_PROPS = { color: "#29415b", gap: 24, size: 1 } as const;
-
-const nodeKinds = ["observe", "decide", "execute_action", "route", "loop", "subworkflow", "adaptive_region", "terminal"];
 
 function toFlowNodes(document: SemanticDocument, layout: LayoutSidecar, selectedIds: string[] = [], previous: FlowNode[] = []): FlowNode[] {
   const previousById = new Map(previous.map((node) => [node.id, node]));
@@ -1616,7 +1765,7 @@ function toFlowEdges(document: SemanticDocument): Edge<{ qualifiedSource: string
       const source = qualifiedNodeId(graph.id, edge.from);
       const target = qualifiedNodeId(graph.id, edge.to);
       edges.push({
-        id: `${source}->${target}:${edge.on}:${edge.priority}`,
+        id: `${source}->${target}:${edge.on}:${edge.priority}:${edge.guard_ref ?? ""}`,
         source,
         target,
         label: edge.on,
@@ -1643,7 +1792,7 @@ function locateEdge(document: SemanticDocument, edgeId: string): { graphId: stri
     for (const [edgeIndex, edge] of graph.edges.entries()) {
       const source = qualifiedNodeId(graph.id, edge.from);
       const target = qualifiedNodeId(graph.id, edge.to);
-      if (`${source}->${target}:${edge.on}:${edge.priority}` === edgeId) return { graphId: graph.id, edgeIndex };
+      if (`${source}->${target}:${edge.on}:${edge.priority}:${edge.guard_ref ?? ""}` === edgeId) return { graphId: graph.id, edgeIndex };
     }
   }
   return undefined;

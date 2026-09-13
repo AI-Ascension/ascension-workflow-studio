@@ -28,6 +28,8 @@ export const WorkflowEdgeSchema = z.object({
   to: z.string().min(1).max(128),
   on: z.string().min(1).max(128),
   priority: z.number().int().nonnegative(),
+  /** Optional owner guard selected for this control edge. */
+  guard_ref: z.string().min(1).max(128).optional(),
 }).strict();
 
 export const WorkflowGuardSchema = z.object({
