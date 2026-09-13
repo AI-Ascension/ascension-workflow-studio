@@ -163,15 +163,21 @@ test("imports, edits, exports, and owner-validates every admitted node kind", as
   await page.getByRole("button", { name: "Apply candidate" }).click();
   await page.getByRole("tab", { name: "List editor" }).click();
   await page.locator(".node-list-row", { hasText: "execute" }).first().click();
-  await page.getByLabel("execute Action proposal source source node").selectOption("adaptive");
+  await page.getByLabel("execute Action proposal source source node").selectOption("decide");
   await expect(page.getByLabel("execute Action proposal source output")).toHaveValue("proposal");
   const digest = await validateAndReadDigest(page);
   expect(digest).not.toBe("not validated");
 
   const bundle = await readDownloadedBundle(page, () => page.getByRole("button", { name: "Export", exact: true }).click());
+  const exported = JSON.parse(bundle);
+  expect(exported.semantic.graphs[0].nodes.find((node: { id: string }) => node.id === "execute").config.proposal_from)
+    .toEqual({ node_id: "decide", output: "proposal" });
   await page.setInputFiles('input[type="file"]', { name: "all-kinds.studio.json", mimeType: "application/json", buffer: Buffer.from(bundle) });
   await page.getByLabel("Imported bundle preview").getByRole("button", { name: "Apply imported bundle" }).click();
   expect(await validateAndReadDigest(page)).toBe(digest);
+  expect(JSON.parse(await page.getByLabel("Raw workflow definition JSON").inputValue())
+    .graphs[0].nodes.find((node: { id: string }) => node.id === "execute").config.proposal_from)
+    .toEqual({ node_id: "decide", output: "proposal" });
 
   await page.getByRole("button", { name: "JSON mode" }).click();
   const stale = JSON.parse(await page.getByLabel("Raw workflow definition JSON").inputValue());
