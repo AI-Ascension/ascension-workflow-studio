@@ -294,7 +294,18 @@ export class OwnerApiClient implements StudioClient {
         capabilities: capabilityResponse.capabilities,
       }),
     });
-    return decodeWith(ValidateResponseSchema, response, "definition validation");
+    const owner = decodeWith(ValidateResponseSchema, response, "definition validation");
+    const bindingDiagnostics = validateNodeBindings(definition).map((diagnostic) => ({
+      code: diagnostic.code,
+      severity: "error" as const,
+      path: diagnostic.path,
+      message: diagnostic.message,
+    }));
+    return {
+      ...owner,
+      valid: owner.valid && bindingDiagnostics.length === 0,
+      diagnostics: [...owner.diagnostics, ...bindingDiagnostics],
+    };
   }
 
   public async inspect(definition: WorkflowDefinition): Promise<InspectResponse> {
