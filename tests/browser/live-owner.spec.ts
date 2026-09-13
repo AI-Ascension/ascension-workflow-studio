@@ -153,6 +153,35 @@ test("round-trips strict and dynamic definitions through the owner without seman
   await roundTrip("sts2.setup.strict", false);
   await roundTrip("sts2.combat.dynamic", true);
 });
+
+test("imports, edits, exports, and owner-validates every admitted node kind", async ({ page }) => {
+  await connectLiveOwner(page);
+  await openOwnedDraft(page);
+  const golden = readFileSync("contracts/accepted/phase1/conformance/valid-all-node-kinds.json", "utf8");
+  const raw = await openRawCandidate(page);
+  await raw.fill(golden);
+  await page.getByRole("button", { name: "Apply candidate" }).click();
+  await page.getByRole("tab", { name: "List editor" }).click();
+  await page.locator(".node-list-row", { hasText: "execute" }).first().click();
+  await page.getByLabel("execute Action proposal source source node").selectOption("adaptive");
+  await expect(page.getByLabel("execute Action proposal source output")).toHaveValue("proposal");
+  const digest = await validateAndReadDigest(page);
+  expect(digest).not.toBe("not validated");
+
+  const bundle = await readDownloadedBundle(page, () => page.getByRole("button", { name: "Export", exact: true }).click());
+  await page.setInputFiles('input[type="file"]', { name: "all-kinds.studio.json", mimeType: "application/json", buffer: Buffer.from(bundle) });
+  await page.getByLabel("Imported bundle preview").getByRole("button", { name: "Apply imported bundle" }).click();
+  expect(await validateAndReadDigest(page)).toBe(digest);
+
+  await page.getByRole("button", { name: "JSON mode" }).click();
+  const stale = JSON.parse(await page.getByLabel("Raw workflow definition JSON").inputValue());
+  const action = stale.graphs[0].nodes.find((node: { id: string }) => node.id === "execute");
+  action.config.proposal_from = { node_id: "stale.node", output: "proposal" };
+  await page.getByLabel("Raw workflow definition JSON").fill(JSON.stringify(stale));
+  await page.getByRole("button", { name: "Apply candidate" }).click();
+  await page.getByRole("button", { name: /Validate/ }).click();
+  await expect(page.locator(".diagnostics-panel")).toContainText("Binding source node stale.node is missing");
+});
 test("publishes adaptive region edits as a new revision and leaves the active run pinned", async ({ page }) => {
   await connectLiveOwner(page);
   await page.getByRole("button", { name: "Library", exact: true }).click();

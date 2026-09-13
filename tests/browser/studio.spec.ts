@@ -64,10 +64,19 @@ test.describe("Studio fixture workbench", () => {
     await expect(conversion).toContainText("Fields removed");
     await expect(conversion.getByRole("list", { name: "Kind conversion diff" })).toContainText("projection_ref");
     await conversion.getByRole("button", { name: "Apply kind change" }).click();
-    await expect(raw).toHaveValue(/"kind": "decide"/);
+    const converted = JSON.parse(await raw.inputValue());
+    expect(converted.graphs[0].nodes.find((node: { id: string }) => node.id === "observe")).toEqual({
+      id: "observe",
+      kind: "decide",
+      config: { decision_profile_ref: "studio.decision" },
+    });
     await page.getByRole("button", { name: "Undo" }).click();
-    await expect(raw).toHaveValue(/"kind": "observe"/);
-    await expect(raw).toHaveValue(/"projection_ref": "fair-play.synthetic.v1"/);
+    const restored = JSON.parse(await raw.inputValue());
+    expect(restored.graphs[0].nodes.find((node: { id: string }) => node.id === "observe")).toEqual({
+      id: "observe",
+      kind: "observe",
+      config: { projection_ref: "fair-play.synthetic.v1" },
+    });
   });
 
   test("surfaces stale proposal bindings and repairs them through the owner-port selector", async ({ page }) => {
@@ -92,7 +101,7 @@ test.describe("Studio fixture workbench", () => {
     await expect(source.locator("option:checked")).toHaveText("stale.node (stale)");
     await expect(page.getByRole("alert")).toContainText(/missing or incompatible/i);
     await page.getByRole("button", { name: /Validate/ }).click();
-    await expect(page.locator(".diagnostics-panel")).toContainText("missing_source");
+    await expect(page.locator(".diagnostics-panel")).toContainText("Binding source node stale.node is missing");
 
     await source.selectOption("adaptive");
     await expect(page.getByLabel("execute Action proposal source output")).toHaveValue("proposal");
