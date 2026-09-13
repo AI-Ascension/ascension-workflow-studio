@@ -68,7 +68,7 @@ test.describe("Studio fixture workbench", () => {
     expect(converted.graphs[0].nodes.find((node: { id: string }) => node.id === "observe")).toEqual({
       id: "observe",
       kind: "decide",
-      config: { decision_profile_ref: "studio.decision" },
+      config: { decision_profile_ref: "studio.decision", context_ref: "studio.context" },
     });
     await page.getByRole("button", { name: "Undo" }).click();
     const restored = JSON.parse(await raw.inputValue());

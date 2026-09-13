@@ -33,14 +33,11 @@
           "id": "route_false",
           "expression": {
             "kind": "not_equal",
-            "value": {
-              "left": "state.ready",
-              "right": {
-                "kind": "literal",
-                "value": {
-                  "kind": "boolean",
-                  "value": true
-                }
+          "value": {
+            "left": "state.ready",
+            "right": {
+              "kind": "boolean",
+              "value": true
               }
             }
           }
@@ -49,13 +46,10 @@
           "id": "route_unknown",
           "expression": {
             "kind": "equal",
-            "value": {
-              "left": "state.ready",
-              "right": {
-                "kind": "literal",
-                "value": {
-                  "kind": "null"
-                }
+          "value": {
+            "left": "state.ready",
+            "right": {
+              "kind": "null"
               }
             }
           }
