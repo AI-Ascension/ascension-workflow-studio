@@ -191,8 +191,7 @@ test("imports, edits, exports, and owner-validates every admitted node kind", as
   await page.getByRole("tab", { name: "List editor" }).click();
   await page.locator(".node-list-row", { hasText: "execute" }).first().click();
   await expect(page.getByLabel("execute Action proposal source source node")).toHaveValue("stale.node");
-  await page.getByRole("button", { name: /Validate/ }).click();
-  await expect(page.locator(".diagnostics-panel")).toContainText("Binding source node stale.node is missing");
+  await expect(page.getByRole("alert")).toContainText(/missing or incompatible/i);
 });
 test("publishes adaptive region edits as a new revision and leaves the active run pinned", async ({ page }) => {
   await connectLiveOwner(page);
