@@ -23,6 +23,21 @@ export function verifyEntries(root, entries) {
   return entries.length;
 }
 
+export function verifyContextCatalogPin(root, pin) {
+  assert.equal(pin.repository, 'AI-Ascension/sts2-harness', 'Unknown catalog producer');
+  assert(/^[a-f0-9]{40}$/.test(pin.revision), 'Invalid catalog producer revision');
+  assert.equal(pin.producer_path, 'fixtures/context-control/catalog-conformance.json');
+  assert.equal(pin.evidence, 'synthetic_descriptor_validation_only');
+  assert.equal(pin.consumed_artifacts?.length, 1, 'Exactly one catalog fixture is required');
+  assert.equal(pin.consumed_artifacts[0].path, 'contracts/accepted/context-control/catalog-conformance.json');
+  const count = verifyEntries(root, pin.consumed_artifacts);
+  const fixture = JSON.parse(readFileSync(resolve(root, pin.consumed_artifacts[0].path)));
+  assert.equal(fixture.fixture_schema, 'ascension.context-control.catalog-conformance.fixture.v1');
+  assert.equal(fixture.origin_revision, pin.historical_contract_origin);
+  assert.equal(fixture.evidence, pin.evidence);
+  return count;
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = fileURLToPath(new URL('../', import.meta.url));
   const phase1 = JSON.parse(readFileSync(resolve(root, 'contracts/accepted/phase1-integration.lock.json')));
@@ -31,8 +46,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const phase1Count = verifyEntries(root, phase1.consumed_artifacts);
   const effective = JSON.parse(readFileSync(resolve(root, 'contracts/effective-limits.lock.json')));
   const effectiveCount = verifyEntries(root, effective.consumed_artifacts);
+  const contextCatalog = JSON.parse(readFileSync(resolve(root, 'contracts/context-control-catalog.lock.json')));
+  const contextCatalogCount = verifyContextCatalogPin(root, contextCatalog);
   assert(recorded.checksums && typeof recorded.checksums === 'object', 'Missing recorded-run pins');
   const recordedCount = verifyEntries(recordedRoot,
     Object.entries(recorded.checksums).map(([path, sha256]) => ({ path, sha256 })));
-  console.log(`Verified ${phase1Count} Phase 1, ${effectiveCount} effective-limit and ${recordedCount} recorded-run contract pins`);
+  console.log(`Verified ${phase1Count} Phase 1, ${effectiveCount} effective-limit, ${contextCatalogCount} context catalog and ${recordedCount} recorded-run contract pins`);
 }

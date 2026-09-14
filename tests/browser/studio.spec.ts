@@ -2,6 +2,77 @@ import { readFileSync } from "node:fs";
 
 import { expect, test } from "@playwright/test";
 
+const contextCatalogVectors = JSON.parse(readFileSync("contracts/accepted/context-control/catalog-conformance.json", "utf8"));
+for (const variant of ["restricted", "zero_notes", "disabled", "tampered", "duplicate", "refresh_failure"] as const) {
+  test(`synthetic management catalog route: ${variant}`, async ({ page }) => {
+    const name = ["restricted", "zero_notes", "disabled"].includes(variant) ? variant : "default";
+    const catalog = structuredClone(contextCatalogVectors.catalogs.find((row: { name: string }) => row.name === name).catalog);
+    if (variant === "tampered") catalog.descriptors[0].effective_limits.max_items += 1;
+    let failed = false;
+    let catalogRequests = 0;
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    await page.route("**/v1/**", async (route) => {
+      const path = new URL(route.request().url()).pathname;
+      if (path === "/v1/health") return route.fulfill({ json: { schema_version: "ascension.management/v1", status: "ok" } });
+      if (path === "/v1/context-bindings") {
+        expect(route.request().headers().authorization).toBe("Bearer synthetic-catalog-token");
+        expect(route.request().method()).toBe("GET");
+        catalogRequests += 1;
+        if (failed) return route.fulfill({ status: 403, json: { error: { code: "denied", message: "Synthetic catalog denial" } } });
+        if (variant === "duplicate") return route.fulfill({ contentType: "application/json", body: '{"descriptors":[],"descriptors":[]}' });
+        return route.fulfill({ json: catalog });
+      }
+      return route.fulfill({ status: path.includes("/drafts/") ? 404 : 503,
+        json: { error: { code: "unavailable", message: "Unrelated synthetic owner route unavailable" } } });
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Open settings" }).click();
+    await page.getByLabel("Bearer token").fill("synthetic-catalog-token");
+    await page.getByLabel("Authenticated actor subject").fill("profile:synthetic-catalog");
+    await page.getByRole("button", { name: "Check owner connection" }).click();
+    await expect(page.locator(".connection-message")).toContainText("Owner reports ok.");
+    await page.getByRole("button", { name: /Live owner API/ }).click();
+    await page.getByRole("button", { name: "Library", exact: true }).click();
+    await page.getByRole("button", { name: "Open designer" }).first().click();
+    const panel = page.getByRole("region", { name: "Context reference catalog" });
+    if (variant === "tampered" || variant === "duplicate") {
+      await expect(panel).toContainText("could not be admitted");
+      await expect(panel.locator("dl")).toHaveCount(0);
+    } else {
+      await expect(panel).toContainText("context.fixture.v1");
+      await expect(panel.locator("dd")).toHaveText([
+        String(catalog.descriptors[0].effective_limits.max_items),
+        String(catalog.descriptors[0].effective_limits.max_notes),
+        String(catalog.descriptors[0].effective_limits.max_context_bytes),
+        String(catalog.descriptors[0].effective_limits.max_objective_bytes),
+        String(catalog.descriptors[0].effective_limits.max_control_events),
+      ]);
+      if (variant === "refresh_failure") {
+        failed = true;
+        await page.getByRole("button", { name: "Refresh context catalog" }).click();
+        await expect(panel).toContainText("denied access");
+        await expect(panel.locator("dl")).toHaveCount(0);
+      }
+    }
+    await page.getByRole("tab", { name: "List editor" }).click();
+    await page.locator(".node-list-row").filter({ hasText: "decide" }).first().click();
+    const select = page.getByLabel("decide Decision context");
+    await expect(select).toHaveValue("sts2.setup.context.v1");
+    if (variant === "restricted" || variant === "zero_notes") {
+      await expect(select).toBeEnabled();
+      await expect(select.locator('option[value="context.fixture.v1"]')).toHaveCount(1);
+    } else {
+      await expect(select).toBeDisabled();
+      await page.getByRole("tab", { name: "Canvas" }).click();
+      await expect(page.getByLabel("decide Decision context")).toBeDisabled();
+      await expect(page.getByLabel("decide Decision context")).toHaveValue("sts2.setup.context.v1");
+    }
+    expect(catalogRequests).toBeGreaterThan(0);
+    expect(errors).toEqual([]);
+  });
+}
+
 interface StudioBenchmarkReport {
   workload: { nodes: number; edges: number };
   build: string;

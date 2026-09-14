@@ -22,11 +22,8 @@ import {
 import {
   JsonObjectSchema,
   LayoutSidecarSchema,
-  contextBindingsFromCapabilities,
-  contextBindingsFromOwnerCatalog,
   type DefinitionRecord,
   type ContextBinding,
-  type ContextOwnerCatalog,
   type DraftRecord,
   type JsonObject,
   type JsonValue,
@@ -88,6 +85,8 @@ import {
 
 import { Notice } from "../../components/Notice";
 import { StatusBadge } from "../../components/StatusBadge";
+import { useContextOwnerCatalog } from "./useContextOwnerCatalog";
+import { ContextOwnerCatalogPanel } from "./ContextOwnerCatalogPanel";
 
 type FlowData = StudioFlowNode["data"];
 type FlowNode = Node<FlowData>;
@@ -153,8 +152,8 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const [diagnostics, setDiagnostics] = useState<ValidateResponse | undefined>();
   const [validationState, setValidationState] = useState<"idle" | "running" | "valid" | "invalid" | "error">("idle");
   const [validationMessage, setValidationMessage] = useState("");
-  const [contextBindings, setContextBindings] = useState<ContextBinding[] | undefined>();
-  const [ownerContextCatalog, setOwnerContextCatalog] = useState<ContextOwnerCatalog | undefined>();
+  const ownerCatalog = useContextOwnerCatalog(client, client.principal());
+  const contextBindings = ownerCatalog.bindings;
   const [draft, setDraft] = useState<DraftState>({ revision: 0, etag: "fixture-0", state: "saved", message: "Draft changes are local until autosave completes." });
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [saveRetry, setSaveRetry] = useState(0);
@@ -188,20 +187,6 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   documentRef.current = document;
 
   const draftId = `draft.${definition.id}`;
-
-  useEffect(() => {
-    let active = true;
-    void client.capabilities().then((response) => {
-      if (active) setContextBindings((current) => current ?? contextBindingsFromCapabilities(response.capabilities));
-    }).catch(() => {});
-    void client.listContextBindings().then((catalog) => {
-      if (!active) return;
-      setOwnerContextCatalog(catalog);
-      const fromOwner = contextBindingsFromOwnerCatalog(catalog);
-      if (fromOwner !== undefined) setContextBindings(fromOwner);
-    }).catch(() => { if (active) setOwnerContextCatalog(undefined); });
-    return () => { active = false; };
-  }, [client]);
 
   const valueKey = (nextDocument: SemanticDocument, nextLayout: LayoutSidecar): string => JSON.stringify({ document: nextDocument, layout: nextLayout });
 
@@ -1008,11 +993,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       <span>Compiler <code data-testid="identity-compiler">{diagnostics?.compiler ?? "not reported"}</code></span>
     </div>
     <p className="identity-note muted">Draft revision, definition digest, layout digest, and compiler identity are independent; none substitutes for another.</p>
-    <section className="panel-card" aria-label="Context reference catalog">
-      <div className="panel-title"><div><p className="eyebrow">Authoring context references</p><h2>Owner binding catalog</h2></div><StatusBadge tone={contextBindings ? "success" : "muted"}>{contextBindings ? "available" : "unavailable"}</StatusBadge></div>
-      {contextBindings ? <p className="muted">{contextBindings.map((binding) => `${binding.context_ref} (${binding.node_kinds.join(", ")})`).join(" · ") || "No compatible references were disclosed."}</p> : <p className="muted">The owner has not disclosed a context-binding catalog. Validation remains authoritative; this editor will not infer bindings.</p>}
-      {ownerContextCatalog ? <p className="muted" data-testid="owner-context-catalog">{ownerContextCatalog.descriptors.map((descriptor) => `${descriptor.context_ref} · ${descriptor.state}${descriptor.grants.content_read ? " · content" : " · metadata-only"}`).join(" · ")}</p> : null}
-    </section>
+    <ContextOwnerCatalogPanel state={ownerCatalog.state} refresh={ownerCatalog.refresh} />
     <RecoveryPanel enabled={recoveryEnabled} principal={principal} count={principalRecordCount} recoverable={recoverable} notice={recoveryNotice} onToggle={() => setRecoveryEnabled((current) => !current)} onRecover={recoverLocalCandidate} onExport={exportRecovery} onClear={clearRecovery} />
     {draft.state === "conflict" ? <Notice tone="danger" title="Draft conflict">The server revision changed while this editor was saving. Local edits are preserved until an explicit resolution.</Notice> : null}
     {draft.state === "conflict" && conflictRemoteDocument && conflictRemoteLayout && conflictOpen ? <ConflictPanel base={mergeBaseRef.current} baseLayout={mergeBaseLayoutRef.current} local={document} localLayout={layout} remote={conflictRemoteDocument} remoteLayout={conflictRemoteLayout} onKeepRemote={reloadRemoteConflict} onKeepLocal={saveLocalAsNew} onMerge={mergeConflict} onCancel={cancelConflictResolution} /> : null}
@@ -1282,12 +1263,12 @@ function ReferenceSelectField({ node, fieldKey, label, options, disabled, onUpda
   const current = typeof node.config[fieldKey] === "string" ? node.config[fieldKey] as string : "";
   const values = [...new Set([...(current ? [current] : []), ...options])];
   return <label className="field-label">{label}<span className="muted">owner-disclosed context reference</span>
-    <select aria-label={`${node.id} ${label}`} value={current} disabled={disabled || values.length === 0} onChange={(event) => {
-      if (!event.target.value) return;
+    <select aria-label={`${node.id} ${label}`} value={current} disabled={disabled || options.length === 0} onChange={(event) => {
+      if (!options.includes(event.target.value)) return;
       onUpdate((candidate) => ({ ...candidate, config: { ...candidate.config, [fieldKey]: event.target.value } }));
     }}>
       {!current ? <option value="">Select a disclosed reference</option> : null}
-      {values.map((value) => <option key={value} value={value}>{value}{options.includes(value) ? "" : " (current, not disclosed)"}</option>)}
+      {values.map((value) => <option key={value} value={value} disabled={!options.includes(value)}>{value}{options.includes(value) ? "" : " (current, not disclosed)"}</option>)}
     </select>
     {!options.length ? <span className="field-unknown">The owner did not disclose compatible context references; use JSON mode for a deliberate candidate.</span> : null}
   </label>;

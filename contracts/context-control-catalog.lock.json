@@ -1,0 +1,13 @@
+{
+  "repository": "AI-Ascension/sts2-harness",
+  "revision": "f6484069298847b09b66d242942497b942a3dc18",
+  "producer_path": "fixtures/context-control/catalog-conformance.json",
+  "historical_contract_origin": "997821420db5a32d40cd2f07ad8f0ebcafcda96c",
+  "evidence": "synthetic_descriptor_validation_only",
+  "consumed_artifacts": [
+    {
+      "path": "contracts/accepted/context-control/catalog-conformance.json",
+      "sha256": "539b87429d4918b55755adab67bb6ed71989e6d90be165b5a396d3124f342c31"
+    }
+  ]
+}
