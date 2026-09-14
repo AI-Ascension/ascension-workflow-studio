@@ -30,6 +30,21 @@ async function reopenDesigner(page: Page): Promise<void> {
   await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
 }
 
+/// Studio no longer submits a hardcoded synthetic target. Exercise the real
+/// catalog -> exact preflight -> submission path against the authenticated owner
+/// before the run inspector assertions.
+async function startLiveRun(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Run inspection" }).click();
+  const panel = page.getByRole("region", { name: "Run admission" });
+  await expect(panel).toBeVisible();
+  await panel.getByLabel("Target instance").selectOption("sts2-synthetic-1");
+  await expect(panel.getByLabel("Execution profile")).toHaveValue("synthetic");
+  await panel.getByRole("button", { name: "Run preflight" }).click();
+  await expect(panel.getByLabel("Exact admission binding")).toBeVisible();
+  await panel.getByRole("button", { name: "Start run" }).click();
+  await expect(panel).toHaveCount(0);
+}
+
 async function ownerResetBase(page: Page, definitionId: string): Promise<void> {
   const result = await page.evaluate(async (id) => {
     const headers = { Authorization: "Bearer studio-live-ci-token", "Content-Type": "application/json" };
@@ -201,7 +216,7 @@ test("publishes adaptive region edits as a new revision and leaves the active ru
   await card.getByRole("button", { name: "Clone draft" }).click();
   await expect(page.getByText(/Loaded the owner-backed draft\.|Autosaved to the active adapter\./)).toBeVisible();
 
-  await page.getByRole("button", { name: "Run inspection" }).click();
+  await startLiveRun(page);
   await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
   const runDigest = page.getByTestId("run-definition-digest");
   await expect(runDigest).not.toHaveText("");
@@ -253,7 +268,7 @@ test("pairs with the authenticated owner through the same-origin adapter", async
   await page.getByRole("button", { name: "Library", exact: true }).click();
   await page.getByRole("button", { name: "Open designer" }).first().click();
   await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
-  await page.getByRole("button", { name: "Run inspection" }).click();
+  await startLiveRun(page);
   await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
   await expect(page.getByText("live API", { exact: true })).toBeVisible();
   await expect(page.getByText(/Loaded \d+ retained event/)).toBeVisible();
@@ -592,7 +607,7 @@ test("resolves a lost publication response through the original publication iden
 test("resolves a lost command response by the original command id", async ({ page }) => {
   await connectLiveOwner(page);
   await openOwnedDraft(page);
-  await page.getByRole("button", { name: "Run inspection" }).click();
+  await startLiveRun(page);
   await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
   await expect(page.getByText("live API", { exact: true })).toBeVisible();
   const pause = page.getByRole("button", { name: "Pause" });
@@ -629,7 +644,7 @@ test("resolves a lost command response by the original command id", async ({ pag
 test("keeps historical cursor actions free of live runtime requests", async ({ page }) => {
   await connectLiveOwner(page);
   await openOwnedDraft(page);
-  await page.getByRole("button", { name: "Run inspection" }).click();
+  await startLiveRun(page);
   await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
   const cursor = page.getByLabel("Historical cursor");
   await expect(cursor).toBeVisible();

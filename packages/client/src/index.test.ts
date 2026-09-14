@@ -1,15 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import type { EventPage, RunEvent, WorkflowDefinition } from "@studio/contracts";
+import type { EventPage, RunEvent, RunTargetConfiguration, TargetDescriptor, WorkflowDefinition } from "@studio/contracts";
+import { semanticDigest } from "@studio/document";
 
 import {
+  CapabilityGateError,
+  ClientError,
   ContextServiceClient,
+  FixtureClient,
   OwnerApiClient,
   applyEventPage,
   buildSafeCommand,
   createProjection,
   normalizeRelativeBase,
   parseSseDataChunk,
+  validateTargetAdmissionBinding,
+  validateTargetConfiguration,
 } from "./index";
 
 function event(sequence: number, runId = "run.fixture.1", digest = "digest"): RunEvent {
@@ -283,5 +289,161 @@ describe("same-origin client boundary", () => {
     const events = await client.events("context.run.1", "cursor.0");
     expect(events.events[0]).not.toHaveProperty("details");
     expect(paths).toEqual(["/api/context/v1/runs/context.run.1/snapshots/snapshot.1", "/api/context/v1/runs/context.run.1/events?cursor=cursor.0"]);
+  });
+});
+
+function targetConfiguration(descriptor: TargetDescriptor, definition: WorkflowDefinition): RunTargetConfiguration {
+  return {
+    instance_id: descriptor.instance_id,
+    execution_profile: descriptor.execution_profiles[0],
+    execution_mode: descriptor.execution_mode,
+    workflow_revision: definition.version,
+    compatibility_revision: descriptor.compatibility_revision,
+    capability_revision: descriptor.capability_revision,
+    game_profile: descriptor.game_profiles[0],
+    save_profile: descriptor.save_profiles[0] ?? null,
+    inference_profile: descriptor.inference_profiles[0] ?? null,
+    context_capability: null,
+    provider_capability: null,
+  };
+}
+
+function definitionFor(descriptor: TargetDescriptor): WorkflowDefinition {
+  return {
+    ...workflowDefinition(),
+    game_profile: descriptor.game_profiles[0],
+  };
+}
+
+async function admissionRequest(
+  client: FixtureClient,
+  descriptor: TargetDescriptor,
+  definition: WorkflowDefinition,
+  requestId: string,
+) {
+  return client.preflightTarget({
+    schema_version: "ascension.workflow-admission/v1",
+    request_id: requestId,
+    workflow_definition_digest: await semanticDigest(definition),
+    target: targetConfiguration(descriptor, definition),
+  });
+}
+
+describe("target admission consumption", () => {
+  it("publishes two distinct synthetic descriptors and never silently chooses one", async () => {
+    const client = new FixtureClient([]);
+    const catalog = await client.listTargets();
+    expect(catalog.targets.map((target) => target.instance_id)).toEqual(["studio-inspection", "studio-inspection-secondary"]);
+    expect(catalog.targets[0].execution_profiles).not.toEqual(catalog.targets[1].execution_profiles);
+    expect(catalog.targets[0].compatibility_revision).not.toEqual(catalog.targets[1].compatibility_revision);
+    expect(catalog.targets[0].game_profiles).toEqual(catalog.targets[1].game_profiles);
+  });
+
+  it("binds preflight to the exact selected configuration and rejects a substitute target", async () => {
+    const client = new FixtureClient([]);
+    const catalog = await client.listTargets();
+    const [primary, secondary] = catalog.targets;
+    const definition = definitionFor(primary);
+    const preflight = await admissionRequest(client, primary, definition, "studio.run.1");
+    expect(preflight.admission.target).toEqual(targetConfiguration(primary, definition));
+
+    const accepted = await client.submitRun(definition, primary.instance_id, primary.execution_profiles[0], {
+      requestId: "studio.run.1",
+      admission: preflight.admission,
+      target: targetConfiguration(primary, definition),
+    });
+    expect(accepted.workflow_run_id).toMatch(/^run\.fixture\./);
+
+    const secondaryDefinition = definitionFor(secondary);
+    await expect(client.submitRun(secondaryDefinition, secondary.instance_id, secondary.execution_profiles[0], {
+      requestId: "studio.run.1",
+      admission: preflight.admission,
+      target: targetConfiguration(secondary, secondaryDefinition),
+    })).rejects.toMatchObject({ code: "target_binding_mismatch" });
+  });
+
+  it("requires an owner admission before any fixture submission", async () => {
+    const client = new FixtureClient([]);
+    const catalog = await client.listTargets();
+    const definition = definitionFor(catalog.targets[0]);
+    await expect(client.submitRun(definition, catalog.targets[0].instance_id, catalog.targets[0].execution_profiles[0]))
+      .rejects.toMatchObject({ code: "target_admission_required" });
+    await expect(client.submitRun(definition, catalog.targets[0].instance_id, catalog.targets[0].execution_profiles[0]))
+      .rejects.toBeInstanceOf(CapabilityGateError);
+  });
+
+  it("rejects an admission whose exact binding drifted after preflight", async () => {
+    const client = new FixtureClient([]);
+    const catalog = await client.listTargets();
+    const descriptor = catalog.targets[0];
+    const definition = definitionFor(descriptor);
+    const preflight = await admissionRequest(client, descriptor, definition, "studio.run.drift");
+    const drifted = { ...preflight.admission, target: { ...preflight.admission.target, execution_profile: "drifted.profile" } };
+    await expect(client.submitRun(definition, descriptor.instance_id, descriptor.execution_profiles[0], {
+      requestId: "studio.run.drift",
+      admission: drifted,
+      target: targetConfiguration(descriptor, definition),
+    })).rejects.toBeInstanceOf(ClientError);
+  });
+
+  it("rejects a request id already bound to a different configuration", async () => {
+    const client = new FixtureClient([]);
+    const catalog = await client.listTargets();
+    const definition = definitionFor(catalog.targets[0]);
+    await admissionRequest(client, catalog.targets[0], definition, "studio.run.reuse");
+    await expect(client.preflightTarget({
+      schema_version: "ascension.workflow-admission/v1",
+      request_id: "studio.run.reuse",
+      workflow_definition_digest: await semanticDigest(definition),
+      target: targetConfiguration(catalog.targets[1], definition),
+    })).rejects.toMatchObject({ code: "target_request_conflict" });
+  });
+
+  it("deduplicates an exact retry and returns the original run identity", async () => {
+    const client = new FixtureClient([]);
+    const catalog = await client.listTargets();
+    const descriptor = catalog.targets[0];
+    const definition = definitionFor(descriptor);
+    const preflight = await admissionRequest(client, descriptor, definition, "studio.run.retry");
+    const options = {
+      requestId: "studio.run.retry",
+      admission: preflight.admission,
+      target: targetConfiguration(descriptor, definition),
+    };
+    const first = await client.submitRun(definition, descriptor.instance_id, descriptor.execution_profiles[0], options);
+    const second = await client.submitRun(definition, descriptor.instance_id, descriptor.execution_profiles[0], options);
+    expect(second.workflow_run_id).toBe(first.workflow_run_id);
+  });
+
+  it("validates every binding field locally and fails closed on drift", () => {
+    const descriptor: TargetDescriptor = {
+      instance_id: "instance.local",
+      execution_profiles: ["live.workflow.v1"],
+      execution_mode: "live",
+      compatibility_revision: "compat.v1",
+      capability_revision: "cap.v1",
+      availability: "available",
+      supported_operations: ["workflow:live"],
+      capabilities: ["context.control.v1"],
+      game_profiles: ["sts2-live-v1"],
+      save_profiles: [],
+      inference_profiles: [],
+    };
+    const definition = { ...workflowDefinition(), game_profile: "sts2-live-v1" };
+    const configuration = targetConfiguration(descriptor, definition);
+    expect(() => validateTargetConfiguration(descriptor, configuration)).not.toThrow();
+    expect(() => validateTargetConfiguration(descriptor, { ...configuration, game_profile: "wrong" })).toThrow(/game_profile/);
+    expect(() => validateTargetConfiguration({ ...descriptor, availability: "revoked" }, configuration)).toThrow(/revoked/);
+
+    const request = {
+      schema_version: "ascension.workflow-admission/v1" as const,
+      request_id: "studio.run.check",
+      workflow_definition_digest: "a".repeat(64),
+      target: configuration,
+    };
+    const admission = { ...request, descriptor_digest: "b".repeat(64), catalog_revision: "catalog.v1" };
+    expect(() => validateTargetAdmissionBinding(admission, request)).not.toThrow();
+    expect(() => validateTargetAdmissionBinding({ ...admission, request_id: "other" }, request)).toThrow(/request_id/);
+    expect(() => validateTargetAdmissionBinding({ ...admission, target: { ...admission.target, instance_id: "other" } }, request)).toThrow(/instance_id/);
   });
 });

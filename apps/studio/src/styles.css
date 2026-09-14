@@ -237,3 +237,13 @@ input:focus, textarea:focus, select:focus, button:focus-visible { border-color: 
 .bundle-diff-list { max-height: 200px; overflow: auto; }
 
 .card-provenance { display: flex; flex-wrap: wrap; gap: 10px; color: var(--muted); font-family: monospace; font-size: .68rem; }
+
+.run-admission { display: grid; gap: 12px; border-color: #3c5a7a; }
+.admission-revision { margin: 0; color: var(--muted); font-family: monospace; font-size: .72rem; }
+.admission-message { margin: 0; }
+.admission-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.admission-summary { display: grid; gap: 4px; margin: 0; }
+.admission-row { display: grid; grid-template-columns: minmax(140px, 220px) 1fr; gap: 8px; border-bottom: 1px solid var(--border); padding: 3px 0; }
+.admission-row dt { color: var(--muted); }
+.admission-row dd { margin: 0; font-family: monospace; overflow-wrap: anywhere; }
+.checkbox-label { display: flex; align-items: center; gap: 8px; }
