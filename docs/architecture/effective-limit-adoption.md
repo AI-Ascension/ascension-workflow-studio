@@ -20,6 +20,13 @@ and retains its encryption and method-name restrictions. Both v1 readers return
 schema maxima. The v3 readers validate the complete closed producer schemas,
 including required `effective_limits` and `binding`. Unknown versions fail.
 
+Validators are compiled in Node from the pinned schemas into checked-in static
+ESM by `tools/generate-effective-limit-validators.mjs`. CI runs its `--check`
+mode to reject stale generated code. The browser never invokes Ajv compilation
+or `Function`/`eval`; the existing `script-src 'self'` CSP remains unchanged.
+The check also executes original producer vectors through the emitted native
+ESM module, covering helper interoperability outside Vitest's module loader.
+
 The Context client reads `/v3/memory/capabilities` and
 `/v1/runs/{context_run_id}/provider-sessions/capabilities` through its same-origin
 Context route. The latter requires a local-metadata-only envelope with zero
@@ -53,6 +60,10 @@ limits, model, adapter, profile or scope. Missing values, disabled memory,
 tampered payloads and stale policy pins are unavailable. The owner remains
 responsible for full policy validation and dispatch admission.
 
+Refreshing the current association invalidates displayed limits immediately.
+Unavailable associations keep them unavailable, and generation guards prevent
+older in-flight descriptor responses from restoring superseded claims.
+
 The UI presents bytes as bytes and explicitly marks token accounting unavailable.
 Provider v3's `encrypted_state: false` widening permits reading the descriptor;
 it grants no retention authority. The view remains read-only and states that
@@ -66,7 +77,12 @@ were added.
 the real `RunsView` and `ContextServiceClient` with an in-memory workflow
 projection and routed authenticated synthetic responses. It checks valid v3,
 legacy v1, missing fields, tampering, stale pins, scoped routes, and absence of
-credentials from DOM/storage. This is synthetic browser/service-boundary
+credentials from DOM/storage. Its harness is production-built with the same
+Vite settings and exact CSP as the application, and checks startup errors.
+It also covers a valid descriptor followed by a rejected association refresh;
+controlled-promise component tests cover older memory and session responses
+arriving after that rejection.
+This is synthetic browser/service-boundary
 evidence. It is not a composed Console/Harness process or native/provider test.
 
 Unit tests compare every executable row in original default/restricted/disabled
@@ -75,6 +91,7 @@ empty-method disabled-session vector is explicitly invalid as a native
 descriptor and is rejected; it is never represented as an attachable profile.
 Run the pinned Node 24.16.0/npm install, contract-pin verifier, lint/typecheck,
 unit tests, build, existing browser journeys and this dedicated browser suite.
+Also run `node tools/generate-effective-limit-validators.mjs --check`.
 
 Studio #119 stays open. Its acceptance remains partial:
 

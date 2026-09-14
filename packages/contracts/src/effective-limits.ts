@@ -1,20 +1,15 @@
-import Ajv2020 from "ajv/dist/2020.js";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 import { z } from "zod";
 
 import memorySchema from "../../../contracts/accepted/effective-limits/context-memory-capabilities.schema.json";
 import sessionSchema from "../../../contracts/accepted/effective-limits/provider-session-capabilities.schema.json";
-import sessionV1Schema from "../../../contracts/accepted/effective-limits/provider-session-capabilities-v1.schema.json";
 import pins from "../../../contracts/effective-limits.lock.json";
 import type { MemoryCapabilitiesV3, ProviderSessionCapabilitiesV1, ProviderSessionCapabilitiesV3 } from "./effective-limit-types";
+import { validateMemoryV3, validateSessionV3, validateSessionV1 } from "./effective-limit-validators.js";
 
 export type { MemoryCapabilitiesV3, ProviderSessionCapabilitiesV1, ProviderSessionCapabilitiesV3 };
 type V3 = MemoryCapabilitiesV3 | ProviderSessionCapabilitiesV3;
-const ajv = new Ajv2020({ strict: false });
-const memoryValid = ajv.compile(memorySchema);
-const sessionValid = ajv.compile(sessionSchema);
-const sessionV1Valid = ajv.compile(sessionV1Schema);
 
 /** Preserve the existing legacy memory projection. It conveys no executable limits.
  * Some served v1 owners omit advisory fields, so keep their established reader. */
@@ -34,12 +29,12 @@ export const MemoryCapabilitiesV1Schema = z.object({
   direct_game_dispatch: z.boolean(),
 }).passthrough();
 
-export const MemoryCapabilitiesV3Schema = z.custom<MemoryCapabilitiesV3>((value) => memoryValid(value));
-export const ProviderSessionCapabilitiesV3Schema = z.custom<ProviderSessionCapabilitiesV3>((value) => sessionValid(value));
+export const MemoryCapabilitiesV3Schema = z.custom<MemoryCapabilitiesV3>((value) => validateMemoryV3(value));
+export const ProviderSessionCapabilitiesV3Schema = z.custom<ProviderSessionCapabilitiesV3>((value) => validateSessionV3(value));
 export const MemoryCapabilitiesSchema = z.union([MemoryCapabilitiesV1Schema, MemoryCapabilitiesV3Schema]);
 export type MemoryCapabilities = z.infer<typeof MemoryCapabilitiesSchema>;
 export const ProviderSessionCapabilitiesSchema = z.union([
-  z.custom<ProviderSessionCapabilitiesV1>((value) => sessionV1Valid(value)),
+  z.custom<ProviderSessionCapabilitiesV1>((value) => validateSessionV1(value)),
   ProviderSessionCapabilitiesV3Schema,
 ]);
 export type ProviderSessionCapabilities = z.infer<typeof ProviderSessionCapabilitiesSchema>;

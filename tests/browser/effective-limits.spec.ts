@@ -2,9 +2,15 @@ import { readFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 
 const vectors = JSON.parse(readFileSync("contracts/accepted/effective-limits/producer.json", "utf8"));
+const productionCsp = readFileSync("index.html", "utf8").match(/http-equiv="Content-Security-Policy" content="([^"]+)"/)?.[1] ?? "";
 
-for (const variant of ["v3", "v1", "tampered", "stale", "missing"] as const) {
+for (const variant of ["v3", "v1", "tampered", "stale", "missing", "association-failure"] as const) {
   test(`synthetic authenticated capability boundary: ${variant}`, async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    let rejectAssociation = false;
+    await page.route("**/synthetic/context-association", (route) =>
+      route.fulfill({ status: rejectAssociation ? 503 : 200, json: {} }));
     const memory = structuredClone(vectors.memory[1].descriptor);
     const session = structuredClone(vectors.session[1].descriptor);
     if (variant === "v1") {
@@ -42,12 +48,23 @@ for (const variant of ["v3", "v1", "tampered", "stale", "missing"] as const) {
       } else await route.fulfill({ status: 503, json: { error: "synthetic unrelated projection unavailable" } });
     });
     await page.goto("/tests/fixtures/effective-limits.html");
+    expect(errors).toEqual([]);
+    await expect(page.locator('meta[http-equiv="Content-Security-Policy"]')).toHaveAttribute("content", productionCsp);
     const memoryPanel = page.getByRole("region", { name: "Memory evidence" });
     const sessionPanel = page.getByRole("region", { name: "Provider session evidence" });
-    if (variant === "v3") {
+    if (variant === "v3" || variant === "association-failure") {
       await expect(memoryPanel).toContainText(`Owner effective optional_byte_budget: ${memory.effective_limits.optional_byte_budget} bytes`);
       await expect(sessionPanel).toContainText(`Owner effective max_prepared_bytes: ${session.effective_limits.max_prepared_bytes} bytes`);
       await expect(sessionPanel).toContainText("Private retention requires owner approval and authenticated encryption.");
+      if (variant === "association-failure") {
+        rejectAssociation = true;
+        await page.getByRole("button", { name: "Refresh", exact: true }).click();
+        await expect(memoryPanel).toContainText("current owner association is unavailable");
+        await expect(sessionPanel).toContainText("current owner association is unavailable");
+        await expect(memoryPanel).not.toContainText("Owner effective");
+        await expect(memoryPanel).not.toContainText("memory search is available");
+        await expect(sessionPanel).not.toContainText("Owner effective");
+      }
     } else if (variant === "missing") {
       await expect(memoryPanel).toContainText("Memory projection is unavailable from the composed context owner.");
       await expect(sessionPanel).toContainText("Effective input limits unavailable from the composed context owner.");

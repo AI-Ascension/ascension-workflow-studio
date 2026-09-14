@@ -30,6 +30,7 @@ jobs:
         run: |
           node --test tools/verify-contract-pins.test.mjs
           node tools/verify-contract-pins.mjs
+          node tools/generate-effective-limit-validators.mjs --check
           (cd contracts/recorded-run-candidate && sha256sum --check --strict SHA256SUMS)
       - run: npm run lint
       - run: npm test -- --run --pool=threads --maxWorkers=1

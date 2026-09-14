@@ -9,6 +9,8 @@ import { RunsView } from "../../apps/studio/src/features/runs/RunsView";
 const client = new FixtureClient(fixtureDefinitions);
 const association = client.contextAssociation.bind(client);
 client.contextAssociation = async (runId) => {
+  const response = await fetch("/synthetic/context-association");
+  if (!response.ok) throw new Error("Synthetic current owner association is unavailable.");
   const original = await association(runId);
   return {
     ...original,
