@@ -128,6 +128,63 @@ async function applyLocalEdit(page: Page, edit: (document: { version: string; gr
   await page.getByRole("button", { name: "Apply candidate" }).click();
 }
 
+// This journey runs first, before any test publishes a definition, so the Library still shows
+// the checked-in catalog, which includes the strict setup workflow with a `decide` context node.
+test("discovers, selects, saves, reloads, and owner-rejects a context reference", async ({ page }) => {
+  await connectLiveOwner(page);
+
+  // The strict setup definition carries a `decide` node with an owner-disclosed context_ref.
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  const card = page.locator(".definition-card").filter({ hasText: "sts2.setup.strict" });
+  await expect(card).toHaveCount(1);
+  await card.getByRole("button", { name: "Clone draft" }).click();
+  await expect(page.getByText(/Loaded the owner-backed draft\.|Autosaved to the active adapter\./)).toBeVisible();
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await page.locator(".definition-card").filter({ hasText: "sts2.setup.strict" }).getByRole("button", { name: "Open designer" }).click();
+  await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
+
+  // Discovery: the owner discloses the compatible context catalog before selection.
+  await expect(page.getByTestId("owner-context-catalog")).toContainText("context.synthetic.v1");
+
+  // Selection: choose a compatible owner-disclosed reference on the decide node.
+  await page.getByRole("tab", { name: "List editor" }).click();
+  await page.locator(".node-list-row", { hasText: "decide" }).first().click();
+  const contextSelect = page.getByLabel("decide Decision context");
+  await expect(contextSelect).toBeVisible();
+  await expect(contextSelect.locator("option", { hasText: "context.synthetic.v1" })).toHaveCount(1);
+  await contextSelect.selectOption("context.synthetic.v1");
+  await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+
+  // The owner admits the selected, disclosed reference.
+  await page.getByRole("button", { name: /Validate/ }).click();
+  await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
+
+  // Reload through the owner ports and confirm the selection persisted.
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await page.locator(".definition-card").filter({ hasText: "sts2.setup.strict" }).getByRole("button", { name: "Open designer" }).click();
+  await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
+  await page.getByRole("tab", { name: "List editor" }).click();
+  await page.locator(".node-list-row", { hasText: "decide" }).first().click();
+  await expect(page.getByLabel("decide Decision context")).toHaveValue("context.synthetic.v1");
+
+  // Owner validation rejects a removed/undisclosed reference across the session.
+  await page.getByRole("button", { name: "JSON mode" }).click();
+  const raw = page.getByLabel("Raw workflow definition JSON");
+  const candidate = JSON.parse(await raw.inputValue()) as {
+    graphs: Array<{ nodes: Array<{ id: string; config: Record<string, unknown> }> }>;
+  };
+  const decideNode = candidate.graphs[0].nodes.find((node) => node.id === "decide");
+  expect(decideNode).toBeDefined();
+  if (!decideNode) throw new Error("decide node missing from the owner definition");
+  decideNode.config.context_ref = "context.removed.v1";
+  await raw.fill(JSON.stringify(candidate, null, 2));
+  await page.getByRole("button", { name: "Apply candidate" }).click();
+  await page.getByRole("button", { name: /Validate/ }).click();
+  const diagnostics = page.locator(".diagnostics-panel");
+  await expect(diagnostics).toContainText("context.removed.v1");
+  await expect(diagnostics).toContainText(/not available|incompatible/i);
+});
+
 test("round-trips strict and dynamic definitions through the owner without semantic drift", async ({ page }) => {
   await connectLiveOwner(page);
 
@@ -768,59 +825,4 @@ test("reconciles the owner revision before retrying an offline save", async ({ p
   await expect(page.getByRole("heading", { name: "Local and remote drafts diverged" })).toBeVisible();
   await expect(page.getByText(/owner revision moved while this tab was offline/)).toBeVisible();
   await expect(page.getByLabel("Raw workflow definition JSON")).toHaveValue(/"version": "1.0.9"/);
-});
-
-test("discovers, selects, saves, reloads, and owner-rejects a context reference", async ({ page }) => {
-  await connectLiveOwner(page);
-
-  // The strict setup definition carries a `decide` node with an owner-disclosed context_ref.
-  await page.getByRole("button", { name: "Library", exact: true }).click();
-  const card = page.locator(".definition-card").filter({ hasText: "sts2.setup.strict" });
-  await expect(card).toHaveCount(1);
-  await card.getByRole("button", { name: "Clone draft" }).click();
-  await expect(page.getByText(/Loaded the owner-backed draft\.|Autosaved to the active adapter\./)).toBeVisible();
-  await page.getByRole("button", { name: "Library", exact: true }).click();
-  await page.locator(".definition-card").filter({ hasText: "sts2.setup.strict" }).getByRole("button", { name: "Open designer" }).click();
-  await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
-
-  // Discovery: the owner discloses the compatible context catalog before selection.
-  await expect(page.getByTestId("owner-context-catalog")).toContainText("context.synthetic.v1");
-
-  // Selection: choose a compatible owner-disclosed reference on the decide node.
-  await page.getByRole("tab", { name: "List editor" }).click();
-  await page.locator(".node-list-row", { hasText: "decide" }).first().click();
-  const contextSelect = page.getByLabel("decide Decision context");
-  await expect(contextSelect).toBeVisible();
-  await expect(contextSelect.locator("option", { hasText: "context.synthetic.v1" })).toHaveCount(1);
-  await contextSelect.selectOption("context.synthetic.v1");
-  await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
-
-  // The owner admits the selected, disclosed reference.
-  await page.getByRole("button", { name: /Validate/ }).click();
-  await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
-
-  // Reload through the owner ports and confirm the selection persisted.
-  await page.getByRole("button", { name: "Library", exact: true }).click();
-  await page.locator(".definition-card").filter({ hasText: "sts2.setup.strict" }).getByRole("button", { name: "Open designer" }).click();
-  await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
-  await page.getByRole("tab", { name: "List editor" }).click();
-  await page.locator(".node-list-row", { hasText: "decide" }).first().click();
-  await expect(page.getByLabel("decide Decision context")).toHaveValue("context.synthetic.v1");
-
-  // Owner validation rejects a removed/undisclosed reference across the session.
-  await page.getByRole("button", { name: "JSON mode" }).click();
-  const raw = page.getByLabel("Raw workflow definition JSON");
-  const candidate = JSON.parse(await raw.inputValue()) as {
-    graphs: Array<{ nodes: Array<{ id: string; config: Record<string, unknown> }> }>;
-  };
-  const decideNode = candidate.graphs[0].nodes.find((node) => node.id === "decide");
-  expect(decideNode).toBeDefined();
-  if (!decideNode) throw new Error("decide node missing from the owner definition");
-  decideNode.config.context_ref = "context.removed.v1";
-  await raw.fill(JSON.stringify(candidate, null, 2));
-  await page.getByRole("button", { name: "Apply candidate" }).click();
-  await page.getByRole("button", { name: /Validate/ }).click();
-  const diagnostics = page.locator(".diagnostics-panel");
-  await expect(diagnostics).toContainText("context.removed.v1");
-  await expect(diagnostics).toContainText(/not available|incompatible/i);
 });
