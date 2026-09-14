@@ -177,14 +177,18 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   expect(decideNode).toBeDefined();
   if (!decideNode) throw new Error("decide node missing from the owner definition");
 
-  const readContextDraft = async (): Promise<{ revision: number; contextRef: string | undefined }> =>
+  const readContextDraft = async (): Promise<string | undefined> =>
     await page.evaluate(async () => {
       const response = await fetch("/v1/studio/drafts/draft.sts2.setup.strict", { headers: { Authorization: "Bearer studio-live-ci-token" } });
-      const draft = await response.json() as { revision: number; document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> } };
-      const node = draft.document.graphs.find((graph) => graph.id === "main")?.nodes.find((entry) => entry.id === "decide");
-      return { revision: draft.revision, contextRef: node?.config.context_ref };
+      const draft = await response.json() as { document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> } };
+      return draft.document.graphs.find((graph) => graph.id === "main")?.nodes.find((entry) => entry.id === "decide")?.config.context_ref;
     });
-  const baseline = await readContextDraft();
+
+  // `identity-draft-revision` is the editor's own saved revision. Waiting on it synchronises the
+  // restoring save with the editor having processed the invalid save's response, so the two saves
+  // cannot interleave and leave the shared owner draft invalid.
+  const draftRevision = page.getByTestId("identity-draft-revision");
+  const baselineRevision = Number(await draftRevision.textContent());
 
   decideNode.config.context_ref = "context.removed.v1";
   await raw.fill(JSON.stringify(candidate, null, 2));
@@ -195,20 +199,18 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   await expect(diagnostics).toContainText("$.graphs.main.nodes.decide.config.context_ref");
   await expect(diagnostics).toContainText(/not available|incompatible/i);
 
-  // The shared owner draft must never be left invalid by an outstanding write. Sequence the saves:
-  // first wait for the invalid candidate to commit at a newer revision, then restore and wait for a
-  // still-newer revision holding the valid reference before teardown.
-  await expect.poll(async () => (await readContextDraft()).revision, { timeout: 15_000 }).toBeGreaterThan(baseline.revision);
-  const invalidRevision = (await readContextDraft()).revision;
-  expect((await readContextDraft()).contextRef).toBe("context.removed.v1");
+  // First let the invalid candidate commit and the editor acknowledge it.
+  await expect.poll(async () => Number(await draftRevision.textContent()), { timeout: 15_000 }).toBeGreaterThan(baselineRevision);
+  const invalidRevision = Number(await draftRevision.textContent());
 
+  // Then restore the valid reference and wait for the editor to acknowledge the restoring save.
   decideNode.config.context_ref = "context.synthetic.v1";
   await raw.fill(JSON.stringify(candidate, null, 2));
   await page.getByRole("button", { name: "Apply candidate" }).click();
-  await expect.poll(async () => {
-    const draft = await readContextDraft();
-    return draft.revision > invalidRevision && draft.contextRef === "context.synthetic.v1";
-  }, { timeout: 15_000 }).toBe(true);
+  await expect.poll(async () => Number(await draftRevision.textContent()), { timeout: 15_000 }).toBeGreaterThan(invalidRevision);
+
+  // The shared owner draft now holds the valid reference for the next journey.
+  await expect.poll(readContextDraft, { timeout: 15_000 }).toBe("context.synthetic.v1");
 });
 
 test("round-trips strict and dynamic definitions through the owner without semantic drift", async ({ page }) => {
