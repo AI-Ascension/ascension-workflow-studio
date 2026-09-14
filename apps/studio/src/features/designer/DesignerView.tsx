@@ -198,7 +198,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       if (!active) return;
       setOwnerContextCatalog(catalog);
       const fromOwner = contextBindingsFromOwnerCatalog(catalog);
-      if (fromOwner) setContextBindings(fromOwner);
+      if (fromOwner !== undefined) setContextBindings(fromOwner);
     }).catch(() => { if (active) setOwnerContextCatalog(undefined); });
     return () => { active = false; };
   }, [client]);

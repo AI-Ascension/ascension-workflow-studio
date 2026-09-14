@@ -510,7 +510,7 @@ export function contextBindingsFromOwnerCatalog(catalog: ContextOwnerCatalog | u
       const parsed = ContextBindingSchema.safeParse({ context_ref: descriptor.context_ref, node_kinds: descriptor.node_kinds });
       return parsed.success ? [parsed.data] : [];
     });
-  return bindings.length > 0 ? bindings : undefined;
+  return bindings;
 }
 
 export const ValidateResponseSchema = z.object({
