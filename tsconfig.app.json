@@ -22,5 +22,5 @@
       "@studio/client": ["./packages/client/src/index.ts"]
     }
   },
-  "include": ["apps/studio/src", "packages"]
+  "include": ["apps/studio/src", "packages", "tests/fixtures"]
 }

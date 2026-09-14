@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 import {
   CapabilityResponseSchema,
   ContextOwnerCatalogSchema,
@@ -7,6 +9,8 @@ import {
   ContextSnapshotListSchema,
   ContextSnapshotManifestSchema,
   MemoryCapabilitiesSchema,
+  ProviderSessionCapabilitiesSchema,
+  type ProviderSessionCapabilities,
   ProviderSessionListSchema,
   CommandResponseSchema,
   DefinitionRecordSchema,
@@ -348,6 +352,21 @@ export class ContextServiceClient {
 
   public async memoryCapabilities(): Promise<MemoryCapabilities> {
     return decodeWith(MemoryCapabilitiesSchema, await this.json("/v3/memory/capabilities"), "memory capabilities");
+  }
+
+  public async providerSessionCapabilities(contextRunId: string): Promise<ProviderSessionCapabilities> {
+    const response = await this.json(`/v1/runs/${encodeIdentifier(contextRunId)}/provider-sessions/capabilities`);
+    // Console capability projections use the same operation/value envelope as
+    // session reads. This route uses the explicit Context run association.
+    const envelope = z.object({
+      schema: z.literal("ascension.provider-session.api-result.v1"),
+      operation: z.literal("capabilities"),
+      value: ProviderSessionCapabilitiesSchema,
+      effect_class: z.literal("local_metadata_only"),
+      inference_calls: z.literal(0),
+      game_effects: z.literal(0),
+    }).strict();
+    return decodeWith(envelope, response, "provider-session capabilities").value;
   }
 
   public async snapshots(runId: string): Promise<ContextSnapshotList> {

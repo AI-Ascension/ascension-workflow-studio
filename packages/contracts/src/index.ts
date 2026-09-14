@@ -229,19 +229,7 @@ const ContextScopeSchema = z.object({
   agent_id: z.string().min(1).max(128),
 }).strict();
 
-export const MemoryCapabilitiesSchema = z.object({
-  schema: z.literal("ascension.context-memory.capabilities.v1"),
-  product_phase: z.literal(3),
-  scope: ContextScopeSchema,
-  enabled: z.boolean(),
-  supported_operations: z.array(z.string()).max(32),
-  phase2_approval_required: z.boolean(),
-  persistent_provider_sessions: z.boolean(),
-  provider_side_compaction: z.boolean(),
-  hidden_reasoning_access: z.boolean(),
-  direct_game_dispatch: z.boolean(),
-}).passthrough();
-export type MemoryCapabilities = z.infer<typeof MemoryCapabilitiesSchema>;
+export * from "./effective-limits";
 
 export const ProviderSessionListSchema = z.object({
   schema: z.literal("ascension.provider-session.api-result.v1"),

@@ -30,6 +30,7 @@ jobs:
         run: |
           node --test tools/verify-contract-pins.test.mjs
           node tools/verify-contract-pins.mjs
+          node tools/generate-effective-limit-validators.mjs --check
           (cd contracts/recorded-run-candidate && sha256sum --check --strict SHA256SUMS)
       - run: npm run lint
       - run: npm test -- --run --pool=threads --maxWorkers=1
@@ -54,6 +55,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       - run: npm run test:browser -- --project=${{ matrix.browser }}
+      - run: npm run test:effective-limits-browser -- --project=${{ matrix.browser }}
       - name: Upload browser diagnostics
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

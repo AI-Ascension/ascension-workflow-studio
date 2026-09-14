@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-effective-limits/
 coverage/
 playwright-report/
 test-results/

@@ -13,6 +13,7 @@
     "lint": "npm run typecheck",
     "test": "vitest run",
     "test:browser": "playwright test",
+    "test:effective-limits-browser": "playwright test --config playwright.effective-limits.config.ts",
     "test:live-owner-browser": "npm run build && playwright test --config playwright.live-owner.config.ts",
     "test:owner-restart": "node --test tests/process/at-046-owner-restart.test.mjs",
     "test:recorded-browser": "playwright test --config playwright.recorded.config.ts",
