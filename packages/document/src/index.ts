@@ -355,6 +355,40 @@ export function cloneDocument(document: SemanticDocument): SemanticDocument {
   return WorkflowDefinitionSchema.parse(JSON.parse(JSON.stringify(document)) as unknown);
 }
 
+/**
+ * Canonical JSON that retains the `annotations` field. The owner's authoritative
+ * definition digest is computed over the complete definition (including
+ * annotations), so run admission and run pinning must use this rather than the
+ * annotation-insensitive semantic identity.
+ */
+export function canonicalJsonComplete(value: unknown): string {
+  return JSON.stringify(canonicalizeComplete(value));
+}
+
+function canonicalizeComplete(value: unknown): JsonValue {
+  if (value === null || typeof value === "string" || typeof value === "boolean") {
+    return value;
+  }
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new Error("canonical JSON does not permit non-finite numbers");
+    }
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => canonicalizeComplete(item));
+  }
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const output = Object.create(null) as JsonObject;
+    for (const key of Object.keys(record).sort()) {
+      output[key] = canonicalizeComplete(record[key]);
+    }
+    return output;
+  }
+  throw new Error("canonical JSON contains an unsupported value");
+}
+
 export function canonicalize(value: unknown): JsonValue {
   if (value === null || typeof value === "string" || typeof value === "boolean") {
     return value;
@@ -631,6 +665,15 @@ export async function sha256Hex(value: string): Promise<string> {
 
 export async function semanticDigest(document: SemanticDocument): Promise<string> {
   return sha256Hex(canonicalJson(document));
+}
+
+/**
+ * Exact owner definition digest: SHA-256 over the complete canonical definition
+ * including annotations. This is the identity the owner binds to target
+ * admission and pins to a run.
+ */
+export async function definitionIdentityDigest(document: SemanticDocument): Promise<string> {
+  return sha256Hex(canonicalJsonComplete(document));
 }
 
 export async function serializeStudioBundle(bundle: DocumentBundle): Promise<string> {

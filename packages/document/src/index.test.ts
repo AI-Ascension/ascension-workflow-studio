@@ -12,6 +12,7 @@ import {
   alignLayout,
   autoLayout,
   canonicalJson,
+  canonicalJsonComplete,
   copyNodes,
   compatibleNodeOutputs,
   convertNodeKind,
@@ -27,6 +28,7 @@ import {
   pasteNodes,
   reconnectEdge,
   serializeStudioBundle,
+  definitionIdentityDigest,
   semanticDigest,
   sha256Hex,
   validateNodeBindings,
@@ -299,5 +301,17 @@ describe("canonical order and null semantics", () => {
 
   it("distinguishes an explicit null from a missing field", () => {
     expect(canonicalJson({ value: null })).not.toBe(canonicalJson({}));
+  });
+});
+
+describe("owner definition identity digest", () => {
+  it("retains annotations so the digest matches the owner's exact definition identity", async () => {
+    const document = { ...definition(), annotations: { summary: "cloned draft", synthetic: true } } as WorkflowDefinition;
+    const identity = await definitionIdentityDigest(document);
+    const semantic = await semanticDigest(document);
+    expect(identity).not.toBe(semantic);
+    expect(identity).toBe(await sha256Hex(canonicalJsonComplete(document)));
+    expect(canonicalJsonComplete(document)).toContain("annotations");
+    expect(canonicalJson(document)).not.toContain("annotations");
   });
 });

@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ClientMode, OwnerApiClient, RunSubmissionOptions } from "@studio/client";
 import { CapabilityGateError, ClientError, ContextServiceClient, FixtureClient, validateTargetConfiguration } from "@studio/client";
 import { OwnerApiClient as LiveOwnerApiClient } from "@studio/client";
-import { cloneDocument, semanticDigest, type ApprovedLinkMapping } from "@studio/document";
+import { cloneDocument, definitionIdentityDigest, type ApprovedLinkMapping } from "@studio/document";
 import type { DefinitionRecord, WorkflowDefinition } from "@studio/contracts";
 
 import { StatusBadge } from "../components/StatusBadge";
@@ -127,7 +127,7 @@ export function App(): JSX.Element {
     setView("runs");
     void (async () => {
       try {
-        const [catalog, digest] = await Promise.all([client.listTargets(), semanticDigest(document)]);
+        const [catalog, digest] = await Promise.all([client.listTargets(), definitionIdentityDigest(document)]);
         if (pendingRunRef.current?.requestId !== requestId) return;
         const hasAvailable = catalog.targets.some((candidate) => candidate.availability === "available");
         updatePendingRun((candidate) => ({

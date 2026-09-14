@@ -63,7 +63,7 @@ import {
   type ValidateResponse,
   type WorkflowDefinition,
 } from "@studio/contracts";
-import { canonicalJson, cloneDocument, diffDocuments, semanticDigest, sha256Hex, validateNodeBindings } from "@studio/document";
+import { canonicalJson, cloneDocument, definitionIdentityDigest, diffDocuments, semanticDigest, sha256Hex, validateNodeBindings } from "@studio/document";
 
 export type ClientMode = "fixture" | "live";
 
@@ -542,7 +542,7 @@ export class OwnerApiClient implements StudioClient {
         assertEqualBindingField(`target.${field}`, admission.target[field], reviewedTarget[field]);
       }
     }
-    const definitionDigest = await semanticDigest(parsedDefinition);
+    const definitionDigest = await definitionIdentityDigest(parsedDefinition);
     assertEqualBindingField("workflow_definition_digest", admission.workflow_definition_digest, definitionDigest);
     assertEqualBindingField("target.workflow_revision", admission.target.workflow_revision, parsedDefinition.version);
     assertEqualBindingField("target.game_profile", admission.target.game_profile, parsedDefinition.game_profile);
@@ -1033,7 +1033,7 @@ export class FixtureClient implements StudioClient {
         assertEqualBindingField(`target.${field}`, admission.target[field], reviewedTarget[field]);
       }
     }
-    const digest = await semanticDigest(parsedDefinition);
+    const digest = await definitionIdentityDigest(parsedDefinition);
     assertEqualBindingField("workflow_definition_digest", admission.workflow_definition_digest, digest);
     assertEqualBindingField("target.workflow_revision", admission.target.workflow_revision, parsedDefinition.version);
     assertEqualBindingField("target.game_profile", admission.target.game_profile, parsedDefinition.game_profile);
