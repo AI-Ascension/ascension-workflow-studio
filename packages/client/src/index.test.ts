@@ -457,7 +457,7 @@ describe("owner context binding catalog", () => {
     expect(bindings?.length).toBe(10);
     expect(bindings?.some((binding) => binding.context_ref === "context.synthetic.v1")).toBe(true);
     const denied = { ...catalog, descriptors: catalog.descriptors.map((descriptor) => ({ ...descriptor, state: "denied" as const })) };
-    expect(contextBindingsFromOwnerCatalog(denied)).toBeUndefined();
+    expect(contextBindingsFromOwnerCatalog(denied)).toEqual([]);
     expect(contextBindingsFromOwnerCatalog(undefined)).toBeUndefined();
   });
 
