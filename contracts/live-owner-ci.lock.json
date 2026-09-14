@@ -1,7 +1,7 @@
 {
   "repository": "AI-Ascension/sts2-harness",
-  "revision": "5863c629ead8de50ac4ebe4f3888095223dbf5be",
-  "scope": "Synthetic authenticated live-owner browser CI, including additive Studio authoring routes",
+  "revision": "16d000821ce43e4f215b0a469a9f5ea20589a8f0",
+  "scope": "Synthetic authenticated live-owner browser CI, including additive Studio authoring routes and the scoped synthetic run-target catalog/preflight contract",
   "baseline_admission": "contracts/accepted/phase1-integration.lock.json",
   "note": "The Phase 1 admission lock preserves historical contract/source digests. This separate pin identifies the newer owner actually tested by CI; neither record claims game or provider compatibility."
 }

@@ -12,6 +12,7 @@ import {
   alignLayout,
   autoLayout,
   canonicalJson,
+  canonicalJsonComplete,
   copyNodes,
   compatibleNodeOutputs,
   convertNodeKind,
@@ -27,6 +28,7 @@ import {
   pasteNodes,
   reconnectEdge,
   serializeStudioBundle,
+  definitionIdentityDigest,
   semanticDigest,
   sha256Hex,
   validateNodeBindings,
@@ -299,5 +301,31 @@ describe("canonical order and null semantics", () => {
 
   it("distinguishes an explicit null from a missing field", () => {
     expect(canonicalJson({ value: null })).not.toBe(canonicalJson({}));
+  });
+});
+
+describe("owner definition identity digest", () => {
+  it("retains annotations so the digest matches the owner's exact definition identity", async () => {
+    const document = { ...definition(), annotations: { summary: "cloned draft", synthetic: true } } as WorkflowDefinition;
+    const identity = await definitionIdentityDigest(document);
+    const semantic = await semanticDigest(document);
+    expect(identity).not.toBe(semantic);
+    expect(identity).toBe(await sha256Hex(canonicalJsonComplete(document)));
+    expect(canonicalJsonComplete(document)).toContain("annotations");
+    expect(canonicalJson(document)).not.toContain("annotations");
+  });
+
+  it("orders integer-like keys lexically to match the owner's canonical JSON", async () => {
+    const document = { ...definition(), annotations: { "2": "second", "10": "tenth" } } as WorkflowDefinition;
+    const json = canonicalJsonComplete(document);
+    expect(json.indexOf('"10"')).toBeGreaterThanOrEqual(0);
+    expect(json.indexOf('"10"')).toBeLessThan(json.indexOf('"2"'));
+  });
+
+  it("matches the owner's exact digest for an accepted workflow vector", async () => {
+    const raw = JSON.parse(readFileSync("contracts/accepted/phase1/workflows/combat.dynamic.json", "utf8")) as WorkflowDefinition;
+    // Independently produced by `sts2-workflow inspect` (SyntheticDefinitionPort raw_digest)
+    // over the same file, so this pins producer/consumer canonical agreement.
+    expect(await definitionIdentityDigest(raw)).toBe("0724ff770512baa7d352ec431db1c55db92bf0e1b23f448fc208561ec187843e");
   });
 });

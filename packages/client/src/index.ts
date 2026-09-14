@@ -24,6 +24,11 @@ import {
   StudioOwnerDefinitionsResponseSchema,
   StudioOwnerDraftSchema,
   StudioOwnerPublishResponseSchema,
+  TargetAdmissionBindingSchema,
+  TargetAdmissionRequestSchema,
+  TargetCatalogResponseSchema,
+  TargetPreflightResponseSchema,
+  RunTargetConfigurationSchema,
   ValidateResponseSchema,
   WorkflowDefinitionSchema,
   decodeWith,
@@ -48,11 +53,17 @@ import {
   type RunSnapshot,
   type RunSubmissionResponse,
   type StatusResponse,
+  type TargetAdmissionBinding,
+  type TargetAdmissionRequest,
+  type TargetCatalogResponse,
+  type TargetDescriptor,
+  type TargetPreflightResponse,
+  type RunTargetConfiguration,
   type JsonObject,
   type ValidateResponse,
   type WorkflowDefinition,
 } from "@studio/contracts";
-import { canonicalJson, cloneDocument, diffDocuments, semanticDigest, validateNodeBindings } from "@studio/document";
+import { canonicalJson, cloneDocument, definitionIdentityDigest, diffDocuments, semanticDigest, sha256Hex, validateNodeBindings } from "@studio/document";
 
 export type ClientMode = "fixture" | "live";
 
@@ -70,6 +81,155 @@ export interface PublishResult {
   outcome: "published" | "already_published" | "conflict";
   definition?: DefinitionRecord;
   draft?: DraftRecord;
+}
+
+export interface RunSubmissionOptions {
+  /** Stable identity reused for preflight, submit, and explicit retry. */
+  requestId?: string;
+  /** Exact owner-issued binding returned by target preflight. */
+  admission?: TargetAdmissionBinding;
+  /** Exact configuration reviewed by the operator before preflight. */
+  target?: RunTargetConfiguration;
+}
+
+const FIXTURE_TARGET_CAPABILITIES = [
+  "studio.fixture.v1",
+  "observe.fair-play.v1",
+  "observe.map.v1",
+  "actions.catalog.v1",
+  "actions.settlement.v1",
+  "authority.generation-fence.v1",
+  "actions.setup.v1",
+  "actions.selection.v1",
+  "actions.combat.v1",
+  "actions.campaign.v1",
+  "actions.map.v1",
+  "actions.reward.v1",
+  "actions.shop.v1",
+  "actions.event.v1",
+  "actions.rest.v1",
+  "operations.reconcile.v1",
+  "terminal.observation.v1",
+  "analysis.combat.v1",
+] as const;
+
+export function fixtureTargetCatalog(): TargetCatalogResponse {
+  return TargetCatalogResponseSchema.parse({
+    schema_version: "ascension.workflow-targets/v1",
+    catalog_revision: "fixture-target-catalog.v1",
+    targets: [{
+      instance_id: "studio-inspection",
+      execution_profiles: ["synthetic"],
+      execution_mode: "synthetic",
+      compatibility_revision: "fixture.compatibility.v1",
+      capability_revision: "fixture.capabilities.v1",
+      availability: "available",
+      supported_operations: ["workflow:run", "workflow:live"],
+      capabilities: [...FIXTURE_TARGET_CAPABILITIES],
+      game_profiles: ["sts2-synthetic-v1"],
+      save_profiles: ["save.synthetic.default"],
+      inference_profiles: ["inference.synthetic.default"],
+    }, {
+      instance_id: "studio-inspection-secondary",
+      execution_profiles: ["synthetic.secondary"],
+      execution_mode: "synthetic",
+      compatibility_revision: "fixture.compatibility.v2",
+      capability_revision: "fixture.capabilities.v2",
+      availability: "available",
+      supported_operations: ["workflow:run"],
+      capabilities: [...FIXTURE_TARGET_CAPABILITIES],
+      game_profiles: ["sts2-synthetic-v1"],
+      save_profiles: [],
+      inference_profiles: [],
+    }],
+  });
+}
+
+const TARGET_CONFIGURATION_FIELDS: (keyof RunTargetConfiguration)[] = [
+  "instance_id",
+  "execution_profile",
+  "execution_mode",
+  "workflow_revision",
+  "compatibility_revision",
+  "capability_revision",
+  "game_profile",
+  "save_profile",
+  "inference_profile",
+  "context_capability",
+  "provider_capability",
+];
+
+function cloneJson<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function bindingMismatch(path: string, detail: string): never {
+  throw new ClientError(`Target admission binding ${path} ${detail}`, "target_binding_mismatch", 409);
+}
+
+function assertEqualBindingField(path: string, actual: unknown, expected: unknown): void {
+  if (actual !== expected) {
+    bindingMismatch(path, `does not match the reviewed value (${String(expected)}).`);
+  }
+}
+
+/**
+ * Check that an owner-issued admission is the exact response to the request
+ * that the Studio reviewed. Every target/profile field is compared, including
+ * nullable optional profile and capability fields.
+ */
+export function validateTargetAdmissionBinding(
+  admission: TargetAdmissionBinding,
+  request: TargetAdmissionRequest,
+): void {
+  assertEqualBindingField("schema_version", admission.schema_version, request.schema_version);
+  assertEqualBindingField("request_id", admission.request_id, request.request_id);
+  assertEqualBindingField("workflow_definition_digest", admission.workflow_definition_digest, request.workflow_definition_digest);
+  for (const field of TARGET_CONFIGURATION_FIELDS) {
+    assertEqualBindingField(`target.${field}`, admission.target[field], request.target[field]);
+  }
+}
+
+/**
+ * Validate a selected target descriptor against every exact target/profile
+ * binding. This is a local preflight guard only; the owner remains the
+ * authority and must perform the same checks.
+ */
+export function validateTargetConfiguration(
+  descriptor: TargetDescriptor,
+  target: RunTargetConfiguration,
+): void {
+  if (descriptor.availability !== "available") {
+    throw new CapabilityGateError(`Target ${descriptor.instance_id} is ${descriptor.availability}.`, "target_unavailable");
+  }
+  assertEqualBindingField("target.instance_id", target.instance_id, descriptor.instance_id);
+  if (!descriptor.execution_profiles.includes(target.execution_profile)) {
+    bindingMismatch("target.execution_profile", `is not supported by ${descriptor.instance_id}.`);
+  }
+  assertEqualBindingField("target.execution_mode", target.execution_mode, descriptor.execution_mode);
+  if (target.execution_mode === "live" && !descriptor.supported_operations.includes("workflow:live")) {
+    throw new CapabilityGateError(
+      `Target ${descriptor.instance_id} does not advertise workflow:live.`,
+      "target_operation_unavailable",
+    );
+  }
+  assertEqualBindingField("target.compatibility_revision", target.compatibility_revision, descriptor.compatibility_revision);
+  assertEqualBindingField("target.capability_revision", target.capability_revision, descriptor.capability_revision);
+  if (!descriptor.game_profiles.includes(target.game_profile)) {
+    bindingMismatch("target.game_profile", `is not supported by ${descriptor.instance_id}.`);
+  }
+  if (target.save_profile !== null && !descriptor.save_profiles.includes(target.save_profile)) {
+    bindingMismatch("target.save_profile", `is not supported by ${descriptor.instance_id}.`);
+  }
+  if (target.inference_profile !== null && !descriptor.inference_profiles.includes(target.inference_profile)) {
+    bindingMismatch("target.inference_profile", `is not supported by ${descriptor.instance_id}.`);
+  }
+  if (target.context_capability !== null && !descriptor.capabilities.includes(target.context_capability)) {
+    bindingMismatch("target.context_capability", `is not advertised by ${descriptor.instance_id}.`);
+  }
+  if (target.provider_capability !== null && !descriptor.capabilities.includes(target.provider_capability)) {
+    bindingMismatch("target.provider_capability", `is not advertised by ${descriptor.instance_id}.`);
+  }
 }
 
 export interface StudioClient {
@@ -90,7 +250,9 @@ export interface StudioClient {
     semantic_change: boolean;
     changed_paths: string[];
   }>;
-  submitRun(definition: WorkflowDefinition, instanceId: string, profile: string): Promise<RunSubmissionResponse>;
+  listTargets(): Promise<TargetCatalogResponse>;
+  preflightTarget(request: TargetAdmissionRequest): Promise<TargetPreflightResponse>;
+  submitRun(definition: WorkflowDefinition, instanceId: string, profile: string, options?: RunSubmissionOptions): Promise<RunSubmissionResponse>;
   status(runId: string): Promise<StatusResponse>;
   events(runId: string, afterSequence: number, limit?: number): Promise<EventPage>;
   contextAssociation(runId: string): Promise<ContextAssociation>;
@@ -188,6 +350,8 @@ export class OwnerApiClient implements StudioClient {
   private readonly fetcher: typeof fetch;
   private token: string | undefined;
   private actorScope: string | undefined;
+  /** Requests are retained so a lost response can be retried verbatim. */
+  private readonly targetAdmissionRequests = new Map<string, TargetAdmissionRequest>();
 
   public constructor(options: OwnerApiClientOptions = {}) {
     this.baseUrl = normalizeRelativeBase(options.baseUrl ?? "/v1");
@@ -334,16 +498,70 @@ export class OwnerApiClient implements StudioClient {
     return decodeWith(DiffResponseSchema, response, "definition diff");
   }
 
-  public async submitRun(definition: WorkflowDefinition, instanceId: string, profile: string): Promise<RunSubmissionResponse> {
+  public async listTargets(): Promise<TargetCatalogResponse> {
+    const response = await this.request("/workflow-targets", { method: "GET" });
+    return decodeWith(TargetCatalogResponseSchema, response, "workflow target catalog");
+  }
+
+  public async preflightTarget(request: TargetAdmissionRequest): Promise<TargetPreflightResponse> {
+    const body = TargetAdmissionRequestSchema.parse(request);
+    const response = await this.request("/workflow-targets/preflight", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    const result = decodeWith(TargetPreflightResponseSchema, response, "workflow target preflight");
+    validateTargetAdmissionBinding(result.admission, body);
+    this.targetAdmissionRequests.set(body.request_id, cloneJson(body));
+    return result;
+  }
+
+  public async submitRun(
+    definition: WorkflowDefinition,
+    instanceId: string,
+    profile: string,
+    options: RunSubmissionOptions = {},
+  ): Promise<RunSubmissionResponse> {
+    const admission = options.admission ? TargetAdmissionBindingSchema.parse(options.admission) : undefined;
+    const requestId = options.requestId ?? admission?.request_id ?? `studio.${cryptoRandomId()}`;
+    const parsedDefinition = WorkflowDefinitionSchema.parse(definition);
+    if (!admission) {
+      throw new CapabilityGateError(
+        "Workflow runs require an owner target preflight before submission",
+        "target_admission_required",
+      );
+    }
+    const reviewedRequest = this.targetAdmissionRequests.get(requestId);
+    if (!reviewedRequest) {
+      throw new ClientError(
+        "Run submission requires the target admission request retained by this Studio session",
+        "target_admission_missing",
+        409,
+      );
+    }
+    validateTargetAdmissionBinding(admission, reviewedRequest);
+    assertEqualBindingField("request_id", requestId, admission.request_id);
+    assertEqualBindingField("target.instance_id", instanceId, admission.target.instance_id);
+    assertEqualBindingField("target.execution_profile", profile, admission.target.execution_profile);
+    if (options.target) {
+      const reviewedTarget = RunTargetConfigurationSchema.parse(options.target);
+      for (const field of TARGET_CONFIGURATION_FIELDS) {
+        assertEqualBindingField(`target.${field}`, admission.target[field], reviewedTarget[field]);
+      }
+    }
+    const definitionDigest = await definitionIdentityDigest(parsedDefinition);
+    assertEqualBindingField("workflow_definition_digest", admission.workflow_definition_digest, definitionDigest);
+    assertEqualBindingField("target.workflow_revision", admission.target.workflow_revision, parsedDefinition.version);
+    assertEqualBindingField("target.game_profile", admission.target.game_profile, parsedDefinition.game_profile);
     const response = await this.request("/workflow-runs", {
       method: "POST",
       body: JSON.stringify({
         schema_version: "ascension.management/v1",
-        request_id: `studio.${cryptoRandomId()}`,
-        definition,
+        request_id: requestId,
+        definition: parsedDefinition,
         artifact_id: null,
         instance_id: instanceId,
         profile,
+        admission,
       }),
     });
     return decodeWith(RunSubmissionResponseSchema, response, "run submission");
@@ -454,6 +672,10 @@ function cryptoRandomId(): string {
   const bytes = new Uint8Array(12);
   globalThis.crypto?.getRandomValues(bytes);
   return Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+function isLiveExecutionProfile(profile: string): boolean {
+  return profile === "live" || profile.startsWith("live.");
 }
 
 function ownerDefinitionToRecord(owner: import("@studio/contracts").StudioOwnerDefinition): DefinitionRecord {
@@ -596,11 +818,20 @@ export function buildSafeCommand(runId: string, expectedRevision: number, kind: 
 export class FixtureClient implements StudioClient {
   public readonly mode = "fixture" as const;
   private readonly definitions: DefinitionRecord[];
+  private readonly targetCatalog: TargetCatalogResponse;
   private readonly drafts = new Map<string, DraftRecord>();
   private readonly runs = new Map<string, { definition: WorkflowDefinition; status: StatusResponse; events: RunEvent[] }>();
+  private readonly targetAdmissionRequests = new Map<string, TargetAdmissionRequest>();
+  private readonly submittedRuns = new Map<string, { fingerprint: string; response: RunSubmissionResponse }>();
+  private nextRunNumber = 1;
 
-  public constructor(definitions: DefinitionRecord[]) {
+  public constructor(definitions: DefinitionRecord[], options: { targets?: TargetDescriptor[] } = {}) {
     this.definitions = definitions.map((record) => DefinitionRecordSchema.parse(record));
+    const baseCatalog = fixtureTargetCatalog();
+    this.targetCatalog = TargetCatalogResponseSchema.parse({
+      ...baseCatalog,
+      targets: options.targets ?? baseCatalog.targets,
+    });
   }
 
   public principal(): string {
@@ -667,6 +898,38 @@ export class FixtureClient implements StudioClient {
     });
     this.definitions.push(definition);
     return { outcome: "published", definition: DefinitionRecordSchema.parse(JSON.parse(JSON.stringify(definition)) as unknown) };
+  }
+
+  public async listTargets(): Promise<TargetCatalogResponse> {
+    return TargetCatalogResponseSchema.parse(cloneJson(this.targetCatalog));
+  }
+
+  public async preflightTarget(request: TargetAdmissionRequest): Promise<TargetPreflightResponse> {
+    const body = TargetAdmissionRequestSchema.parse(request);
+    const catalog = this.targetCatalog;
+    const prior = this.targetAdmissionRequests.get(body.request_id);
+    if (prior && canonicalJson(prior) !== canonicalJson(body)) {
+      throw new ClientError("The target request ID is already bound to a different configuration", "target_request_conflict", 409);
+    }
+    const descriptor = catalog.targets.find((target) => target.instance_id === body.target.instance_id);
+    if (!descriptor) {
+      throw new CapabilityGateError("The selected fixture target is unavailable.", "target_unavailable");
+    }
+    validateTargetConfiguration(descriptor, body.target);
+    const descriptorDigest = await sha256Hex(canonicalJson(descriptor as unknown as JsonObject));
+    const admission = TargetAdmissionBindingSchema.parse({
+      schema_version: "ascension.workflow-admission/v1",
+      request_id: body.request_id,
+      workflow_definition_digest: body.workflow_definition_digest,
+      target: body.target,
+      descriptor_digest: descriptorDigest,
+      catalog_revision: catalog.catalog_revision,
+    });
+    this.targetAdmissionRequests.set(body.request_id, cloneJson(body));
+    return TargetPreflightResponseSchema.parse({
+      schema_version: "ascension.workflow-admission/v1",
+      admission,
+    });
   }
 
   public async health(): Promise<{ status: string }> {
@@ -743,10 +1006,74 @@ export class FixtureClient implements StudioClient {
     };
   }
 
-  public async submitRun(definition: WorkflowDefinition, _instanceId: string, _profile: string): Promise<RunSubmissionResponse> {
-    const digest = await semanticDigest(definition);
-    const runId = `run.fixture.${this.runs.size + 1}`;
-    const snapshot = makeFixtureSnapshot(runId, digest, "running", 1);
+  public async submitRun(
+    definition: WorkflowDefinition,
+    instanceId: string,
+    profile: string,
+    options: RunSubmissionOptions = {},
+  ): Promise<RunSubmissionResponse> {
+    const parsedDefinition = WorkflowDefinitionSchema.parse(definition);
+    const admission = options.admission ? TargetAdmissionBindingSchema.parse(options.admission) : undefined;
+    if (!admission) {
+      throw new CapabilityGateError(
+        "Workflow runs require an owner target preflight before submission",
+        "target_admission_required",
+      );
+    }
+    const requestId = options.requestId ?? admission.request_id;
+    const reviewedRequest = this.targetAdmissionRequests.get(requestId);
+    if (!reviewedRequest) {
+      throw new ClientError(
+        "Run submission requires a fixture target admission retained by this session",
+        "target_admission_missing",
+        409,
+      );
+    }
+    validateTargetAdmissionBinding(admission, reviewedRequest);
+    assertEqualBindingField("request_id", requestId, admission.request_id);
+    assertEqualBindingField("target.instance_id", instanceId, admission.target.instance_id);
+    assertEqualBindingField("target.execution_profile", profile, admission.target.execution_profile);
+    if (options.target) {
+      const reviewedTarget = RunTargetConfigurationSchema.parse(options.target);
+      for (const field of TARGET_CONFIGURATION_FIELDS) {
+        assertEqualBindingField(`target.${field}`, admission.target[field], reviewedTarget[field]);
+      }
+    }
+    const digest = await definitionIdentityDigest(parsedDefinition);
+    assertEqualBindingField("workflow_definition_digest", admission.workflow_definition_digest, digest);
+    assertEqualBindingField("target.workflow_revision", admission.target.workflow_revision, parsedDefinition.version);
+    assertEqualBindingField("target.game_profile", admission.target.game_profile, parsedDefinition.game_profile);
+    const descriptor = this.targetCatalog.targets.find((target) => target.instance_id === admission.target.instance_id);
+    if (!descriptor) {
+      throw new CapabilityGateError("The selected fixture target is unavailable.", "target_unavailable");
+    }
+    validateTargetConfiguration(descriptor, admission.target);
+    const descriptorDigest = await sha256Hex(canonicalJson(descriptor as unknown as JsonObject));
+    assertEqualBindingField("descriptor_digest", admission.descriptor_digest, descriptorDigest);
+    assertEqualBindingField("catalog_revision", admission.catalog_revision, this.targetCatalog.catalog_revision);
+    const missingCapabilities = parsedDefinition.capabilities.required.filter((capability) => !descriptor.capabilities.includes(capability));
+    if (missingCapabilities.length > 0) {
+      throw new CapabilityGateError(
+        `Fixture target does not advertise required capabilities: ${missingCapabilities.join(", ")}`,
+        "target_capability_unavailable",
+      );
+    }
+    const fingerprint = canonicalJson({
+      workflow_definition_digest: digest,
+      target: admission.target,
+      descriptor_digest: admission.descriptor_digest,
+      catalog_revision: admission.catalog_revision,
+    });
+    const existing = this.submittedRuns.get(requestId);
+    if (existing) {
+      if (existing.fingerprint !== fingerprint) {
+        throw new ClientError("The run request ID is already bound to a different submission", "run_request_conflict", 409);
+      }
+      return cloneJson(existing.response);
+    }
+    const runId = `run.fixture.${this.nextRunNumber}`;
+    this.nextRunNumber += 1;
+    const snapshot = makeFixtureSnapshot(runId, digest, "running", 1, admission);
     const event = makeFixtureEvent(runId, digest, 1, "run_started", snapshot.cursor.node_execution_id);
     const status: StatusResponse = {
       schema_version: "ascension.workflow-status/v1",
@@ -757,8 +1084,10 @@ export class FixtureClient implements StudioClient {
       recovery_admission: { kind: "no_pending_effects" },
       last_progress_sequence: 1,
     };
-    this.runs.set(runId, { definition: cloneDocument(definition), status, events: [event] });
-    return { schema_version: "ascension.workflow-run/v1", workflow_run_id: runId, run_revision: 1, status: "running" };
+    this.runs.set(runId, { definition: cloneDocument(parsedDefinition), status, events: [event] });
+    const response = { schema_version: "ascension.workflow-run/v1", workflow_run_id: runId, run_revision: 1, status: "running" as const };
+    this.submittedRuns.set(requestId, { fingerprint, response });
+    return cloneJson(response);
   }
 
   public async status(runId: string): Promise<StatusResponse> {
@@ -868,7 +1197,13 @@ export class FixtureClient implements StudioClient {
   }
 }
 
-function makeFixtureSnapshot(runId: string, digest: string, status: RunSnapshot["status"], revision: number): RunSnapshot {
+function makeFixtureSnapshot(
+  runId: string,
+  digest: string,
+  status: RunSnapshot["status"],
+  revision: number,
+  admission?: TargetAdmissionBinding,
+): RunSnapshot {
   return {
     schema_version: "ascension.workflow-run/v1",
     workflow_run_id: runId,
@@ -880,6 +1215,7 @@ function makeFixtureSnapshot(runId: string, digest: string, status: RunSnapshot[
     pending_operation: null,
     budget: { provider_calls_consumed: 0, provider_calls_reserved: 0, node_steps_consumed: 1, replans_consumed: 0 },
     cleanup: "not_started",
+    ...(admission ? { admission: cloneJson(admission) } : {}),
   };
 }
 
