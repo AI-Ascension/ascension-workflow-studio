@@ -93,3 +93,17 @@ describe("unsupported definition isolation", () => {
     expect(screen.getByRole("textbox", { name: "Archived unsupported workflow definition JSON" })).toHaveValue(archived);
   });
 });
+
+describe("owner context binding catalog", () => {
+  it("renders the owner-disclosed context bindings rather than inferring them", async () => {
+    const client = new FixtureClient(fixtureDefinitions);
+    const definition = fixtureDefinitions[0];
+    render(<DesignerView client={client} catalog={fixtureDefinitions} definition={definition}
+      initialDocument={definition.definition} mode="fixture" onBack={vi.fn()}
+      onRun={vi.fn()} onRawTextChange={vi.fn()} />);
+    const catalog = await screen.findByTestId("owner-context-catalog");
+    expect(catalog).toHaveTextContent("context.synthetic.v1");
+    expect(catalog).toHaveTextContent("sts2.combat.context.v1");
+    expect(catalog).toHaveTextContent("metadata-only");
+  });
+});

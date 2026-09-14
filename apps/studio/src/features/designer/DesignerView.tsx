@@ -23,8 +23,10 @@ import {
   JsonObjectSchema,
   LayoutSidecarSchema,
   contextBindingsFromCapabilities,
+  contextBindingsFromOwnerCatalog,
   type DefinitionRecord,
   type ContextBinding,
+  type ContextOwnerCatalog,
   type DraftRecord,
   type JsonObject,
   type JsonValue,
@@ -152,6 +154,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const [validationState, setValidationState] = useState<"idle" | "running" | "valid" | "invalid" | "error">("idle");
   const [validationMessage, setValidationMessage] = useState("");
   const [contextBindings, setContextBindings] = useState<ContextBinding[] | undefined>();
+  const [ownerContextCatalog, setOwnerContextCatalog] = useState<ContextOwnerCatalog | undefined>();
   const [draft, setDraft] = useState<DraftState>({ revision: 0, etag: "fixture-0", state: "saved", message: "Draft changes are local until autosave completes." });
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [saveRetry, setSaveRetry] = useState(0);
@@ -189,8 +192,14 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   useEffect(() => {
     let active = true;
     void client.capabilities().then((response) => {
-      if (active) setContextBindings(contextBindingsFromCapabilities(response.capabilities));
-    }).catch(() => { if (active) setContextBindings(undefined); });
+      if (active) setContextBindings((current) => current ?? contextBindingsFromCapabilities(response.capabilities));
+    }).catch(() => {});
+    void client.listContextBindings().then((catalog) => {
+      if (!active) return;
+      setOwnerContextCatalog(catalog);
+      const fromOwner = contextBindingsFromOwnerCatalog(catalog);
+      if (fromOwner) setContextBindings(fromOwner);
+    }).catch(() => { if (active) setOwnerContextCatalog(undefined); });
     return () => { active = false; };
   }, [client]);
 
@@ -1002,6 +1011,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     <section className="panel-card" aria-label="Context reference catalog">
       <div className="panel-title"><div><p className="eyebrow">Authoring context references</p><h2>Owner binding catalog</h2></div><StatusBadge tone={contextBindings ? "success" : "muted"}>{contextBindings ? "available" : "unavailable"}</StatusBadge></div>
       {contextBindings ? <p className="muted">{contextBindings.map((binding) => `${binding.context_ref} (${binding.node_kinds.join(", ")})`).join(" · ") || "No compatible references were disclosed."}</p> : <p className="muted">The owner has not disclosed a context-binding catalog. Validation remains authoritative; this editor will not infer bindings.</p>}
+      {ownerContextCatalog ? <p className="muted" data-testid="owner-context-catalog">{ownerContextCatalog.descriptors.map((descriptor) => `${descriptor.context_ref} · ${descriptor.state}${descriptor.grants.content_read ? " · content" : " · metadata-only"}`).join(" · ")}</p> : null}
     </section>
     <RecoveryPanel enabled={recoveryEnabled} principal={principal} count={principalRecordCount} recoverable={recoverable} notice={recoveryNotice} onToggle={() => setRecoveryEnabled((current) => !current)} onRecover={recoverLocalCandidate} onExport={exportRecovery} onClear={clearRecovery} />
     {draft.state === "conflict" ? <Notice tone="danger" title="Draft conflict">The server revision changed while this editor was saving. Local edits are preserved until an explicit resolution.</Notice> : null}

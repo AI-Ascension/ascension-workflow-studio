@@ -1,5 +1,6 @@
 import {
   CapabilityResponseSchema,
+  ContextOwnerCatalogSchema,
   ContextAssociationSchema,
   ContextComparisonSchema,
   ContextEventPageSchema,
@@ -33,6 +34,7 @@ import {
   WorkflowDefinitionSchema,
   decodeWith,
   type CapabilityResponse,
+  type ContextOwnerCatalog,
   type ContextAssociation,
   type ContextComparison,
   type ContextEventPage,
@@ -145,6 +147,46 @@ export function fixtureTargetCatalog(): TargetCatalogResponse {
   });
 }
 
+const FIXTURE_CONTEXT_BINDINGS: Array<[string, Array<"analyze" | "decide">]> = [
+  ["context.synthetic.v1", ["analyze", "decide"]],
+  ["sts2.campaign.context.v1", ["decide"]],
+  ["sts2.combat.context.v1", ["decide"]],
+  ["sts2.event.context.v1", ["decide"]],
+  ["sts2.map.context.v1", ["decide"]],
+  ["sts2.rest.context.v1", ["decide"]],
+  ["sts2.reward.context.v1", ["decide"]],
+  ["sts2.selection.context.v1", ["decide"]],
+  ["sts2.setup.context.v1", ["decide"]],
+  ["sts2.shop.context.v1", ["decide"]],
+];
+
+export async function fixtureContextOwnerCatalog(): Promise<ContextOwnerCatalog> {
+  const owner_id = "fixture.context-owner";
+  const owner_version = "1.0.0";
+  const descriptors = await Promise.all(FIXTURE_CONTEXT_BINDINGS.map(async ([context_ref, node_kinds]) => ({
+    schema_version: "ascension.context-control.owner-binding.v1" as const,
+    binding_id: `fixture.${context_ref}.binding.v1`,
+    version: 1,
+    digest: await sha256Hex(canonicalJson({ context_ref, node_kinds })),
+    context_ref,
+    node_kinds,
+    sources: [],
+    operations: [],
+    effective_limits: { max_items: 256, max_notes: 64, max_context_bytes: 65_536, max_objective_bytes: 4_096, max_control_events: 4_096 },
+    continuity: { survives_controller_restart: false, receipt_recovery: false, provider_session_continuity: false },
+    grants: { metadata_read: true, content_read: false, edit: false, control: false },
+    state: "available" as const,
+  })));
+  descriptors.sort((left, right) => left.context_ref.localeCompare(right.context_ref));
+  return ContextOwnerCatalogSchema.parse({
+    schema_version: "ascension.context-control.owner-catalog.v1",
+    owner_id,
+    owner_version,
+    catalog_digest: await sha256Hex(canonicalJson({ owner_id, owner_version, descriptors })),
+    descriptors,
+  });
+}
+
 const TARGET_CONFIGURATION_FIELDS: (keyof RunTargetConfiguration)[] = [
   "instance_id",
   "execution_profile",
@@ -242,6 +284,7 @@ export interface StudioClient {
   publishDraft(draftId: string, expectedRevision: number, etag: string, definitionDigest: string, clientMutationId?: string): Promise<PublishResult>;
   health(): Promise<{ status: string }>;
   capabilities(): Promise<CapabilityResponse>;
+  listContextBindings(): Promise<ContextOwnerCatalog>;
   validate(definition: WorkflowDefinition): Promise<ValidateResponse>;
   inspect(definition: WorkflowDefinition): Promise<InspectResponse>;
   diff(oldDefinition: WorkflowDefinition, newDefinition: WorkflowDefinition): Promise<{
@@ -446,6 +489,11 @@ export class OwnerApiClient implements StudioClient {
   public async capabilities(): Promise<CapabilityResponse> {
     const response = await this.request("/capabilities", { method: "GET" });
     return decodeWith(CapabilityResponseSchema, response, "capabilities");
+  }
+
+  public async listContextBindings(): Promise<ContextOwnerCatalog> {
+    const response = await this.request("/context-bindings", { method: "GET" });
+    return decodeWith(ContextOwnerCatalogSchema, response, "context binding catalog");
   }
 
   public async validate(definition: WorkflowDefinition): Promise<ValidateResponse> {
@@ -946,6 +994,10 @@ export class FixtureClient implements StudioClient {
         ],
       },
     };
+  }
+
+  public async listContextBindings(): Promise<ContextOwnerCatalog> {
+    return fixtureContextOwnerCatalog();
   }
 
   public async validate(definition: WorkflowDefinition): Promise<ValidateResponse> {
