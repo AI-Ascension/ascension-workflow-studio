@@ -194,7 +194,7 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
     const response = await fetch("/v1/studio/drafts/draft.sts2.setup.strict", { headers: { Authorization: "Bearer studio-live-ci-token" } });
     const draft = await response.json() as { document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> } };
     return draft.document.graphs.find((graph) => graph.id === "main")?.nodes.find((node) => node.id === "decide")?.config.context_ref;
-  })).toBe("context.synthetic.v1", { timeout: 15_000 });
+  }), { timeout: 15_000 }).toBe("context.synthetic.v1");
 });
 
 test("round-trips strict and dynamic definitions through the owner without semantic drift", async ({ page }) => {
