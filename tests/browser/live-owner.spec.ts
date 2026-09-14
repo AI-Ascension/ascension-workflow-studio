@@ -182,7 +182,19 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   await page.getByRole("button", { name: /Validate/ }).click();
   const diagnostics = page.locator(".diagnostics-panel");
   await expect(diagnostics).toContainText("context.removed.v1");
+  await expect(diagnostics).toContainText("$.graphs.main.nodes.decide.config.context_ref");
   await expect(diagnostics).toContainText(/not available|incompatible/i);
+
+  // Restore a valid reference and prove the shared owner draft is persisted valid before teardown,
+  // so the invalid candidate cannot leak into the next journey through the owner draft.
+  decideNode.config.context_ref = "context.synthetic.v1";
+  await raw.fill(JSON.stringify(candidate, null, 2));
+  await page.getByRole("button", { name: "Apply candidate" }).click();
+  await expect.poll(async () => await page.evaluate(async () => {
+    const response = await fetch("/v1/studio/drafts/draft.sts2.setup.strict", { headers: { Authorization: "Bearer studio-live-ci-token" } });
+    const draft = await response.json() as { document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> } };
+    return draft.document.graphs.find((graph) => graph.id === "main")?.nodes.find((node) => node.id === "decide")?.config.context_ref;
+  })).toBe("context.synthetic.v1", { timeout: 15_000 });
 });
 
 test("round-trips strict and dynamic definitions through the owner without semantic drift", async ({ page }) => {
