@@ -14,6 +14,7 @@
     "test": "vitest run",
     "test:browser": "playwright test",
     "test:live-owner-browser": "npm run build && playwright test --config playwright.live-owner.config.ts",
+    "test:owner-restart": "node --test tests/process/at-046-owner-restart.test.mjs",
     "test:recorded-browser": "playwright test --config playwright.recorded.config.ts",
     "recording:inspect": "node tools/inspect-recording.mjs",
     "test:watch": "vitest",

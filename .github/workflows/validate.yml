@@ -131,6 +131,10 @@ jobs:
           done
           cat /tmp/studio-live.log
           exit 1
+      - name: Owner-restart persistence (AT-046)
+        env:
+          STS2_WORKFLOW_BIN: harness/target/debug/sts2-workflow
+        run: npm run test:owner-restart
       - run: npm run test:live-owner-browser
       - name: Show live owner diagnostics
         if: failure()
