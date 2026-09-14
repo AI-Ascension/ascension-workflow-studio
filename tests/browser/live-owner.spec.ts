@@ -38,7 +38,9 @@ async function startLiveRun(page: Page): Promise<void> {
   const panel = page.getByRole("region", { name: "Run admission" });
   await expect(panel).toBeVisible();
   await panel.getByLabel("Target instance").selectOption("sts2-synthetic-1");
-  await expect(panel.getByLabel("Execution profile")).toHaveValue("synthetic");
+  await expect(panel.getByLabel("Execution profile")).toHaveValue("");
+  await panel.getByLabel("Execution profile").selectOption("synthetic");
+  await panel.getByLabel("Game profile").selectOption("sts2-synthetic-v1");
   await panel.getByRole("button", { name: "Run preflight" }).click();
   await expect(panel.getByLabel("Exact admission binding")).toBeVisible();
   await panel.getByRole("button", { name: "Start run" }).click();
