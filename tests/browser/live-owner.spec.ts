@@ -167,50 +167,47 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   await page.locator(".node-list-row", { hasText: "decide" }).first().click();
   await expect(page.getByLabel("decide Decision context")).toHaveValue("context.synthetic.v1");
 
-  // Owner validation rejects a removed/undisclosed reference across the session.
+  // Owner validation rejects a removed/undisclosed reference. The definition is submitted through
+  // the owner's validation port from the browser — the same route the Studio client uses — against
+  // a copy of the admitted document, so the shared owner draft is never mutated and no autosave
+  // cleanup race is possible.
   await page.getByRole("button", { name: "JSON mode" }).click();
-  const raw = page.getByLabel("Raw workflow definition JSON");
-  const candidate = JSON.parse(await raw.inputValue()) as {
-    graphs: Array<{ nodes: Array<{ id: string; config: Record<string, unknown> }> }>;
-  };
-  const decideNode = candidate.graphs[0].nodes.find((node) => node.id === "decide");
-  expect(decideNode).toBeDefined();
-  if (!decideNode) throw new Error("decide node missing from the owner definition");
-
-  const readContextDraft = async (): Promise<string | undefined> =>
-    await page.evaluate(async () => {
-      const response = await fetch("/v1/studio/drafts/draft.sts2.setup.strict", { headers: { Authorization: "Bearer studio-live-ci-token" } });
-      const draft = await response.json() as { document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> } };
-      return draft.document.graphs.find((graph) => graph.id === "main")?.nodes.find((entry) => entry.id === "decide")?.config.context_ref;
+  const rejection = await page.evaluate(async () => {
+    const headers = { Authorization: "Bearer studio-live-ci-token", "Content-Type": "application/json" };
+    const capabilities = await (await fetch("/v1/capabilities", { headers })).json() as { capabilities: unknown };
+    const textarea = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Raw workflow definition JSON"]');
+    const definition = JSON.parse(textarea ? textarea.value : "{}") as {
+      graphs: Array<{ id: string; nodes: Array<{ id: string; config: Record<string, unknown> }> }>;
+    };
+    const node = definition.graphs.find((graph) => graph.id === "main")?.nodes.find((entry) => entry.id === "decide");
+    if (!node) throw new Error("decide node missing from the owner definition");
+    node.config.context_ref = "context.removed.v1";
+    const response = await fetch("/v1/workflow-definitions/validate", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ schema_version: "ascension.management/v1", definition, capabilities: capabilities.capabilities }),
     });
+    const body = await response.json() as {
+      valid: boolean;
+      diagnostics: Array<{ code: string; path: string; message: string }>;
+    };
+    return {
+      valid: body.valid,
+      unresolved: body.diagnostics.filter((diagnostic) => diagnostic.code === "context_ref_unresolved"),
+    };
+  });
+  expect(rejection.valid).toBe(false);
+  expect(rejection.unresolved).toHaveLength(1);
+  expect(rejection.unresolved[0].path).toBe("$.graphs.main.nodes.decide.config.context_ref");
+  expect(rejection.unresolved[0].message).toContain("context.removed.v1");
+  expect(rejection.unresolved[0].message).toMatch(/not available|incompatible/i);
 
-  // `identity-draft-revision` is the editor's own saved revision. Waiting on it synchronises the
-  // restoring save with the editor having processed the invalid save's response, so the two saves
-  // cannot interleave and leave the shared owner draft invalid.
-  const draftRevision = page.getByTestId("identity-draft-revision");
-  const baselineRevision = Number(await draftRevision.textContent());
-
-  decideNode.config.context_ref = "context.removed.v1";
-  await raw.fill(JSON.stringify(candidate, null, 2));
-  await page.getByRole("button", { name: "Apply candidate" }).click();
-  await page.getByRole("button", { name: /Validate/ }).click();
-  const diagnostics = page.locator(".diagnostics-panel");
-  await expect(diagnostics).toContainText("context.removed.v1");
-  await expect(diagnostics).toContainText("$.graphs.main.nodes.decide.config.context_ref");
-  await expect(diagnostics).toContainText(/not available|incompatible/i);
-
-  // First let the invalid candidate commit and the editor acknowledge it.
-  await expect.poll(async () => Number(await draftRevision.textContent()), { timeout: 15_000 }).toBeGreaterThan(baselineRevision);
-  const invalidRevision = Number(await draftRevision.textContent());
-
-  // Then restore the valid reference and wait for the editor to acknowledge the restoring save.
-  decideNode.config.context_ref = "context.synthetic.v1";
-  await raw.fill(JSON.stringify(candidate, null, 2));
-  await page.getByRole("button", { name: "Apply candidate" }).click();
-  await expect.poll(async () => Number(await draftRevision.textContent()), { timeout: 15_000 }).toBeGreaterThan(invalidRevision);
-
-  // The shared owner draft now holds the valid reference for the next journey.
-  await expect.poll(readContextDraft, { timeout: 15_000 }).toBe("context.synthetic.v1");
+  // The shared draft still holds the valid selection for the next journey.
+  await expect.poll(async () => await page.evaluate(async () => {
+    const response = await fetch("/v1/studio/drafts/draft.sts2.setup.strict", { headers: { Authorization: "Bearer studio-live-ci-token" } });
+    const draft = await response.json() as { document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> } };
+    return draft.document.graphs.find((graph) => graph.id === "main")?.nodes.find((entry) => entry.id === "decide")?.config.context_ref;
+  }), { timeout: 15_000 }).toBe("context.synthetic.v1");
 });
 
 test("round-trips strict and dynamic definitions through the owner without semantic drift", async ({ page }) => {
