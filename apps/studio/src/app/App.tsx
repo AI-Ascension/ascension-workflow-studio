@@ -124,7 +124,9 @@ export function App(): JSX.Element {
     };
     pendingRunRef.current = initial;
     setPendingRun(initial);
-    setView("runs");
+    // Keep the current view while the operator reviews admission. Switching to
+    // the run inspector now would mount it with a stale run id before the owner
+    // returns the admitted run identity.
     void (async () => {
       try {
         const [catalog, digest] = await Promise.all([client.listTargets(), definitionIdentityDigest(document)]);
