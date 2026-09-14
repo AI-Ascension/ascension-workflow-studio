@@ -140,6 +140,8 @@ test("round-trips strict and dynamic definitions through the owner without seman
     await page.getByRole("button", { name: "Library", exact: true }).click();
     await page.locator(".definition-card").filter({ hasText: cardId }).getByRole("button", { name: "Open designer" }).click();
     await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
+    // The designer discovers the owner-disclosed context-binding catalog.
+    await expect(page.getByTestId("owner-context-catalog")).toContainText("context.synthetic.v1");
 
     const before = await validateAndReadDigest(page);
     expect(before).not.toBe("not validated");

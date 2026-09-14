@@ -437,6 +437,82 @@ export function contextBindingsFromCapabilities(value: JsonValue): ContextBindin
   return parsed.success ? parsed.data : undefined;
 }
 
+export const ContextOwnerBindingStateSchema = z.enum([
+  "available",
+  "disabled",
+  "unattached",
+  "denied",
+  "stale",
+  "unsupported",
+]);
+export type ContextOwnerBindingState = z.infer<typeof ContextOwnerBindingStateSchema>;
+
+export const ContextOwnerSourceSchema = z.object({
+  source_id: z.string().min(1).max(128),
+  version: z.number().int().positive(),
+  digest: z.string().regex(/^[a-f0-9]{64}$/),
+}).strict();
+
+export const ContextOwnerLimitsSchema = z.object({
+  max_items: z.number().int().nonnegative(),
+  max_notes: z.number().int().nonnegative(),
+  max_context_bytes: z.number().int().nonnegative(),
+  max_objective_bytes: z.number().int().nonnegative(),
+  max_control_events: z.number().int().nonnegative(),
+}).strict();
+
+export const ContextOwnerContinuitySchema = z.object({
+  survives_controller_restart: z.boolean(),
+  receipt_recovery: z.boolean(),
+  provider_session_continuity: z.boolean(),
+}).strict();
+
+export const ContextOwnerGrantsSchema = z.object({
+  metadata_read: z.boolean(),
+  content_read: z.boolean(),
+  edit: z.boolean(),
+  control: z.boolean(),
+}).strict();
+
+export const ContextOwnerDescriptorSchema = z.object({
+  schema_version: z.literal("ascension.context-control.owner-binding.v1"),
+  binding_id: z.string().min(1).max(128),
+  version: z.number().int().positive(),
+  digest: z.string().regex(/^[a-f0-9]{64}$/),
+  context_ref: z.string().min(1).max(128),
+  node_kinds: z.array(z.enum(["analyze", "decide"])).min(1).max(16),
+  sources: z.array(ContextOwnerSourceSchema).max(16),
+  operations: z.array(z.string().min(1).max(64)).max(16),
+  effective_limits: ContextOwnerLimitsSchema,
+  continuity: ContextOwnerContinuitySchema,
+  grants: ContextOwnerGrantsSchema,
+  state: ContextOwnerBindingStateSchema,
+}).strict();
+export type ContextOwnerDescriptor = z.infer<typeof ContextOwnerDescriptorSchema>;
+
+export const ContextOwnerCatalogSchema = z.object({
+  schema_version: z.literal("ascension.context-control.owner-catalog.v1"),
+  owner_id: z.string().min(1).max(128),
+  owner_version: z.string().min(1).max(128),
+  catalog_digest: z.string().regex(/^[a-f0-9]{64}$/),
+  descriptors: z.array(ContextOwnerDescriptorSchema).max(128),
+}).strict();
+export type ContextOwnerCatalog = z.infer<typeof ContextOwnerCatalogSchema>;
+
+/** Owner-validated authoring bindings: only available descriptors that grant
+ * metadata scope are usable. The owner remains authoritative; this projection
+ * never infers a binding the owner did not disclose. */
+export function contextBindingsFromOwnerCatalog(catalog: ContextOwnerCatalog | undefined): ContextBinding[] | undefined {
+  if (!catalog) return undefined;
+  const bindings = catalog.descriptors
+    .filter((descriptor) => descriptor.state === "available" && descriptor.grants.metadata_read)
+    .flatMap((descriptor) => {
+      const parsed = ContextBindingSchema.safeParse({ context_ref: descriptor.context_ref, node_kinds: descriptor.node_kinds });
+      return parsed.success ? [parsed.data] : [];
+    });
+  return bindings.length > 0 ? bindings : undefined;
+}
+
 export const ValidateResponseSchema = z.object({
   schema_version: z.string(),
   valid: z.boolean(),
