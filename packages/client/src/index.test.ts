@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import type { EventPage, RunEvent, RunTargetConfiguration, TargetDescriptor, WorkflowDefinition } from "@studio/contracts";
+import { contextBindingsFromOwnerCatalog, type EventPage, type RunEvent, type RunTargetConfiguration, type TargetDescriptor, type WorkflowDefinition } from "@studio/contracts";
 import { semanticDigest } from "@studio/document";
 
 import {
@@ -9,6 +9,7 @@ import {
   ContextServiceClient,
   FixtureClient,
   OwnerApiClient,
+  fixtureContextOwnerCatalog,
   applyEventPage,
   buildSafeCommand,
   createProjection,
@@ -446,5 +447,35 @@ describe("target admission consumption", () => {
     expect(() => validateTargetAdmissionBinding(admission, request)).not.toThrow();
     expect(() => validateTargetAdmissionBinding({ ...admission, request_id: "other" }, request)).toThrow(/request_id/);
     expect(() => validateTargetAdmissionBinding({ ...admission, target: { ...admission.target, instance_id: "other" } }, request)).toThrow(/instance_id/);
+  });
+});
+
+describe("owner context binding catalog", () => {
+  it("derives owner-validated bindings only from available metadata descriptors", async () => {
+    const catalog = await fixtureContextOwnerCatalog();
+    const bindings = contextBindingsFromOwnerCatalog(catalog);
+    expect(bindings?.length).toBe(10);
+    expect(bindings?.some((binding) => binding.context_ref === "context.synthetic.v1")).toBe(true);
+    const denied = { ...catalog, descriptors: catalog.descriptors.map((descriptor) => ({ ...descriptor, state: "denied" as const })) };
+    expect(contextBindingsFromOwnerCatalog(denied)).toEqual([]);
+    expect(contextBindingsFromOwnerCatalog(undefined)).toBeUndefined();
+  });
+
+  it("lists fixture owner context bindings", async () => {
+    const client = new FixtureClient([]);
+    const catalog = await client.listContextBindings();
+    expect(catalog.descriptors.length).toBe(10);
+    expect(catalog.descriptors.some((descriptor) => descriptor.context_ref === "sts2.combat.context.v1")).toBe(true);
+  });
+
+  it("decodes the owner context-binding route", async () => {
+    const catalog = await fixtureContextOwnerCatalog();
+    const fetcher: typeof fetch = async (input) => {
+      expect(String(input)).toContain("/v1/context-bindings");
+      return new Response(JSON.stringify(catalog), { status: 200, headers: { "content-type": "application/json" } });
+    };
+    const client = new OwnerApiClient({ baseUrl: "/v1", fetcher });
+    const decoded = await client.listContextBindings();
+    expect(decoded.descriptors.length).toBe(10);
   });
 });

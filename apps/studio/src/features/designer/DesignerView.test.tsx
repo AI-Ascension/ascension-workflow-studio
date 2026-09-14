@@ -1,7 +1,7 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { FixtureClient } from "@studio/client";
+import { FixtureClient, fixtureContextOwnerCatalog } from "@studio/client";
 import { fixtureDefinitions } from "../../fixtures/catalog";
 import { DesignerView } from "./DesignerView";
 import { IndexedDbRecoveryStore } from "./recoveryStore";
@@ -91,5 +91,49 @@ describe("unsupported definition isolation", () => {
     applyRaw(archived);
     await act(async () => { resolveText(supported); });
     expect(screen.getByRole("textbox", { name: "Archived unsupported workflow definition JSON" })).toHaveValue(archived);
+  });
+});
+
+describe("owner context binding catalog", () => {
+  it("renders the owner-disclosed context bindings rather than inferring them", async () => {
+    const client = new FixtureClient(fixtureDefinitions);
+    const definition = fixtureDefinitions[0];
+    render(<DesignerView client={client} catalog={fixtureDefinitions} definition={definition}
+      initialDocument={definition.definition} mode="fixture" onBack={vi.fn()}
+      onRun={vi.fn()} onRawTextChange={vi.fn()} />);
+    const catalog = await screen.findByTestId("owner-context-catalog");
+    expect(catalog).toHaveTextContent("context.synthetic.v1");
+    expect(catalog).toHaveTextContent("sts2.combat.context.v1");
+    expect(catalog).toHaveTextContent("metadata-only");
+  });
+});
+
+
+describe("owner context catalog authority", () => {
+  const renderWith = async (ownerDelay: number, capabilitiesDelay: number): Promise<void> => {
+    const client = new FixtureClient(fixtureDefinitions);
+    const catalog = await fixtureContextOwnerCatalog();
+    const denied = { ...catalog, descriptors: catalog.descriptors.map((descriptor) => ({ ...descriptor, state: "denied" as const })) };
+    const capabilities = client.capabilities.bind(client);
+    vi.spyOn(client, "capabilities").mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(capabilities()), capabilitiesDelay)));
+    vi.spyOn(client, "listContextBindings").mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve(denied), ownerDelay)));
+    const definition = fixtureDefinitions[0];
+    render(<DesignerView client={client} catalog={fixtureDefinitions} definition={definition}
+      initialDocument={definition.definition} mode="fixture" onBack={vi.fn()}
+      onRun={vi.fn()} onRawTextChange={vi.fn()} />);
+  };
+
+  it("keeps the owner authoritative when the catalog resolves last", async () => {
+    await renderWith(10, 1);
+    expect(await screen.findByTestId("owner-context-catalog")).toHaveTextContent("denied");
+    expect(await screen.findByText(/No compatible references were disclosed/)).toBeInTheDocument();
+    expect(screen.queryByText(/context.synthetic.v1 \(analyze, decide\)/)).not.toBeInTheDocument();
+  });
+
+  it("keeps the owner authoritative when the catalog resolves first", async () => {
+    await renderWith(1, 10);
+    expect(await screen.findByTestId("owner-context-catalog")).toHaveTextContent("denied");
+    expect(await screen.findByText(/No compatible references were disclosed/)).toBeInTheDocument();
+    expect(screen.queryByText(/context.synthetic.v1 \(analyze, decide\)/)).not.toBeInTheDocument();
   });
 });
