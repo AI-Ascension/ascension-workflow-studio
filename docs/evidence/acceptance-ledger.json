@@ -3,8 +3,8 @@
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
     "blocked": 34,
-    "evidenced": 60,
-    "partial": 20,
+    "evidenced": 61,
+    "partial": 19,
     "implemented": 6
   },
   "cases": [
@@ -598,14 +598,15 @@
         "P2-046"
       ],
       "work_package": "WP-15",
-      "status": "partial",
-      "actual_command": "GitHub Actions Studio validation run 34679245809 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner)",
+      "status": "evidenced",
+      "actual_command": "GitHub Actions Studio validation run 34819034970, Authenticated live-owner browser job, step \"Owner-restart persistence (AT-046)\" (npm run test:owner-restart)",
       "actual_source_heads": {
-        "studio": "ec8dd67",
-        "owner": "PR #57"
+        "studio": "36d10e4",
+        "owner": "91731e849bef2884ae17e44d4f7143a532c53f38"
       },
-      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the synthetic live process completed draft create and reload. Studio CI run 34636988818 verified an authenticated Chromium user creates and hydrates a draft, receives a stale-revision draft-save conflict after a separate authenticated owner write, and resolves it by loading the remote owner revision. Studio PR #97 (CI run 34679245809 passed all six jobs) closed the two gaps the ledger previously listed: `tests/browser/live-owner.spec.ts` \u201cretries a lost draft-save response with the original mutation identity\u201d verifies retry without a duplicate revision, and \u201cmerges non-overlapping semantic and layout candidates and revalidates them\u201d applies a three-way merge against the real owner and revalidates the merged candidate. Remaining for AT-046: the acceptance action also requires saving an incomplete bounded draft, **restarting the owner store/service**, and reloading it through the owner ports; no browser test restarts the owner process, so that atomic-persistence-across-restart step is still unverified. P2-046 stays partial until it is.",
+      "evidence": "Merged owner PR #57 supplies memory and SQLite persistence with focused revision, conflict, reopen, and HTTP tests; the synthetic live process completed draft create and reload. Studio CI run 34636988818 verified an authenticated Chromium user creates and hydrates a draft, receives a stale-revision draft-save conflict after a separate authenticated owner write, and resolves it by loading the remote owner revision. Studio PR #97 (CI run 34679245809 passed all six jobs) added lost-draft-save-response retry with the original mutation identity and three-way merge application with revalidation against the real owner. The remaining owner-restart step is now covered: Studio validation run 34819034970 (Authenticated live-owner browser job, step \u201cOwner-restart persistence (AT-046)\u201d, `npm run test:owner-restart`) started the pinned authenticated owner (revision 91731e849bef2884ae17e44d4f7143a532c53f38), created an incomplete bounded draft, saved a semantic and layout change through the conditional-write API, restarted the owner service against the same durable store, and reloaded through the owner ports. It asserted an unchanged revision, a byte-identical mutation etag covering document and layout, and deep-equal semantic document and layout, then re-exercised the conditional-write API after the restart. Only owner HTTP ports are used; no direct SQLite or localStorage persistence. Tested Studio head 36d10e40e6995d0abf08e62c203387a3309d8366. See `tests/process/at-046-owner-restart.test.mjs`.",
       "actual_evidence_refs": [
+        "tests/process/at-046-owner-restart.test.mjs",
         "tests/browser/live-owner.spec.ts",
         "apps/studio/src/features/designer/DesignerView.tsx",
         "apps/studio/src/features/designer/recoveryStore.ts"
