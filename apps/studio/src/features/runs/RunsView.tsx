@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import type { CommandKind, CommandResponse, ContextAssociation, ContextEventPage, ContextSnapshotManifest, EventPage, RunEvent, StatusResponse } from "@studio/contracts";
-import { effectiveLimitDisclosure } from "@studio/contracts";
+import { effectiveLimit, effectiveLimitDisclosure } from "@studio/contracts";
 import { ClientError, applyEventPage, createProjection, type ContextServiceClient, type RunProjection, type StudioClient } from "@studio/client";
 import { mapProjectionSupport, pinnedMapIdentity, resolveApprovedLink, VisibleMapProjectionSchema, type ApprovedLinkMapping, type VisibleMapProjection } from "@studio/document";
 
@@ -99,7 +99,14 @@ export function RunsView({ client, contextClient, mode, initialRunId, onRunIdCha
             const expected = association.value.context;
             if (memory.scope.run_id !== contextRunId || memory.scope.episode_id !== expected.episode_id || memory.scope.agent_id !== expected.agent_id) {
               setMemoryMessage("Memory projection was rejected because the Context owner returned a different scoped identity.");
-            } else setMemoryMessage(`${memory.enabled ? `Read-only memory search is available (${memory.supported_operations.join(", ") || "no operations disclosed"}).` : "Memory projection is explicitly unavailable."} ${effectiveLimitDisclosure(memory, "optional_byte_budget")}`);
+            } else {
+              const limit = effectiveLimit(memory, "optional_byte_budget");
+              const canDescribeSearch = memory.schema === "ascension.context-memory.capabilities.v1" || limit.state === "available";
+              const availability = !memory.enabled ? "Memory projection is explicitly unavailable."
+                : canDescribeSearch ? `Read-only memory search is available (${memory.supported_operations.join(", ") || "no operations disclosed"}).`
+                  : "Memory projection was rejected.";
+              setMemoryMessage(`${availability} ${effectiveLimitDisclosure(memory, "optional_byte_budget")}`);
+            }
           } catch { setMemoryMessage("Memory projection is unavailable from the composed context owner."); }
         } else setMemoryMessage("Memory search is unavailable from this owner.");
         if (association.value.capabilities.provider_session_inspect) {

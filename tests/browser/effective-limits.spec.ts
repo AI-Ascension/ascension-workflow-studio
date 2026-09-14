@@ -57,6 +57,7 @@ for (const variant of ["v3", "v1", "tampered", "stale", "missing"] as const) {
       await expect(sessionPanel).toContainText(`Effective input limits unavailable (${reason})`);
       await expect(memoryPanel).not.toContainText("Owner effective");
       await expect(sessionPanel).not.toContainText("Owner effective");
+      if (variant !== "v1") await expect(memoryPanel).not.toContainText("memory search is available");
     }
     expect(requests).toContain("/api/context/v1/runs/fixture-run/provider-sessions/capabilities");
     expect(requests.some((path) => path.includes("workflow-fixture"))).toBe(false);
