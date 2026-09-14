@@ -8,5 +8,5 @@
     "noEmit": true,
     "types": ["node", "@playwright/test"]
   },
-  "include": ["vite.config.ts", "vitest.config.ts", "playwright.config.ts", "playwright.recorded.config.ts", "tests/browser"]
+  "include": ["vite.config.ts", "vitest.config.ts", "playwright.config.ts", "playwright.recorded.config.ts", "playwright.effective-limits.config.ts", "tests/browser"]
 }

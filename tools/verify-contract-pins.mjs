@@ -29,8 +29,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const recordedRoot = resolve(root, 'contracts/recorded-run-candidate');
   const recorded = JSON.parse(readFileSync(resolve(recordedRoot, 'studio-pin.json')));
   const phase1Count = verifyEntries(root, phase1.consumed_artifacts);
+  const effective = JSON.parse(readFileSync(resolve(root, 'contracts/effective-limits.lock.json')));
+  const effectiveCount = verifyEntries(root, effective.consumed_artifacts);
   assert(recorded.checksums && typeof recorded.checksums === 'object', 'Missing recorded-run pins');
   const recordedCount = verifyEntries(recordedRoot,
     Object.entries(recorded.checksums).map(([path, sha256]) => ({ path, sha256 })));
-  console.log(`Verified ${phase1Count} Phase 1 and ${recordedCount} recorded-run contract pins`);
+  console.log(`Verified ${phase1Count} Phase 1, ${effectiveCount} effective-limit and ${recordedCount} recorded-run contract pins`);
 }

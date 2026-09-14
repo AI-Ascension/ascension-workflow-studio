@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import effectiveFixtures from "../../../contracts/accepted/effective-limits/producer.json";
 
 import { contextBindingsFromOwnerCatalog, type EventPage, type RunEvent, type RunTargetConfiguration, type TargetDescriptor, type WorkflowDefinition } from "@studio/contracts";
 import { semanticDigest } from "@studio/document";
@@ -18,6 +19,29 @@ import {
   validateTargetAdmissionBinding,
   validateTargetConfiguration,
 } from "./index";
+
+describe("provider capability read boundary", () => {
+  it("uses the explicit Context run, bearer token, and read-only envelope", async () => {
+    const paths: string[] = [];
+    let effects = 0;
+    const client = new ContextServiceClient({ token: "synthetic-only", fetcher: async (input, init) => {
+      paths.push(String(input));
+      expect(init?.method).toBe("GET");
+      expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer synthetic-only");
+      return new Response(JSON.stringify({
+        schema: "ascension.provider-session.api-result.v1", operation: "capabilities",
+        value: effectiveFixtures.session[0].descriptor, effect_class: "local_metadata_only",
+        inference_calls: effects, game_effects: 0,
+      }));
+    } });
+    await expect(client.providerSessionCapabilities("context-run")).resolves.toMatchObject({
+      schema: "ascension.provider-session.capabilities.v3", hardening: { encrypted_state: false },
+    });
+    effects = 1;
+    await expect(client.providerSessionCapabilities("context-run")).rejects.toThrow();
+    expect(paths).toEqual(Array(2).fill("/api/context/v1/runs/context-run/provider-sessions/capabilities"));
+  });
+});
 
 function event(sequence: number, runId = "run.fixture.1", digest = "digest"): RunEvent {
   return {

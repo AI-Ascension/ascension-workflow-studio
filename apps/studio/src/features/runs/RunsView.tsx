@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 
 import type { CommandKind, CommandResponse, ContextAssociation, ContextEventPage, ContextSnapshotManifest, EventPage, RunEvent, StatusResponse } from "@studio/contracts";
+import { effectiveLimitDisclosure } from "@studio/contracts";
 import { ClientError, applyEventPage, createProjection, type ContextServiceClient, type RunProjection, type StudioClient } from "@studio/client";
 import { mapProjectionSupport, pinnedMapIdentity, resolveApprovedLink, VisibleMapProjectionSchema, type ApprovedLinkMapping, type VisibleMapProjection } from "@studio/document";
 
@@ -98,7 +99,7 @@ export function RunsView({ client, contextClient, mode, initialRunId, onRunIdCha
             const expected = association.value.context;
             if (memory.scope.run_id !== contextRunId || memory.scope.episode_id !== expected.episode_id || memory.scope.agent_id !== expected.agent_id) {
               setMemoryMessage("Memory projection was rejected because the Context owner returned a different scoped identity.");
-            } else setMemoryMessage(memory.enabled ? `Read-only memory search is available (${memory.supported_operations.join(", ") || "no operations disclosed"}).` : "Memory projection is explicitly unavailable.");
+            } else setMemoryMessage(`${memory.enabled ? `Read-only memory search is available (${memory.supported_operations.join(", ") || "no operations disclosed"}).` : "Memory projection is explicitly unavailable."} ${effectiveLimitDisclosure(memory, "optional_byte_budget")}`);
           } catch { setMemoryMessage("Memory projection is unavailable from the composed context owner."); }
         } else setMemoryMessage("Memory search is unavailable from this owner.");
         if (association.value.capabilities.provider_session_inspect) {
@@ -107,6 +108,14 @@ export function RunsView({ client, contextClient, mode, initialRunId, onRunIdCha
             setSessionMessage(sessions.value.run_id === requestedRunId
               ? `Read-only session projection: ${sessions.value.bindings.length} binding(s), ${sessions.value.operations.length} operation(s).`
               : "Provider-session projection was rejected because the Harness returned a different workflow run identity.");
+            if (sessions.value.run_id === requestedRunId && contextRunId) {
+              try {
+                const capabilities = await contextClient.providerSessionCapabilities(contextRunId);
+                setSessionMessage(`Read-only session projection: ${sessions.value.bindings.length} binding(s), ${sessions.value.operations.length} operation(s). ${effectiveLimitDisclosure(capabilities, "max_prepared_bytes")} Private retention requires owner approval and authenticated encryption.`);
+              } catch {
+                setSessionMessage(`Read-only session projection: ${sessions.value.bindings.length} binding(s), ${sessions.value.operations.length} operation(s). Effective input limits unavailable from the composed context owner.`);
+              }
+            }
           } catch { setSessionMessage("Provider-session projection is unavailable from the Harness owner."); }
         } else setSessionMessage("Provider-session inspection is unavailable from this owner.");
       } else {
