@@ -176,6 +176,16 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   const decideNode = candidate.graphs[0].nodes.find((node) => node.id === "decide");
   expect(decideNode).toBeDefined();
   if (!decideNode) throw new Error("decide node missing from the owner definition");
+
+  const readContextDraft = async (): Promise<{ revision: number; contextRef: string | undefined }> =>
+    await page.evaluate(async () => {
+      const response = await fetch("/v1/studio/drafts/draft.sts2.setup.strict", { headers: { Authorization: "Bearer studio-live-ci-token" } });
+      const draft = await response.json() as { revision: number; document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> } };
+      const node = draft.document.graphs.find((graph) => graph.id === "main")?.nodes.find((entry) => entry.id === "decide");
+      return { revision: draft.revision, contextRef: node?.config.context_ref };
+    });
+  const baseline = await readContextDraft();
+
   decideNode.config.context_ref = "context.removed.v1";
   await raw.fill(JSON.stringify(candidate, null, 2));
   await page.getByRole("button", { name: "Apply candidate" }).click();
@@ -185,16 +195,20 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   await expect(diagnostics).toContainText("$.graphs.main.nodes.decide.config.context_ref");
   await expect(diagnostics).toContainText(/not available|incompatible/i);
 
-  // Restore a valid reference and prove the shared owner draft is persisted valid before teardown,
-  // so the invalid candidate cannot leak into the next journey through the owner draft.
+  // The shared owner draft must never be left invalid by an outstanding write. Sequence the saves:
+  // first wait for the invalid candidate to commit at a newer revision, then restore and wait for a
+  // still-newer revision holding the valid reference before teardown.
+  await expect.poll(async () => (await readContextDraft()).revision, { timeout: 15_000 }).toBeGreaterThan(baseline.revision);
+  const invalidRevision = (await readContextDraft()).revision;
+  expect((await readContextDraft()).contextRef).toBe("context.removed.v1");
+
   decideNode.config.context_ref = "context.synthetic.v1";
   await raw.fill(JSON.stringify(candidate, null, 2));
   await page.getByRole("button", { name: "Apply candidate" }).click();
-  await expect.poll(async () => await page.evaluate(async () => {
-    const response = await fetch("/v1/studio/drafts/draft.sts2.setup.strict", { headers: { Authorization: "Bearer studio-live-ci-token" } });
-    const draft = await response.json() as { document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> } };
-    return draft.document.graphs.find((graph) => graph.id === "main")?.nodes.find((node) => node.id === "decide")?.config.context_ref;
-  }), { timeout: 15_000 }).toBe("context.synthetic.v1");
+  await expect.poll(async () => {
+    const draft = await readContextDraft();
+    return draft.revision > invalidRevision && draft.contextRef === "context.synthetic.v1";
+  }, { timeout: 15_000 }).toBe(true);
 });
 
 test("round-trips strict and dynamic definitions through the owner without semantic drift", async ({ page }) => {
