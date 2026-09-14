@@ -32,6 +32,8 @@ Existing bounded JSON guards remain 2MiB, depth32, 20,000 values and 64KiB encod
 A maximal producer-shaped catalog with 128 descriptors, 16 kinds/sources, all 11 operations
 and maximal supported identifiers/versions fits these guards in tests. Safe positive integer
 versions are supported; larger Rust u64 versions are explicitly unsupported, never rounded.
+Raw numeric tokens must use plain unsigned integer spelling within JavaScript's safe range,
+matching producer u64 wire admission; fractions, exponents and negative zero reject before conversion.
 Consumer parser guards are not newly published owner capacities.
 
 The Designer invalidates selectable bindings during loading, refresh and client/principal

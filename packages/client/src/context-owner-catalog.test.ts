@@ -52,6 +52,49 @@ describe("bounded management catalog response", () => {
     const client = new OwnerApiClient({ baseUrl: "/v1", token: "test-owner-token", fetcher });
     expect(await client.listContextBindings()).toEqual(catalog);
   });
+  it("rejects non-u64 wire spellings before rounding can hide them behind unchanged digests", async () => {
+    const original = JSON.stringify(catalogFixture());
+    expect(original).toContain('"version":1');
+    for (const token of [
+      "1.0000000000000001", "0.99999999999999999", "1.0", "1e0", "-0", "-1",
+      "1e999999999999999999999", "9007199254740993", "18446744073709551615",
+      "01", "1.", "1e", "+1",
+    ]) {
+      const raw = original.replace('"version":1', `"version":${token}`);
+      await expect(readContextCatalogBody(new Response(raw)), token).rejects.toThrow();
+      const client = new OwnerApiClient({ baseUrl: "/v1", fetcher: async () => new Response(raw) });
+      await expect(client.listContextBindings(), token).rejects.toMatchObject({ code: "context_catalog_invalid" });
+    }
+    // The producer's zero-note descriptor retains its original descriptor and catalog digests.
+    const zeroNotes = JSON.stringify(catalogFixture("zero_notes"));
+    expect(zeroNotes).toContain('"max_notes":0');
+    for (const token of ["1e-9999", "-1e-9999", "0.0000000000000000001"]) {
+      const raw = zeroNotes.replace('"max_notes":0', `"max_notes":${token}`);
+      await expect(readContextCatalogBody(new Response(raw)), token).rejects.toThrow();
+      const client = new OwnerApiClient({ baseUrl: "/v1", fetcher: async () => new Response(raw) });
+      await expect(client.listContextBindings(), token).rejects.toMatchObject({ code: "context_catalog_invalid" });
+    }
+  });
+  it("checks numeric tokens across chunks without changing escaped strings or split UTF-8", async () => {
+    const original = JSON.stringify(catalogFixture());
+    const raw = original.replace('"version":1', '"version":1.0000000000000001');
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const byte of bytes(raw)) controller.enqueue(Uint8Array.of(byte));
+        controller.close();
+      },
+    });
+    const client = new OwnerApiClient({ baseUrl: "/v1", fetcher: async () => new Response(stream) });
+    await expect(client.listContextBindings()).rejects.toMatchObject({ code: "context_catalog_invalid" });
+    const value = { text: 'é \\"version":1.0000000000000001 1e99999 -0', zero: 0, maximum: Number.MAX_SAFE_INTEGER };
+    const stringStream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        for (const byte of bytes(JSON.stringify(value))) controller.enqueue(Uint8Array.of(byte));
+        controller.close();
+      },
+    });
+    expect(await readContextCatalogBody(new Response(stringStream))).toEqual(value);
+  });
   it("rejects tampered and duplicate-key catalogs before exposing binding options", async () => {
     const c = catalogFixture(); c.descriptors[0].effective_limits.max_items = 65;
     for (const raw of [JSON.stringify(c), '{"descriptors":[],"descriptors":[]}']) {
