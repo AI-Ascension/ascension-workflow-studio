@@ -92,8 +92,12 @@ describe("Studio run admission", () => {
     expect(within(panel).getByRole("button", { name: "Run preflight" })).toBeDisabled();
 
     await user.selectOptions(targetSelect, "studio-inspection-secondary");
-    expect(within(panel).getByLabelText("Execution profile")).toHaveValue("synthetic.secondary");
-    expect(within(panel).getByLabelText("Game profile")).toHaveValue("sts2-synthetic-v1");
+    // Choosing a target does not choose profiles on the operator's behalf.
+    expect(within(panel).getByLabelText("Execution profile")).toHaveValue("");
+    expect(within(panel).getByLabelText("Game profile")).toHaveValue("");
+    expect(within(panel).getByRole("button", { name: "Run preflight" })).toBeDisabled();
+    await user.selectOptions(within(panel).getByLabelText("Execution profile"), "synthetic.secondary");
+    await user.selectOptions(within(panel).getByLabelText("Game profile"), "sts2-synthetic-v1");
     await user.click(within(panel).getByRole("button", { name: "Run preflight" }));
 
     const summary = await within(panel).findByLabelText("Exact admission binding");
@@ -110,18 +114,22 @@ describe("Studio run admission", () => {
     const user = userEvent.setup();
     const panel = await openRunAdmission(user);
     await user.selectOptions(within(panel).getByLabelText("Target instance"), "studio-inspection");
+    await user.selectOptions(within(panel).getByLabelText("Execution profile"), "synthetic");
+    await user.selectOptions(within(panel).getByLabelText("Game profile"), "sts2-synthetic-v1");
     await user.click(within(panel).getByRole("button", { name: "Run preflight" }));
     expect(await within(panel).findByLabelText("Exact admission binding")).toBeInTheDocument();
 
     await user.selectOptions(within(panel).getByLabelText("Target instance"), "studio-inspection-secondary");
     expect(within(panel).queryByLabelText("Exact admission binding")).not.toBeInTheDocument();
-    expect(within(panel).getByRole("button", { name: "Run preflight" })).toBeEnabled();
+    expect(within(panel).getByRole("button", { name: "Run preflight" })).toBeDisabled();
   });
 
   it("submits only once when the start control is double-clicked", async () => {
     const user = userEvent.setup();
     const panel = await openRunAdmission(user);
     await user.selectOptions(within(panel).getByLabelText("Target instance"), "studio-inspection");
+    await user.selectOptions(within(panel).getByLabelText("Execution profile"), "synthetic");
+    await user.selectOptions(within(panel).getByLabelText("Game profile"), "sts2-synthetic-v1");
     await user.click(within(panel).getByRole("button", { name: "Run preflight" }));
     await within(panel).findByLabelText("Exact admission binding");
     const start = within(panel).getByRole("button", { name: "Start run" });

@@ -434,6 +434,7 @@ describe("target admission consumption", () => {
     expect(() => validateTargetConfiguration(descriptor, configuration)).not.toThrow();
     expect(() => validateTargetConfiguration(descriptor, { ...configuration, game_profile: "wrong" })).toThrow(/game_profile/);
     expect(() => validateTargetConfiguration({ ...descriptor, availability: "revoked" }, configuration)).toThrow(/revoked/);
+    expect(() => validateTargetConfiguration({ ...descriptor, supported_operations: [] }, configuration)).toThrow(/workflow:live/);
 
     const request = {
       schema_version: "ascension.workflow-admission/v1" as const,

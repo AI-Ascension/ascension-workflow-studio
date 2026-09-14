@@ -314,4 +314,18 @@ describe("owner definition identity digest", () => {
     expect(canonicalJsonComplete(document)).toContain("annotations");
     expect(canonicalJson(document)).not.toContain("annotations");
   });
+
+  it("orders integer-like keys lexically to match the owner's canonical JSON", async () => {
+    const document = { ...definition(), annotations: { "2": "second", "10": "tenth" } } as WorkflowDefinition;
+    const json = canonicalJsonComplete(document);
+    expect(json.indexOf('"10"')).toBeGreaterThanOrEqual(0);
+    expect(json.indexOf('"10"')).toBeLessThan(json.indexOf('"2"'));
+  });
+
+  it("matches the owner's exact digest for an accepted workflow vector", async () => {
+    const raw = JSON.parse(readFileSync("contracts/accepted/phase1/workflows/combat.dynamic.json", "utf8")) as WorkflowDefinition;
+    // Independently produced by `sts2-workflow inspect` (SyntheticDefinitionPort raw_digest)
+    // over the same file, so this pins producer/consumer canonical agreement.
+    expect(await definitionIdentityDigest(raw)).toBe("0724ff770512baa7d352ec431db1c55db92bf0e1b23f448fc208561ec187843e");
+  });
 });

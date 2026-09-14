@@ -48,12 +48,14 @@ export function createRunRequestId(): string {
 }
 
 export function selectionForTarget(descriptor: TargetDescriptor): RunTargetSelection {
+  // Selecting a target never chooses a profile on the operator's behalf. Every
+  // execution/game profile must be chosen explicitly before preflight.
   return {
     targetId: descriptor.instance_id,
-    executionProfile: descriptor.execution_profiles[0] ?? "",
-    gameProfile: descriptor.game_profiles[0] ?? "",
-    saveProfile: descriptor.save_profiles[0] ?? null,
-    inferenceProfile: descriptor.inference_profiles[0] ?? null,
+    executionProfile: "",
+    gameProfile: "",
+    saveProfile: null,
+    inferenceProfile: null,
     contextCapability: null,
     providerCapability: null,
   };

@@ -252,7 +252,9 @@ export function App(): JSX.Element {
   const resetPendingSelection = (mutate: (selection: RunTargetSelection | undefined) => RunTargetSelection | undefined): void => {
     const current = pendingRunRef.current;
     if (!current || ["submitting", "unknown"].includes(current.phase)) return;
-    const identity = current.phase === "admitted" ? createRunRequestId() : current.requestId;
+    // Any change after an owner admission abandons that binding and must bind a
+    // fresh request identity, never reuse the admitted request id.
+    const identity = current.admission ? createRunRequestId() : current.requestId;
     updatePendingRun((candidate) => ({
       ...candidate,
       requestId: identity,
@@ -279,8 +281,9 @@ export function App(): JSX.Element {
   const retryTargetCatalog = (): void => {
     const current = pendingRunRef.current;
     if (!current) return;
-    const requestId = current.requestId;
-    updatePendingRun((candidate) => ({ ...candidate, phase: "loading", message: "Refreshing target catalog…" }));
+    // Abandoning an admitted selection must not reuse its request id.
+    const requestId = current.admission ? createRunRequestId() : current.requestId;
+    updatePendingRun((candidate) => ({ ...candidate, requestId, phase: "loading", message: "Refreshing target catalog…" }));
     void client.listTargets().then((catalog) => {
       if (pendingRunRef.current?.requestId !== requestId) return;
       const hasAvailable = catalog.targets.some((candidate) => candidate.availability === "available");

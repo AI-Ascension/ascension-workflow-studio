@@ -207,6 +207,12 @@ export function validateTargetConfiguration(
     bindingMismatch("target.execution_profile", `is not supported by ${descriptor.instance_id}.`);
   }
   assertEqualBindingField("target.execution_mode", target.execution_mode, descriptor.execution_mode);
+  if (target.execution_mode === "live" && !descriptor.supported_operations.includes("workflow:live")) {
+    throw new CapabilityGateError(
+      `Target ${descriptor.instance_id} does not advertise workflow:live.`,
+      "target_operation_unavailable",
+    );
+  }
   assertEqualBindingField("target.compatibility_revision", target.compatibility_revision, descriptor.compatibility_revision);
   assertEqualBindingField("target.capability_revision", target.capability_revision, descriptor.capability_revision);
   if (!descriptor.game_profiles.includes(target.game_profile)) {
