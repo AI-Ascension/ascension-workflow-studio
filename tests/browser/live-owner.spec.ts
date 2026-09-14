@@ -128,6 +128,88 @@ async function applyLocalEdit(page: Page, edit: (document: { version: string; gr
   await page.getByRole("button", { name: "Apply candidate" }).click();
 }
 
+// This journey runs first, before any test publishes a definition, so the Library still shows
+// the checked-in catalog, which includes the strict setup workflow with a `decide` context node.
+test("discovers, selects, saves, reloads, and owner-rejects a context reference", async ({ page }) => {
+  await connectLiveOwner(page);
+
+  // The strict setup definition carries a `decide` node with an owner-disclosed context_ref.
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  const card = page.locator(".definition-card").filter({ hasText: "sts2.setup.strict" });
+  await expect(card).toHaveCount(1);
+  await card.getByRole("button", { name: "Clone draft" }).click();
+  await expect(page.getByText(/Loaded the owner-backed draft\.|Autosaved to the active adapter\./)).toBeVisible();
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await page.locator(".definition-card").filter({ hasText: "sts2.setup.strict" }).getByRole("button", { name: "Open designer" }).click();
+  await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
+
+  // Discovery: the owner discloses the compatible context catalog before selection.
+  await expect(page.getByTestId("owner-context-catalog")).toContainText("context.synthetic.v1");
+
+  // Selection: choose a compatible owner-disclosed reference on the decide node.
+  await page.getByRole("tab", { name: "List editor" }).click();
+  await page.locator(".node-list-row", { hasText: "decide" }).first().click();
+  const contextSelect = page.getByLabel("decide Decision context");
+  await expect(contextSelect).toBeVisible();
+  await expect(contextSelect.locator("option", { hasText: "context.synthetic.v1" })).toHaveCount(1);
+  await contextSelect.selectOption("context.synthetic.v1");
+  await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+
+  // The owner admits the selected, disclosed reference.
+  await page.getByRole("button", { name: /Validate/ }).click();
+  await expect(page.locator(".validation-label")).toHaveText(/Validated at /);
+
+  // Reload through the owner ports and confirm the selection persisted.
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await page.locator(".definition-card").filter({ hasText: "sts2.setup.strict" }).getByRole("button", { name: "Open designer" }).click();
+  await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
+  await page.getByRole("tab", { name: "List editor" }).click();
+  await page.locator(".node-list-row", { hasText: "decide" }).first().click();
+  await expect(page.getByLabel("decide Decision context")).toHaveValue("context.synthetic.v1");
+
+  // Owner validation rejects a removed/undisclosed reference. The definition is submitted through
+  // the owner's validation port from the browser — the same route the Studio client uses — against
+  // a copy of the admitted document, so the shared owner draft is never mutated and no autosave
+  // cleanup race is possible.
+  await page.getByRole("button", { name: "JSON mode" }).click();
+  const rejection = await page.evaluate(async () => {
+    const headers = { Authorization: "Bearer studio-live-ci-token", "Content-Type": "application/json" };
+    const capabilities = await (await fetch("/v1/capabilities", { headers })).json() as { capabilities: unknown };
+    const textarea = document.querySelector<HTMLTextAreaElement>('textarea[aria-label="Raw workflow definition JSON"]');
+    const definition = JSON.parse(textarea ? textarea.value : "{}") as {
+      graphs: Array<{ id: string; nodes: Array<{ id: string; config: Record<string, unknown> }> }>;
+    };
+    const node = definition.graphs.find((graph) => graph.id === "main")?.nodes.find((entry) => entry.id === "decide");
+    if (!node) throw new Error("decide node missing from the owner definition");
+    node.config.context_ref = "context.removed.v1";
+    const response = await fetch("/v1/workflow-definitions/validate", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ schema_version: "ascension.management/v1", definition, capabilities: capabilities.capabilities }),
+    });
+    const body = await response.json() as {
+      valid: boolean;
+      diagnostics: Array<{ code: string; path: string; message: string }>;
+    };
+    return {
+      valid: body.valid,
+      unresolved: body.diagnostics.filter((diagnostic) => diagnostic.code === "context_ref_unresolved"),
+    };
+  });
+  expect(rejection.valid).toBe(false);
+  expect(rejection.unresolved).toHaveLength(1);
+  expect(rejection.unresolved[0].path).toBe("$.graphs.main.nodes.decide.config.context_ref");
+  expect(rejection.unresolved[0].message).toContain("context.removed.v1");
+  expect(rejection.unresolved[0].message).toMatch(/not available|incompatible/i);
+
+  // The shared draft still holds the valid selection for the next journey.
+  await expect.poll(async () => await page.evaluate(async () => {
+    const response = await fetch("/v1/studio/drafts/draft.sts2.setup.strict", { headers: { Authorization: "Bearer studio-live-ci-token" } });
+    const draft = await response.json() as { document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> } };
+    return draft.document.graphs.find((graph) => graph.id === "main")?.nodes.find((entry) => entry.id === "decide")?.config.context_ref;
+  }), { timeout: 15_000 }).toBe("context.synthetic.v1");
+});
+
 test("round-trips strict and dynamic definitions through the owner without semantic drift", async ({ page }) => {
   await connectLiveOwner(page);
 
