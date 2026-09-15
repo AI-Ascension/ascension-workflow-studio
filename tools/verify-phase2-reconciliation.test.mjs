@@ -65,7 +65,7 @@ test('ledger status summaries are recomputed from their records', () => {
 
 test('every unresolved acceptance case has an owner', () => {
   for (const entry of acceptanceLedger.cases) {
-    if (entry.status === 'implemented' || entry.status === 'evidenced') continue;
+    if (entry.status === 'evidenced') continue;
     const def = acceptance.find((c) => c.id === entry.id);
     const owner = ownerMap.cases[entry.id] ?? ownerMap.workPackages[def.work_package] ?? ownerMap.default;
     assert.ok(owner && owner.owner, `${entry.id} has no owner`);
@@ -89,14 +89,24 @@ test('the reconciliation projection covers every requirement and case', () => {
   );
 });
 
-test('resolved cases carry no owner and unresolved cases do', () => {
+test('only evidenced cases are ownerless; unresolved cases carry an owner', () => {
   for (const entry of reconciliation.cases) {
-    const resolved = entry.acceptanceStatus === 'implemented' || entry.acceptanceStatus === 'evidenced';
+    const resolved = entry.acceptanceStatus === 'evidenced';
     if (resolved) {
-      assert.equal(entry.owner, null, `${entry.acceptanceId} resolved but owned`);
+      assert.equal(entry.owner, null, `${entry.acceptanceId} evidenced but owned`);
       assert.equal(entry.ownerKind, 'completed');
     } else {
       assert.ok(entry.owner, `${entry.acceptanceId} unresolved but unowned`);
+      assert.ok(entry.ownerNote && entry.ownerNote.length > 0, `${entry.acceptanceId} owner has no note`);
     }
+  }
+});
+
+test('implemented acceptance retains an owner for outstanding verification', () => {
+  const implemented = reconciliation.cases.filter((c) => c.acceptanceStatus === 'implemented');
+  assert.ok(implemented.length > 0, 'expected implemented cases to be present');
+  for (const entry of implemented) {
+    assert.ok(entry.owner, `${entry.acceptanceId} implemented but unowned`);
+    assert.notEqual(entry.ownerKind, 'completed');
   }
 });

@@ -30,6 +30,7 @@ jobs:
         run: |
           node --test tools/verify-contract-pins.test.mjs
           node tools/verify-contract-pins.mjs
+          node tools/generate-effective-limit-validators.mjs --check
           (cd contracts/recorded-run-candidate && sha256sum --check --strict SHA256SUMS)
       - name: Verify Phase 2 requirement/acceptance reconciliation
         run: node --test tools/verify-phase2-reconciliation.test.mjs

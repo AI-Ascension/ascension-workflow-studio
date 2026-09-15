@@ -32,9 +32,13 @@
         "AT-002",
         "AT-003",
         "AT-018",
+        "AT-034",
         "AT-035",
+        "AT-036",
         "AT-038",
         "AT-040",
+        "AT-053",
+        "AT-054",
         "AT-089",
         "AT-093",
         "AT-100",
@@ -58,6 +62,7 @@
       "cases": [
         "AT-030",
         "AT-031",
+        "AT-047",
         "AT-055",
         "AT-057",
         "AT-064",
@@ -80,6 +85,7 @@
       "note": "Diagnostics binding and canonical backend validation at the owner composition boundary.",
       "cases": [
         "AT-025",
+        "AT-026",
         "AT-027",
         "AT-043",
         "AT-044",
@@ -636,8 +642,8 @@
       "actualSourceHeads": {
         "studio": "c779980"
       },
-      "owner": null,
-      "ownerKind": "completed",
+      "owner": "Studio #108",
+      "ownerKind": "feature-backlog",
       "ownerNote": "Diagnostics binding and canonical backend validation at the owner composition boundary."
     },
     {
@@ -800,8 +806,8 @@
       "actualSourceHeads": {
         "studio": "858417f"
       },
-      "owner": null,
-      "ownerKind": "completed",
+      "owner": "Studio #1",
+      "ownerKind": "original-tracker",
       "ownerNote": "Remaining nested browser remap acceptance for the original editor."
     },
     {
@@ -844,8 +850,8 @@
       "actualSourceHeads": {
         "studio": "1a69a2a"
       },
-      "owner": null,
-      "ownerKind": "completed",
+      "owner": "Studio #1",
+      "ownerKind": "original-tracker",
       "ownerNote": "Remaining nested browser remap acceptance for the original editor."
     },
     {
@@ -1081,8 +1087,8 @@
       "actualSourceHeads": {
         "studio": "64cc163"
       },
-      "owner": null,
-      "ownerKind": "completed",
+      "owner": "Studio #107",
+      "ownerKind": "feature-backlog",
       "ownerNote": "Draft persistence through admitted owner ports; owner-restart case already evidenced."
     },
     {
@@ -1212,8 +1218,8 @@
       "actualSourceHeads": {
         "studio": "d9affcc"
       },
-      "owner": null,
-      "ownerKind": "completed",
+      "owner": "Studio #1",
+      "ownerKind": "original-tracker",
       "ownerNote": "Remaining conflict-resolution original acceptance."
     },
     {
@@ -1234,8 +1240,8 @@
       "actualSourceHeads": {
         "studio": "d9affcc"
       },
-      "owner": null,
-      "ownerKind": "completed",
+      "owner": "Studio #1",
+      "ownerKind": "original-tracker",
       "ownerNote": "Remaining conflict-resolution original acceptance."
     },
     {

@@ -43,7 +43,7 @@ const acceptanceStatus = Object.fromEntries(
   acceptanceLedger.cases.map((c) => [c.id, c]),
 );
 
-const RESOLVED = new Set(["implemented", "evidenced"]);
+const RESOLVED = new Set(["evidenced"]);
 
 function disposition(workPackage) {
   return ownerMap.workPackages[workPackage] ?? ownerMap.default;
@@ -144,6 +144,7 @@ const EXPLICIT_COVERAGE = [
 ];
 
 const CORRECTIONS = [
+  "Acceptance ownership (2026-09-15 review): `implemented` cases are no longer treated as resolved. AT-026/AT-034/AT-036/AT-047/AT-053/AT-054 are implemented in source but their required `phase1_process`/`browser` evidence tier is not demonstrated, so they retain an owner for outstanding verification instead of being recorded as completed. Only `evidenced` acceptance is ownerless.",
   "AT-091/AT-092 (P2-091/P2-092): blocked → partial. Later merged CI (`.github/workflows/validate.yml`) runs real Chromium/Firefox/WebKit journeys and an authenticated job against the pinned real owner; the prior 'engines and attached owner process are not yet available' statement was stale.",
   "AT-097 (P2-097): blocked → evidenced/implemented. The lost-save/publication/command and concurrent-editor tests are merged in `tests/browser/live-owner.spec.ts` and run against the pinned real owner process.",
   "AT-112 (P2-112): blocked → evidenced. `.github/workflows/validate.yml` is configured and green on main; the requirement was already recorded implemented, so the blocked case was a stale contradiction.",
@@ -166,7 +167,7 @@ md.push(`- Source package reviewed at Studio \`${report.source_commit}\` on ${re
 md.push(`- Requirement ledger: ${JSON.stringify(report.requirement_counts)} (of ${requirementLedger.requirements.length}).`);
 md.push(`- Acceptance ledger: ${JSON.stringify(report.acceptance_counts)} (of ${acceptanceLedger.cases.length}).`);
 md.push(
-  "- `implemented`/`evidenced` entries are resolved; `partial` and `blocked` entries carry an owner below.",
+  "- Only `evidenced` entries are resolved. `implemented`, `partial` and `blocked` entries keep an owner below, because implementation alone does not satisfy the case's required evidence tier.",
 );
 md.push(
   "- Every entry keeps its original stable id, requirement link and required evidence tier; unavailable evidence is not labelled passed.",

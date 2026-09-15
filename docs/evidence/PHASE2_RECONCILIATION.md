@@ -8,7 +8,7 @@ over the original package and the two evidence ledgers; it does not redefine a s
 - Source package reviewed at Studio `06b780a8f198c989f13f4a5e6e98f3c0361e3cf7` on 2026-09-15.
 - Requirement ledger: {"blocked":28,"implemented":75,"partial":17} (of 120).
 - Acceptance ledger: {"blocked":28,"evidenced":63,"partial":23,"implemented":6} (of 120).
-- `implemented`/`evidenced` entries are resolved; `partial` and `blocked` entries carry an owner below.
+- Only `evidenced` entries are resolved. `implemented`, `partial` and `blocked` entries keep an owner below, because implementation alone does not satisfy the case's required evidence tier.
 - Every entry keeps its original stable id, requirement link and required evidence tier; unavailable evidence is not labelled passed.
 
 ## Preserved completed increments
@@ -17,6 +17,7 @@ AT-046/P2-046 (owner-restart draft persistence) remains evidenced/implemented fr
 
 ## 2026-09-15 evidence-backed corrections
 
+- Acceptance ownership (2026-09-15 review): `implemented` cases are no longer treated as resolved. AT-026/AT-034/AT-036/AT-047/AT-053/AT-054 are implemented in source but their required `phase1_process`/`browser` evidence tier is not demonstrated, so they retain an owner for outstanding verification instead of being recorded as completed. Only `evidenced` acceptance is ownerless.
 - AT-091/AT-092 (P2-091/P2-092): blocked → partial. Later merged CI (`.github/workflows/validate.yml`) runs real Chromium/Firefox/WebKit journeys and an authenticated job against the pinned real owner; the prior 'engines and attached owner process are not yet available' statement was stale.
 - AT-097 (P2-097): blocked → evidenced/implemented. The lost-save/publication/command and concurrent-editor tests are merged in `tests/browser/live-owner.spec.ts` and run against the pinned real owner process.
 - AT-112 (P2-112): blocked → evidenced. `.github/workflows/validate.yml` is configured and green on main; the requirement was already recorded implemented, so the blocked case was a stale contradiction.
@@ -45,11 +46,11 @@ Partial. This reconciliation supplies the criterion-to-evidence mapping (AT-116)
 - **Harness #94** (cross-repository) — Additive owner projection change is merged; browser pairing and live-owner process evidence must come from live harness execution.
   - AT-009
 - **Studio #1** (original-tracker) — Original orchestration/Luna-Max child-runtime evidence; requires the authorized child-runtime environment and cannot be satisfied by browser or fixture tests.
-  - AT-001, AT-002, AT-003, AT-018, AT-035, AT-038, AT-040, AT-089, AT-093, AT-100, AT-101, AT-102, AT-103, AT-104, AT-105, AT-107, AT-110, AT-113, AT-114, AT-115, AT-117
+  - AT-001, AT-002, AT-003, AT-018, AT-034, AT-035, AT-036, AT-038, AT-040, AT-053, AT-054, AT-089, AT-093, AT-100, AT-101, AT-102, AT-103, AT-104, AT-105, AT-107, AT-110, AT-113, AT-114, AT-115, AT-117
 - **Studio #107** (feature-backlog) — Render an actual owner run state through admitted target/admission.
-  - AT-030, AT-031, AT-055, AT-057, AT-064, AT-065, AT-069, AT-071, AT-072, AT-075, AT-091, AT-092, AT-095, AT-096, AT-098, AT-099
+  - AT-030, AT-031, AT-047, AT-055, AT-057, AT-064, AT-065, AT-069, AT-071, AT-072, AT-075, AT-091, AT-092, AT-095, AT-096, AT-098, AT-099
 - **Studio #108** (feature-backlog) — Diagnostics binding and canonical backend validation at the owner composition boundary.
-  - AT-025, AT-027, AT-043, AT-044, AT-061, AT-062, AT-063, AT-066, AT-079, AT-080
+  - AT-025, AT-026, AT-027, AT-043, AT-044, AT-061, AT-062, AT-063, AT-066, AT-079, AT-080
 - **Studio #112** (feature-backlog) — Registry/profile discovery and typed generation per node.
   - AT-019, AT-020
 - **Studio #134** (reconciliation-task) — This task: map every mandatory requirement to evidence or an explicit blocker.
@@ -84,7 +85,7 @@ Partial. This reconciliation supplies the criterion-to-evidence mapping (AT-116)
 | P2-023 | AT-023 | WP-07 | phase1_process | evidenced |
 | P2-024 | AT-024 | WP-07 | phase1_process | evidenced |
 | P2-025 | AT-025 | WP-08 | phase1_process | partial → Studio #108 |
-| P2-026 | AT-026 | WP-08 | phase1_process | implemented |
+| P2-026 | AT-026 | WP-08 | phase1_process | implemented → Studio #108 |
 | P2-027 | AT-027 | WP-08 | phase1_process | partial → Studio #108 |
 | P2-028 | AT-028 | WP-09 | browser | evidenced |
 | P2-029 | AT-029 | WP-09 | browser | evidenced |
@@ -92,9 +93,9 @@ Partial. This reconciliation supplies the criterion-to-evidence mapping (AT-116)
 | P2-031 | AT-031 | WP-10 | browser | partial → Studio #107 |
 | P2-032 | AT-032 | WP-10 | browser | evidenced |
 | P2-033 | AT-033 | WP-10 | browser | evidenced |
-| P2-034 | AT-034 | WP-11 | browser | implemented |
+| P2-034 | AT-034 | WP-11 | browser | implemented → Studio #1 |
 | P2-035 | AT-035 | WP-11 | browser | partial → Studio #1 |
-| P2-036 | AT-036 | WP-11 | browser | implemented |
+| P2-036 | AT-036 | WP-11 | browser | implemented → Studio #1 |
 | P2-037 | AT-037 | WP-12 | browser | evidenced |
 | P2-038 | AT-038 | WP-12 | browser | partial → Studio #1 |
 | P2-039 | AT-039 | WP-12 | browser | evidenced |
@@ -105,14 +106,14 @@ Partial. This reconciliation supplies the criterion-to-evidence mapping (AT-116)
 | P2-044 | AT-044 | WP-14 | browser | partial → Studio #108 |
 | P2-045 | AT-045 | WP-14 | browser | evidenced |
 | P2-046 | AT-046 | WP-15 | phase1_process | evidenced |
-| P2-047 | AT-047 | WP-15 | phase1_process | implemented |
+| P2-047 | AT-047 | WP-15 | phase1_process | implemented → Studio #107 |
 | P2-048 | AT-048 | WP-15 | phase1_process | evidenced |
 | P2-049 | AT-049 | WP-16 | browser | evidenced |
 | P2-050 | AT-050 | WP-16 | browser | evidenced |
 | P2-051 | AT-051 | WP-16 | browser | evidenced |
 | P2-052 | AT-052 | WP-17 | browser | evidenced |
-| P2-053 | AT-053 | WP-17 | browser | implemented |
-| P2-054 | AT-054 | WP-17 | browser | implemented |
+| P2-053 | AT-053 | WP-17 | browser | implemented → Studio #1 |
+| P2-054 | AT-054 | WP-17 | browser | implemented → Studio #1 |
 | P2-055 | AT-055 | WP-18 | phase1_process | partial → Studio #107 |
 | P2-056 | AT-056 | WP-18 | phase1_process | evidenced |
 | P2-057 | AT-057 | WP-18 | phase1_process | partial → Studio #107 |
