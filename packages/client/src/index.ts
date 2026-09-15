@@ -70,6 +70,8 @@ import {
   type WorkflowDefinition,
 } from "@studio/contracts";
 import { canonicalJson, cloneDocument, definitionIdentityDigest, diffDocuments, semanticDigest, sha256Hex, validateNodeBindings } from "@studio/document";
+import contextCatalogFixture from "../../../contracts/accepted/context-control/catalog-conformance.json";
+import { readContextCatalogBody } from "./context-owner-catalog";
 
 export type ClientMode = "fixture" | "live";
 
@@ -151,44 +153,8 @@ export function fixtureTargetCatalog(): TargetCatalogResponse {
   });
 }
 
-const FIXTURE_CONTEXT_BINDINGS: Array<[string, Array<"analyze" | "decide">]> = [
-  ["context.synthetic.v1", ["analyze", "decide"]],
-  ["sts2.campaign.context.v1", ["decide"]],
-  ["sts2.combat.context.v1", ["decide"]],
-  ["sts2.event.context.v1", ["decide"]],
-  ["sts2.map.context.v1", ["decide"]],
-  ["sts2.rest.context.v1", ["decide"]],
-  ["sts2.reward.context.v1", ["decide"]],
-  ["sts2.selection.context.v1", ["decide"]],
-  ["sts2.setup.context.v1", ["decide"]],
-  ["sts2.shop.context.v1", ["decide"]],
-];
-
 export async function fixtureContextOwnerCatalog(): Promise<ContextOwnerCatalog> {
-  const owner_id = "fixture.context-owner";
-  const owner_version = "1.0.0";
-  const descriptors = await Promise.all(FIXTURE_CONTEXT_BINDINGS.map(async ([context_ref, node_kinds]) => ({
-    schema_version: "ascension.context-control.owner-binding.v1" as const,
-    binding_id: `fixture.${context_ref}.binding.v1`,
-    version: 1,
-    digest: await sha256Hex(canonicalJson({ context_ref, node_kinds })),
-    context_ref,
-    node_kinds,
-    sources: [],
-    operations: [],
-    effective_limits: { max_items: 256, max_notes: 64, max_context_bytes: 65_536, max_objective_bytes: 4_096, max_control_events: 4_096 },
-    continuity: { survives_controller_restart: false, receipt_recovery: false, provider_session_continuity: false },
-    grants: { metadata_read: true, content_read: false, edit: false, control: false },
-    state: "available" as const,
-  })));
-  descriptors.sort((left, right) => left.context_ref.localeCompare(right.context_ref));
-  return ContextOwnerCatalogSchema.parse({
-    schema_version: "ascension.context-control.owner-catalog.v1",
-    owner_id,
-    owner_version,
-    catalog_digest: await sha256Hex(canonicalJson({ owner_id, owner_version, descriptors })),
-    descriptors,
-  });
+  return ContextOwnerCatalogSchema.parse(contextCatalogFixture.catalogs.find((row) => row.name === "default")?.catalog);
 }
 
 const TARGET_CONFIGURATION_FIELDS: (keyof RunTargetConfiguration)[] = [
@@ -511,7 +477,7 @@ export class OwnerApiClient implements StudioClient {
   }
 
   public async listContextBindings(): Promise<ContextOwnerCatalog> {
-    const response = await this.request("/context-bindings", { method: "GET" });
+    const response = await this.request("/context-bindings", { method: "GET" }, true);
     return decodeWith(ContextOwnerCatalogSchema, response, "context binding catalog");
   }
 
@@ -691,7 +657,7 @@ export class OwnerApiClient implements StudioClient {
     return decodeWith(ExportResponseSchema, response, "run export");
   }
 
-  private async request(path: string, init: RequestInit): Promise<unknown> {
+  private async request(path: string, init: RequestInit, catalogBody = false): Promise<unknown> {
     const headers = new Headers(init.headers);
     headers.set("accept", "application/json");
     if (init.body !== undefined) {
@@ -705,7 +671,16 @@ export class OwnerApiClient implements StudioClient {
       headers,
       credentials: "same-origin",
     });
-    const body: unknown = await response.json().catch(() => undefined);
+    let body: unknown;
+    if (catalogBody) {
+      try {
+        body = await readContextCatalogBody(response);
+      } catch {
+        throw new ClientError("Context catalog body is unavailable, malformed, or outside consumer bounds", "context_catalog_invalid", response.status);
+      }
+    } else {
+      body = await response.json().catch(() => undefined);
+    }
     if (!response.ok) {
       const decoded = ErrorResponseSchema.safeParse(body);
       throw new ClientError(

@@ -478,18 +478,18 @@ describe("owner context binding catalog", () => {
   it("derives owner-validated bindings only from available metadata descriptors", async () => {
     const catalog = await fixtureContextOwnerCatalog();
     const bindings = contextBindingsFromOwnerCatalog(catalog);
-    expect(bindings?.length).toBe(10);
-    expect(bindings?.some((binding) => binding.context_ref === "context.synthetic.v1")).toBe(true);
+    expect(bindings?.length).toBe(1);
+    expect(bindings?.some((binding) => binding.context_ref === "context.fixture.v1")).toBe(true);
     const denied = { ...catalog, descriptors: catalog.descriptors.map((descriptor) => ({ ...descriptor, state: "denied" as const })) };
-    expect(contextBindingsFromOwnerCatalog(denied)).toEqual([]);
+    expect(contextBindingsFromOwnerCatalog(denied)).toBeUndefined();
     expect(contextBindingsFromOwnerCatalog(undefined)).toBeUndefined();
   });
 
   it("lists fixture owner context bindings", async () => {
     const client = new FixtureClient([]);
     const catalog = await client.listContextBindings();
-    expect(catalog.descriptors.length).toBe(10);
-    expect(catalog.descriptors.some((descriptor) => descriptor.context_ref === "sts2.combat.context.v1")).toBe(true);
+    expect(catalog.descriptors.length).toBe(1);
+    expect(catalog.descriptors.some((descriptor) => descriptor.context_ref === "context.fixture.v1")).toBe(true);
   });
 
   it("decodes the owner context-binding route", async () => {
@@ -500,6 +500,6 @@ describe("owner context binding catalog", () => {
     };
     const client = new OwnerApiClient({ baseUrl: "/v1", fetcher });
     const decoded = await client.listContextBindings();
-    expect(decoded.descriptors.length).toBe(10);
+    expect(decoded.descriptors.length).toBe(1);
   });
 });

@@ -1,10 +1,23 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { verifyEntries } from './verify-contract-pins.mjs';
+import { verifyContextCatalogPin, verifyEntries } from './verify-contract-pins.mjs';
+
+test('catalog inventory keeps producer source, synthetic provenance and fixture identity separate', () => {
+  const root = fileURLToPath(new URL('../', import.meta.url));
+  const pin = JSON.parse(readFileSync(join(root, 'contracts/context-control-catalog.lock.json')));
+  assert.equal(verifyContextCatalogPin(root, pin), 1);
+  for (const update of [
+    { repository: 'consumer/invented' }, { revision: 'main' }, { producer_path: 'other.json' },
+    { evidence: 'authenticated_owner' }, { historical_contract_origin: pin.revision },
+    { consumed_artifacts: [] }, { consumed_artifacts: [...pin.consumed_artifacts, ...pin.consumed_artifacts] },
+    { consumed_artifacts: [{ ...pin.consumed_artifacts[0], sha256: '0'.repeat(64) }] },
+  ]) assert.throws(() => verifyContextCatalogPin(root, { ...pin, ...update }));
+});
 
 test('contract pins reject corruption, omissions, duplicates and escaping paths', (t) => {
   const temp = mkdtempSync(join(tmpdir(), 'studio-contract-test-'));

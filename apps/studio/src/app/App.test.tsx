@@ -21,7 +21,7 @@ describe("Studio shell", () => {
     expect(screen.getByText("fixture mode", { exact: false })).toBeInTheDocument();
     await user.click(screen.getAllByRole("button", { name: "Open designer" })[0]);
     expect(await screen.findByRole("heading", { name: "Strict setup" })).toBeInTheDocument();
-    expect(await screen.findByRole("region", { name: "Context reference catalog" })).toHaveTextContent("context.synthetic.v1");
+    expect(await screen.findByRole("region", { name: "Context reference catalog" })).toHaveTextContent("context.fixture.v1");
     expect(screen.getByRole("tab", { name: "List editor" })).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: "List editor" }));
     expect(screen.getByText("Semantic node list")).toBeInTheDocument();
