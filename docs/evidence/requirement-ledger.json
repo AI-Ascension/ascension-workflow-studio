@@ -2,9 +2,9 @@
   "schema_version": 1,
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
-    "blocked": 33,
-    "implemented": 74,
-    "partial": 13
+    "blocked": 28,
+    "implemented": 75,
+    "partial": 17
   },
   "requirements": [
     {
@@ -911,8 +911,8 @@
       "id": "P2-091",
       "mandatory": true,
       "work_package": "WP-30",
-      "status": "blocked",
-      "evidence": "Real browser journey engines and attached owner process are not yet available.",
+      "status": "partial",
+      "evidence": "Real browser engines and the attached pinned owner process are now exercised in CI (`Studio validation` run 34912274871); complete authoring-to-run and history journeys across all engines remain to be recorded. See AT-091.",
       "acceptance_cases": [
         "AT-091"
       ]
@@ -921,8 +921,8 @@
       "id": "P2-092",
       "mandatory": true,
       "work_package": "WP-30",
-      "status": "blocked",
-      "evidence": "Real forbidden/conflict/disconnected browser states need owner attachment.",
+      "status": "partial",
+      "evidence": "Fixture and live-owner browser journeys cover empty/loading/invalid/conflict and concurrent-editor states; forbidden and owner-unattached states remain to be evidenced. See AT-092.",
       "acceptance_cases": [
         "AT-092"
       ]
@@ -971,8 +971,8 @@
       "id": "P2-097",
       "mandatory": true,
       "work_package": "WP-32",
-      "status": "blocked",
-      "evidence": "Lost-save/publication/concurrent-editor owner contracts are unavailable.",
+      "status": "implemented",
+      "evidence": "Lost-save/publication/command and concurrent-editor cases are implemented and evidenced by `tests/browser/live-owner.spec.ts` running against the pinned real owner process in the `Authenticated live-owner browser` job. See AT-097.",
       "acceptance_cases": [
         "AT-097"
       ]
@@ -1131,8 +1131,8 @@
       "id": "P2-113",
       "mandatory": true,
       "work_package": "WP-37",
-      "status": "blocked",
-      "evidence": "Generated client regeneration is not configured.",
+      "status": "partial",
+      "evidence": "Contract-pin digests and the recorded-run SHA256SUMS inventory are verified in CI (`tools/verify-contract-pins.mjs`); generated-client regeneration from reviewed sources is not configured.",
       "acceptance_cases": [
         "AT-113"
       ]
@@ -1141,8 +1141,8 @@
       "id": "P2-114",
       "mandatory": true,
       "work_package": "WP-37",
-      "status": "blocked",
-      "evidence": "CI evidence is not configured.",
+      "status": "partial",
+      "evidence": "CI is configured and green on main; sanitized browser/live-owner diagnostics are uploaded only on failure (`64f21ea`, `e563efc`). Exact failure-reproducibility evidence remains partial.",
       "acceptance_cases": [
         "AT-114"
       ]

@@ -1,7 +1,11 @@
 # Phase 2 final integration report
 
-Date: 2026-09-11
+Date: 2026-09-11; reconciled 2026-09-15 for [Studio #134](https://github.com/AI-Ascension/ascension-workflow-studio/issues/134).
 Readiness: merged Phase 2 implementation; release remains blocked by the recorded verification gates.
+
+The current criterion-to-evidence mapping and owner assignment is in
+[PHASE2_RECONCILIATION.md](PHASE2_RECONCILIATION.md); it is a projection over the
+requirement and acceptance ledgers and lists every unresolved mandatory case by owner.
 
 ## Delivered product
 
@@ -22,7 +26,7 @@ The delivery artifacts are the static bundle under `artifacts/studio-bundle/`, i
 
 ## Coverage and evidence
 
-The requirement ledger currently reports 45 implemented, 30 partial, 32 blocked, and 13 not-started requirements. The acceptance ledger reports 38 evidenced, 36 partial, 33 blocked, and 13 not-run cases. The ledgers preserve the required distinction between source/unit evidence, browser evidence, real Phase 1 process evidence, delivery artifacts, and unavailable native proof.
+The requirement ledger currently reports 75 implemented, 17 partial, and 28 blocked requirements. The acceptance ledger reports 63 evidenced, 6 implemented, 23 partial, and 28 blocked cases. The 2026-09-15 reconciliation corrected stale statements and mapped every unresolved mandatory case to an owner; see [PHASE2_RECONCILIATION.md](PHASE2_RECONCILIATION.md). The ledgers preserve the required distinction between source/unit evidence, browser evidence, real Phase 1 process evidence, delivery artifacts, and unavailable native proof.
 
 The clean-install checks passed:
 
@@ -56,4 +60,4 @@ The Studio and owner PRs were merged in dependency order after their review chec
 
 ## Remaining gaps
 
-The mandatory unresolved work is explicit in the ledgers. The main blockers are the missing native child-session runtime; browser session revocation, browser validation/publication, plan/artifact retrieval; the full accessibility/viewport/zoom matrix; production CSP/static-host review; independent runtime egress and license review; and shared-client regeneration. GitHub Actions now validates the combined Studio main head with unit, build, Chromium, Firefox, WebKit, recorded-run browser, and authenticated live-owner browser checks. The implementation is merged, but it is not ready for a release decision.
+The mandatory unresolved work is explicit in the ledgers and mapped to owners in [PHASE2_RECONCILIATION.md](PHASE2_RECONCILIATION.md). The main blockers are the missing native child-session runtime; browser session pairing/revocation; plan/artifact retrieval; the full accessibility/viewport/zoom matrix; production CSP/static-host review; independent runtime egress and license review; shared-client regeneration; and the final combined-head/native-lineage acceptance. GitHub Actions now validates the combined Studio main head with unit, build, Chromium, Firefox, WebKit, recorded-run browser, and authenticated live-owner browser checks. The implementation is merged, but it is not ready for a release decision.
