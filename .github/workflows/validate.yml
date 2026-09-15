@@ -26,7 +26,7 @@ jobs:
           node-version: 24.16.0
           cache: npm
       - run: npm ci
-- name: Verify pinned producer contracts
+      - name: Verify pinned producer contracts
         run: |
           node --test tools/verify-contract-pins.test.mjs
           node tools/verify-contract-pins.mjs
