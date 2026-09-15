@@ -1,0 +1,67 @@
+{
+  "default": {
+    "owner": "Studio #1",
+    "kind": "original-tracker",
+    "note": "Original Phase 2 workbench tracker; retains the named remaining acceptance task."
+  },
+  "workPackages": {
+    "WP-00": { "owner": "Studio #1", "kind": "original-tracker", "note": "Original orchestration/Luna-Max child-runtime evidence; requires the authorized child-runtime environment and cannot be satisfied by browser or fixture tests." },
+    "WP-05": { "owner": "Studio #1", "kind": "original-tracker", "note": "Archival preservation of unsupported schema bytes; remaining exact-byte assertion is original-workbench acceptance." },
+    "WP-06": { "owner": "Studio #112", "kind": "feature-backlog", "note": "Registry/profile discovery and typed generation per node." },
+    "WP-08": { "owner": "Studio #108", "kind": "feature-backlog", "note": "Diagnostics binding and canonical backend validation at the owner composition boundary." },
+    "WP-09": { "owner": "Studio #107", "kind": "feature-backlog", "note": "Render an actual owner run state through admitted target/admission." },
+    "WP-10": { "owner": "Studio #107", "kind": "feature-backlog", "note": "Real browser add/connect/reconnect/delete journey against the live owner." },
+    "WP-11": { "owner": "Studio #1", "kind": "original-tracker", "note": "Remaining nested browser remap acceptance for the original editor." },
+    "WP-12": { "owner": "Studio #1", "kind": "original-tracker", "note": "Remaining browser coverage for ordered guard branches." },
+    "WP-13": { "owner": "Studio #1", "kind": "original-tracker", "note": "Remaining browser coverage for invalid-text preservation." },
+    "WP-14": { "owner": "Studio #108", "kind": "feature-backlog", "note": "Adaptive operation/policy editing and generated plan-layer projection." },
+    "WP-15": { "owner": "Studio #107", "kind": "feature-backlog", "note": "Draft persistence through admitted owner ports; owner-restart case already evidenced." },
+    "WP-16": { "owner": "Studio #1", "kind": "original-tracker", "note": "Remaining offline/crash-recovery original acceptance." },
+    "WP-17": { "owner": "Studio #1", "kind": "original-tracker", "note": "Remaining conflict-resolution original acceptance." },
+    "WP-18": { "owner": "Studio #107", "kind": "feature-backlog", "note": "Exact publication and immutable-digest launch after capability/policy admission." },
+    "WP-19": { "owner": "Studio #1", "kind": "original-tracker", "note": "Remaining template/subworkflow original acceptance." },
+    "WP-20": { "owner": "Studio #108", "kind": "feature-backlog", "note": "Owner pairing, browser session, origin binding and static-host serving." },
+    "WP-21": { "owner": "Studio #107", "kind": "feature-backlog", "note": "Live attachment/snapshot binding and bounded polling under current authorization." },
+    "WP-22": { "owner": "Studio #107", "kind": "feature-backlog", "note": "Stream gap/retention behavior against the attached owner." },
+    "WP-23": { "owner": "Studio #107", "kind": "feature-backlog", "note": "Per-invocation/plan detail and authorized artifact rendering." },
+    "WP-24": { "owner": "Studio #107", "kind": "feature-backlog", "note": "Historical command policy metadata from the admitted owner." },
+    "WP-26": { "owner": "Studio #108", "kind": "feature-backlog", "note": "Server-side object permissions and production CSP/static-host controls." },
+    "WP-29": { "owner": "Studio #1", "kind": "original-tracker", "note": "Original performance acceptance (AT-089/PERF-01-08); WebKit edit p95 target retained." },
+    "WP-30": { "owner": "Studio #107", "kind": "feature-backlog", "note": "Complete browser authoring-to-run and state-matrix journeys against the attached owner." },
+    "WP-31": { "owner": "Studio #107", "kind": "feature-backlog", "note": "Durable browser/web attachment restart and accepted dynamic-plan observation." },
+    "WP-32": { "owner": "Studio #107", "kind": "feature-backlog", "note": "Scoped owner fault matrix and restart-ownership uncertainty." },
+    "WP-33": { "owner": "Studio #1", "kind": "original-tracker", "note": "Independent security-boundary review and readiness block." },
+    "WP-34": { "owner": "Studio #1", "kind": "original-tracker", "note": "Manual screenshot, screen-reader and pointer/zoom accessibility acceptance." },
+    "WP-35": { "owner": "Studio #1", "kind": "original-tracker", "note": "Static-host bundle acceptance, safe paths/base routing and incompatible-bundle handling." },
+    "WP-36": { "owner": "Studio #1", "kind": "original-tracker", "note": "Compatibility/additive-change and non-destructive upgrade/rollback evidence." },
+    "WP-37": { "owner": "Studio #1", "kind": "original-tracker", "note": "CI artifact pinning/regeneration and sanitized reproducible failure evidence." },
+    "WP-38": { "owner": "Studio #1", "kind": "original-tracker", "note": "Final combined-head, mandatory-ledger and lineage acceptance." }
+  },
+  "cases": {
+    "AT-009": {
+      "owner": "Harness #94",
+      "kind": "cross-repository",
+      "note": "Additive owner projection change is merged; browser pairing and live-owner process evidence must come from live harness execution."
+    },
+    "AT-066": {
+      "owner": "Studio #108",
+      "kind": "feature-backlog",
+      "note": "Bounded polling fallback and revocation require the owner session/pairing composition."
+    },
+    "AT-093": {
+      "owner": "Studio #1",
+      "kind": "original-tracker",
+      "note": "Production static-host CSP/worker/routing acceptance is outside the Studio repository."
+    },
+    "AT-116": {
+      "owner": "Studio #134",
+      "kind": "reconciliation-task",
+      "note": "This task: map every mandatory requirement to evidence or an explicit blocker."
+    },
+    "AT-117": {
+      "owner": "Studio #1",
+      "kind": "original-tracker",
+      "note": "Native lineage/model compliance and worker closure require the authorized orchestration environment."
+    }
+  }
+}

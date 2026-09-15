@@ -2,9 +2,9 @@
   "schema_version": 1,
   "source": "docs/reference/phase2-package/quality/acceptance-cases.json",
   "status_summary": {
-    "blocked": 34,
-    "evidenced": 61,
-    "partial": 19,
+    "blocked": 28,
+    "evidenced": 63,
+    "partial": 23,
     "implemented": 6
   },
   "cases": [
@@ -1244,10 +1244,10 @@
         "P2-091"
       ],
       "work_package": "WP-30",
-      "status": "blocked",
+      "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Real browser journey engines and attached owner process are not yet available."
+      "evidence": "Real browser engines and an attached real owner process now run in CI: `.github/workflows/validate.yml` runs fixture journeys on Chromium, Firefox and WebKit, and the `Authenticated live-owner browser` job runs the pinned Rust owner (`sts2-workflow serve --auth-profile studio-live`) with `tests/browser/live-owner.spec.ts`. `tests/browser/studio.spec.ts` covers authoring and inspection; live-owner covers validation, publication, conflict and lost-response journeys. A single recorded end-to-end authoring-to-run-to-history journey across all engines remains to be recorded."
     },
     {
       "id": "AT-092",
@@ -1255,10 +1255,10 @@
         "P2-092"
       ],
       "work_package": "WP-30",
-      "status": "blocked",
+      "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Real forbidden/conflict/disconnected browser states need owner attachment."
+      "evidence": "Fixture browser journeys cover empty, loading, invalid and conflict states on Chromium, Firefox and WebKit; the live-owner job covers stale-revision conflict, lost/disconnected response and two-tab concurrent-editor states against the pinned owner. Forbidden and owner-unattached states still need explicit owner-attachment evidence."
     },
     {
       "id": "AT-093",
@@ -1317,10 +1317,10 @@
         "P2-097"
       ],
       "work_package": "WP-32",
-      "status": "blocked",
+      "status": "evidenced",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Lost-save/publication/concurrent-editor owner contracts are unavailable."
+      "evidence": "The lost-save/publication/command and concurrent-editor matrix is merged and runs in the `Authenticated live-owner browser` job against the pinned real owner process. `tests/browser/live-owner.spec.ts` covers a retried lost draft-save response reusing the original mutation identity (`5283b3f`), a lost publication response resolved by original identity (`ec8dd67`, P2-056), a lost command response resolved by original command id (`46feb91`), stale-revision draft conflicts and three-way merge (`d9affcc`), publication conflict (`c26bb12`), delete-versus-edit and reordered-branch review, and a two-tab conflicting pinned-reference change (`2ccd397`). The pinned owner is `AI-Ascension/sts2-harness` revision `91731e849bef2884ae17e44d4f7143a532c53f38`; only real owner HTTP ports are used."
     },
     {
       "id": "AT-098",
@@ -1502,10 +1502,10 @@
         "P2-112"
       ],
       "work_package": "WP-37",
-      "status": "blocked",
+      "status": "evidenced",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "CI workflow is not configured in this initial delivery."
+      "evidence": "`.github/workflows/validate.yml` is configured and green on main. Studio validation run 34912274871 (head `06b780a8f198c989f13f4a5e6e98f3c0361e3cf7`) passed `Unit, type, and production build` (contract-pin verification, lint/typecheck, unit tests, production build) together with the Chromium, Firefox, WebKit, recorded-run and authenticated live-owner browser jobs."
     },
     {
       "id": "AT-113",
@@ -1513,10 +1513,10 @@
         "P2-113"
       ],
       "work_package": "WP-37",
-      "status": "blocked",
+      "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "Generated client regeneration is not configured."
+      "evidence": "Shared-artifact pinning is configured: `tools/verify-contract-pins.mjs` (with `tools/verify-contract-pins.test.mjs`) verifies contract digests and the `contracts/recorded-run-candidate/SHA256SUMS` inventory in the `Unit, type, and production build` CI job. Regenerating a client from those pinned reviewed sources is not configured, so this requirement remains partial."
     },
     {
       "id": "AT-114",
@@ -1524,10 +1524,10 @@
         "P2-114"
       ],
       "work_package": "WP-37",
-      "status": "blocked",
+      "status": "partial",
       "actual_command": null,
       "actual_source_heads": {},
-      "evidence": "CI evidence is not configured."
+      "evidence": "CI is configured and green on main (run 34912274871, head `06b780a8`). Sanitized diagnostics are retained only on failure: the browser and recorded-run jobs upload `playwright-report`/`test-results`, and the live-owner job uploads live-owner diagnostics and prints the owner log (`64f21ea`, `e563efc`). Exact per-run failure-reproducibility evidence is not yet recorded."
     },
     {
       "id": "AT-115",

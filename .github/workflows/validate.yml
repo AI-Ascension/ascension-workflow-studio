@@ -26,12 +26,13 @@ jobs:
           node-version: 24.16.0
           cache: npm
       - run: npm ci
-      - name: Verify pinned producer contracts
+- name: Verify pinned producer contracts
         run: |
           node --test tools/verify-contract-pins.test.mjs
           node tools/verify-contract-pins.mjs
-          node tools/generate-effective-limit-validators.mjs --check
           (cd contracts/recorded-run-candidate && sha256sum --check --strict SHA256SUMS)
+      - name: Verify Phase 2 requirement/acceptance reconciliation
+        run: node --test tools/verify-phase2-reconciliation.test.mjs
       - run: npm run lint
       - run: npm test -- --run --pool=threads --maxWorkers=1
       - run: npm run build
