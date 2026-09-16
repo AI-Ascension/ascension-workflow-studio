@@ -611,9 +611,7 @@ test("imports, proposes, separately approves and adopts saved policy, then switc
   await expect(policyPanel.getByRole("region", { name: "Current adopted policy" })).toContainText(targetSha);
   await policyPanel.getByRole("button", { name: "Refresh history" }).click();
   await expect(
-    policyPanel.locator("p.muted").filter({
-      has: policyPanel.locator("code").getByText(firstRunId, { exact: true }),
-    }),
+    policyPanel.locator("p.muted").filter({ hasText: firstRunId }),
   ).toHaveText(`Run ${firstRunId} · owner revision 5`);
   await expect(proposal).toContainText("migration.browser");
   await expect(proposal).toContainText("adopted");
