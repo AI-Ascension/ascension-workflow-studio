@@ -13,7 +13,7 @@ const preview = spawn(process.execPath, [
 ], {
   cwd: root,
   detached: true,
-  stdio: "inherit",
+  stdio: "ignore",
 });
 let proxyServer;
 let shuttingDown = false;
@@ -54,11 +54,21 @@ proxyServer = http.createServer((req, res) => {
   });
   req.pipe(proxy);
 });
-proxyServer.listen(proxyPort, "127.0.0.1");
 proxyServer.once("error", (error) => {
   console.error(`studio preview proxy failed to start: ${error.message}`);
   process.exitCode = 1;
   void shutdown().finally(() => process.exit());
+});
+preview.once("spawn", () => {
+  if (shuttingDown) return;
+  if (typeof process.send === "function") {
+    try { process.send({ type: "preview-process", pid: preview.pid }); } catch {}
+    process.once("message", (message) => {
+      if (message?.type === "start-proxy" && !shuttingDown) proxyServer.listen(proxyPort, "127.0.0.1");
+    });
+    return;
+  }
+  proxyServer.listen(proxyPort, "127.0.0.1");
 });
 
 async function shutdown() {
@@ -70,7 +80,7 @@ async function shutdown() {
     await Promise.race([closed, new Promise((resolveTimeout) => setTimeout(resolveTimeout, 1_000))]);
   }
   if (Number.isInteger(preview.pid) && preview.pid > 1) {
-    try { process.kill(-preview.pid, "SIGTERM"); } catch {}
+    try { preview.kill("SIGTERM"); } catch {}
     await waitForPreview(2_000);
     try { process.kill(-preview.pid, "SIGKILL"); } catch {}
     await waitForPreview(500);
