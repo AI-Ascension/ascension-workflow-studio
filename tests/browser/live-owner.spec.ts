@@ -446,6 +446,188 @@ test("renders an owner revision conflict after a stale browser save", async ({ p
   await expect(page.locator(".validation-label")).toHaveText("Publication needs conflict resolution before it can create an immutable revision.");
 });
 
+test("imports, proposes, separately approves and adopts saved policy, then switches runs", async ({ page }) => {
+  const sourceBytes = Buffer.from('{\n  "policy_id": "studio-browser-policy",\n  "version": 1\n}\n');
+  const targetBytes = Buffer.from('{\n  "policy_id": "studio-browser-policy",\n  "version": 2\n}\n');
+  const sourceSha = "a".repeat(64);
+  const proposalSha = "b".repeat(64);
+  const targetSha = "c".repeat(64);
+  type HistoryEntry = {
+    sha256: string;
+    policy_id: string;
+    version: number;
+    mode: "enabled";
+    continuity: "strict_reviewed";
+    active: boolean;
+  };
+  type ProposalEntry = {
+    proposal_id: string;
+    proposal_sha256: string;
+    source_sha256: string;
+    target_sha256: string;
+    state: "proposed" | "approved" | "adopted";
+    approval_recorded: boolean;
+    adopted_policy_sha256: string | null;
+  };
+  type OwnerState = {
+    revision: number;
+    active: null | {
+      sha256: string;
+      policy_id: string;
+      version: number;
+      mode: "enabled";
+      continuity: "strict_reviewed";
+      max_completed_turns: number;
+      history_ttl_seconds: number;
+      epoch: number;
+    };
+    history: HistoryEntry[];
+    proposals: ProposalEntry[];
+  };
+  const ownerByRun = new Map<string, OwnerState>();
+  const policyRequests: string[] = [];
+  await page.route("**/v1/workflow-runs/*/provider-session-policy**", async (route) => {
+    const request = route.request();
+    const url = new URL(request.url());
+    const runId = decodeURIComponent(url.pathname.split("/")[3]);
+    expect(request.headers().authorization).toBe("Bearer studio-live-ci-token");
+    expect(url.search).not.toContain("studio-live-ci-token");
+    policyRequests.push(`${request.method()} ${url.pathname}${url.search}`);
+    const state = ownerByRun.get(runId) ?? { revision: 1, active: null, history: [], proposals: [] };
+    ownerByRun.set(runId, state);
+    const view = () => ({
+      schema_version: "ascension.provider-session.policy-owner-view.v1",
+      operation: "current",
+      value: { run_id: runId, ...state },
+      effect_class: "local_metadata_only",
+      inference_calls: 0,
+      game_effects: 0,
+    });
+    const command = (
+      operation: "import" | "propose" | "approve" | "adopt",
+      policySha: string | null = null,
+      proposalDigest: string | null = null,
+    ) => ({
+      schema_version: "ascension.provider-session.policy-owner-command.v1",
+      operation,
+      revision: state.revision,
+      policy_sha256: policySha,
+      proposal_sha256: proposalDigest,
+      effect_class: "local_metadata_only",
+      inference_calls: 0,
+      game_effects: 0,
+    });
+    const respond = (body: unknown, status = 200) => route.fulfill({
+      status,
+      contentType: "application/json",
+      body: JSON.stringify(body),
+    });
+
+    if (request.method() === "GET") return respond(view());
+    const expectedRevision = Number(url.searchParams.get("expected_revision"));
+    expect(expectedRevision).toBe(state.revision);
+    const bytes = request.postDataBuffer();
+    if (url.pathname.endsWith("/import")) {
+      expect(bytes).toEqual(sourceBytes);
+      state.revision += 1;
+      state.history.push({
+        sha256: sourceSha, policy_id: "studio-browser-policy", version: 1,
+        mode: "enabled", continuity: "strict_reviewed", active: false,
+      });
+      return respond(command("import", sourceSha));
+    }
+    if (url.pathname.endsWith("/proposals/migration.browser")) {
+      expect(url.searchParams.get("source_sha256")).toBe(sourceSha);
+      expect(bytes).toEqual(targetBytes);
+      state.revision += 1;
+      state.history.push({
+        sha256: targetSha, policy_id: "studio-browser-policy", version: 2,
+        mode: "enabled", continuity: "strict_reviewed", active: false,
+      });
+      state.proposals.push({
+        proposal_id: "migration.browser", proposal_sha256: proposalSha,
+        source_sha256: sourceSha, target_sha256: targetSha,
+        state: "proposed", approval_recorded: false, adopted_policy_sha256: null,
+      });
+      return respond(command("propose", null, proposalSha));
+    }
+    const proposal = state.proposals.find((entry) => entry.proposal_id === "migration.browser");
+    expect(proposal).toBeDefined();
+    const commandBody = request.postDataJSON() as { proposal_sha256?: string; approval_ref?: string };
+    expect(commandBody.proposal_sha256).toBe(proposalSha);
+    expect(commandBody.approval_ref).toBe("approval.browser");
+    if (url.pathname.endsWith("/approve")) {
+      state.revision += 1;
+      proposal!.state = "approved";
+      proposal!.approval_recorded = true;
+      return respond(command("approve"));
+    }
+    if (url.pathname.endsWith("/adopt")) {
+      state.revision += 1;
+      state.active = {
+        sha256: targetSha, policy_id: "studio-browser-policy", version: 2,
+        mode: "enabled", continuity: "strict_reviewed",
+        max_completed_turns: 32, history_ttl_seconds: 3600, epoch: 1,
+      };
+      state.history.forEach((entry) => { entry.active = entry.sha256 === targetSha; });
+      proposal!.state = "adopted";
+      proposal!.adopted_policy_sha256 = targetSha;
+      return respond(command("adopt", targetSha));
+    }
+    return respond({ error: { code: "not_found" } }, 404);
+  });
+
+  await connectLiveOwner(page);
+  await startLiveRun(page);
+  const policyPanel = page.getByRole("region", { name: "Saved provider-session policy" });
+  await expect(policyPanel).toBeVisible();
+  const runInput = page.getByRole("textbox", { name: "Run ID" });
+  const firstRunId = await runInput.inputValue();
+  await expect(policyPanel).toContainText("No policy is adopted for this owner.");
+
+  await policyPanel.getByLabel("Policy JSON file").setInputFiles({
+    name: "source-policy.json", mimeType: "application/json", buffer: sourceBytes,
+  });
+  await policyPanel.getByRole("button", { name: "Import policy" }).click();
+  await expect(policyPanel).toContainText(/Policy import recorded at owner revision 2/);
+  await expect(policyPanel.getByRole("region", { name: "Saved policy history" }).getByText(sourceSha)).toBeVisible();
+
+  await policyPanel.getByLabel("Source policy").selectOption(sourceSha);
+  await policyPanel.getByLabel("Proposal ID").fill("migration.browser");
+  await policyPanel.getByLabel("Target policy JSON").setInputFiles({
+    name: "target-policy.json", mimeType: "application/json", buffer: targetBytes,
+  });
+  await policyPanel.getByRole("button", { name: "Create proposal" }).click();
+  await expect(policyPanel).toContainText(/Migration proposal recorded at owner revision 3/);
+  const proposal = policyPanel.getByRole("region", { name: "Migration approvals and adoption" });
+  await proposal.getByLabel("Approval reference for migration.browser").fill("approval.browser");
+  await proposal.getByRole("button", { name: "Record approval" }).click();
+  await expect(policyPanel).toContainText(/Proposal approval recorded at owner revision 4/);
+  await expect(proposal).toContainText("Approval recorded by owner.");
+  await proposal.getByLabel("Approval reference for migration.browser").fill("approval.browser");
+  await proposal.getByRole("button", { name: "Adopt approved proposal" }).click();
+  await expect(policyPanel).toContainText(/Proposal adoption recorded at owner revision 5/);
+  await expect(policyPanel.getByRole("region", { name: "Current adopted policy" })).toContainText(targetSha);
+  await policyPanel.getByRole("button", { name: "Refresh history" }).click();
+  await expect(policyPanel.getByText(/owner revision 5/)).toBeVisible();
+  await expect(proposal).toContainText("migration.browser");
+  await expect(proposal).toContainText("adopted");
+
+  await page.getByRole("button", { name: "Run inspection" }).click();
+  await startLiveRun(page);
+  await expect(policyPanel).toBeVisible();
+  const secondRunId = await runInput.inputValue();
+  expect(secondRunId).not.toBe(firstRunId);
+  await expect(policyPanel).toContainText("No policy is adopted for this owner.");
+  await expect(policyPanel.getByText("No policies have been imported.")).toBeVisible();
+
+  await runInput.fill(firstRunId);
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  await expect(policyPanel.getByRole("region", { name: "Current adopted policy" })).toContainText(targetSha);
+  await expect(policyPanel).toContainText("migration.browser");
+  expect(policyRequests.length).toBeGreaterThanOrEqual(8);
+});
+
 test("retries a lost draft-save response with the original mutation identity", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Open settings" }).click();

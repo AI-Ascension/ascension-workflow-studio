@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import type {
@@ -235,6 +235,122 @@ describe("saved provider-session policy lifecycle", () => {
     expect(screen.getByLabelText("Target policy JSON")).toHaveValue("");
     expect(screen.getByRole("combobox", { name: "Source policy" })).toHaveValue("");
     expect(screen.getByRole("textbox", { name: "Proposal ID" })).toHaveValue("");
+  });
+
+  it("ignores a late import completion after switching workflow runs", async () => {
+    let resolveImport!: (response: ProviderSessionPolicyCommandResponse) => void;
+    const pendingImport = new Promise<ProviderSessionPolicyCommandResponse>((resolve) => {
+      resolveImport = resolve;
+    });
+    const source = {
+      sha256: sourceSha, policy_id: "saved.policy", version: 1,
+      mode: "enabled" as const, continuity: "strict_reviewed" as const, active: false,
+    };
+    const otherSha = "d".repeat(64);
+    const other = {
+      sha256: otherSha, policy_id: "other.policy", version: 4,
+      mode: "inspect_only" as const, continuity: "strict_reviewed" as const, active: false,
+    };
+    const client: ProviderSessionPolicyClient = {
+      providerSessionPolicy: vi.fn(async (requestedRunId) => current({
+        run_id: requestedRunId,
+        revision: 1,
+        active: null,
+        history: requestedRunId === runId ? [source] : [other],
+        proposals: [],
+      })),
+      importProviderSessionPolicy: vi.fn(() => pendingImport),
+      proposeProviderSessionPolicy: vi.fn(),
+      approveProviderSessionPolicy: vi.fn(),
+      adoptProviderSessionPolicyProposal: vi.fn(),
+      adoptImportedProviderSessionPolicy: vi.fn(),
+    };
+
+    const view = render(<ProviderSessionPolicyPanel client={client} runId={runId} />);
+    await screen.findByText((_content, element) => element?.textContent === `Run ${runId} · owner revision 1`);
+    fireEvent.change(screen.getByLabelText("Policy JSON file"), {
+      target: { files: [new File(['{"policy_id":"saved.policy"}'], "policy.json", { type: "application/json" })] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Import policy" }));
+    await waitFor(() => expect(client.importProviderSessionPolicy).toHaveBeenCalledOnce());
+
+    view.rerender(<ProviderSessionPolicyPanel client={client} runId="workflow.run.2" />);
+    await screen.findByText((_content, element) => element?.textContent === "Run workflow.run.2 · owner revision 1");
+    fireEvent.change(screen.getByRole("combobox", { name: "Imported policy to adopt" }), { target: { value: otherSha } });
+    fireEvent.change(screen.getByLabelText("Policy JSON file"), {
+      target: { files: [new File(['{"policy_id":"next.policy"}'], "next.json", { type: "application/json" })] },
+    });
+    expect(screen.getByRole("button", { name: "Import policy" })).toBeEnabled();
+    await act(async () => {
+      resolveImport(command("import", 2));
+      await pendingImport;
+    });
+
+    expect(screen.getByText((_content, element) => element?.textContent === "Run workflow.run.2 · owner revision 1")).toBeInTheDocument();
+    expect(client.providerSessionPolicy).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("combobox", { name: "Imported policy to adopt" })).toHaveValue(otherSha);
+    expect(screen.queryByText(/Policy import recorded at owner revision/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Import policy" })).toBeEnabled();
+  });
+
+  it("ignores a late proposal completion after switching workflow runs", async () => {
+    let resolveProposal!: (response: ProviderSessionPolicyCommandResponse) => void;
+    const pendingProposal = new Promise<ProviderSessionPolicyCommandResponse>((resolve) => {
+      resolveProposal = resolve;
+    });
+    const source = {
+      sha256: sourceSha, policy_id: "saved.policy", version: 1,
+      mode: "enabled" as const, continuity: "strict_reviewed" as const, active: false,
+    };
+    const otherSha = "d".repeat(64);
+    const other = {
+      sha256: otherSha, policy_id: "other.policy", version: 4,
+      mode: "inspect_only" as const, continuity: "strict_reviewed" as const, active: false,
+    };
+    const client: ProviderSessionPolicyClient = {
+      providerSessionPolicy: vi.fn(async (requestedRunId) => current({
+        run_id: requestedRunId,
+        revision: 1,
+        active: null,
+        history: requestedRunId === runId ? [source] : [other],
+        proposals: [],
+      })),
+      importProviderSessionPolicy: vi.fn(),
+      proposeProviderSessionPolicy: vi.fn(() => pendingProposal),
+      approveProviderSessionPolicy: vi.fn(),
+      adoptProviderSessionPolicyProposal: vi.fn(),
+      adoptImportedProviderSessionPolicy: vi.fn(),
+    };
+
+    const view = render(<ProviderSessionPolicyPanel client={client} runId={runId} />);
+    await screen.findByText((_content, element) => element?.textContent === `Run ${runId} · owner revision 1`);
+    fireEvent.change(screen.getByRole("combobox", { name: "Source policy" }), { target: { value: sourceSha } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Proposal ID" }), { target: { value: "migration.1" } });
+    fireEvent.change(screen.getByLabelText("Target policy JSON"), {
+      target: { files: [new File(['{"policy_id":"saved.policy","version":2}'], "target.json", { type: "application/json" })] },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create proposal" }));
+    await waitFor(() => expect(client.proposeProviderSessionPolicy).toHaveBeenCalledOnce());
+
+    view.rerender(<ProviderSessionPolicyPanel client={client} runId="workflow.run.2" />);
+    await screen.findByText((_content, element) => element?.textContent === "Run workflow.run.2 · owner revision 1");
+    fireEvent.change(screen.getByRole("combobox", { name: "Source policy" }), { target: { value: otherSha } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Proposal ID" }), { target: { value: "migration.next" } });
+    fireEvent.change(screen.getByLabelText("Target policy JSON"), {
+      target: { files: [new File(['{"policy_id":"other.policy","version":5}'], "next-target.json", { type: "application/json" })] },
+    });
+    expect(screen.getByRole("button", { name: "Create proposal" })).toBeEnabled();
+    await act(async () => {
+      resolveProposal(command("propose", 2));
+      await pendingProposal;
+    });
+
+    expect(screen.getByText((_content, element) => element?.textContent === "Run workflow.run.2 · owner revision 1")).toBeInTheDocument();
+    expect(client.providerSessionPolicy).toHaveBeenCalledTimes(2);
+    expect(screen.getByRole("textbox", { name: "Proposal ID" })).toHaveValue("migration.next");
+    expect(screen.getByRole("combobox", { name: "Source policy" })).toHaveValue(otherSha);
+    expect(screen.queryByText(/Migration proposal recorded at owner revision/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create proposal" })).toBeEnabled();
   });
 
   it("surfaces a denied owner read without substituting local policy state", async () => {

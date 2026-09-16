@@ -31,6 +31,7 @@ export function ProviderSessionPolicyPanel({ client, runId }: ProviderSessionPol
   const importInput = useRef<HTMLInputElement>(null);
   const targetInput = useRef<HTMLInputElement>(null);
   const refreshId = useRef(0);
+  const ownerGeneration = useRef(0);
 
   const refresh = useCallback(async (): Promise<void> => {
     const currentId = ++refreshId.current;
@@ -50,8 +51,10 @@ export function ProviderSessionPolicyPanel({ client, runId }: ProviderSessionPol
   }, [client, runId]);
 
   useEffect(() => {
+    ownerGeneration.current += 1;
     setValue(undefined);
     setNotice(undefined);
+    setBusy(false);
     setImportFile(undefined);
     setTargetFile(undefined);
     setSelectedPolicy("");
@@ -60,28 +63,36 @@ export function ProviderSessionPolicyPanel({ client, runId }: ProviderSessionPol
     if (importInput.current) importInput.current.value = "";
     if (targetInput.current) targetInput.current.value = "";
     void refresh();
-    return () => { refreshId.current += 1; };
+    return () => {
+      ownerGeneration.current += 1;
+      refreshId.current += 1;
+    };
   }, [refresh]);
 
-  const perform = async (
+  const perform = async <T extends { revision: number },>(
     description: string,
-    command: () => Promise<{ revision: number }>,
+    command: () => Promise<T>,
+    afterCommand?: (result: T) => void,
   ): Promise<void> => {
     if (busy || !value) return;
+    const generation = ownerGeneration.current;
     setBusy(true);
     setError(undefined);
     setNotice(undefined);
     try {
       const result = await command();
+      if (generation !== ownerGeneration.current) return;
+      afterCommand?.(result);
       setNotice(`${description} recorded at owner revision ${result.revision}. Refreshing current history…`);
       await refresh();
     } catch (cause: unknown) {
+      if (generation !== ownerGeneration.current) return;
       setError(errorMessage(cause));
       if (cause instanceof ClientError && cause.status === 409) {
         setNotice("The owner rejected this stale or conflicting change. Refresh history before trying again.");
       }
     } finally {
-      setBusy(false);
+      if (generation === ownerGeneration.current) setBusy(false);
     }
   };
 
@@ -91,13 +102,15 @@ export function ProviderSessionPolicyPanel({ client, runId }: ProviderSessionPol
       setError(`Choose a JSON policy file no larger than ${MAX_UPLOAD_BYTES} bytes.`);
       return;
     }
-    await perform("Policy import", async () => {
-      const result = await client.importProviderSessionPolicy(runId, value.revision, await importFile.arrayBuffer());
-      setImportFile(undefined);
-      if (importInput.current) importInput.current.value = "";
-      if (result.policy_sha256) setSelectedPolicy(result.policy_sha256);
-      return result;
-    });
+    await perform(
+      "Policy import",
+      async () => client.importProviderSessionPolicy(runId, value.revision, await importFile.arrayBuffer()),
+      (result) => {
+        setImportFile(undefined);
+        if (importInput.current) importInput.current.value = "";
+        if (result.policy_sha256) setSelectedPolicy(result.policy_sha256);
+      },
+    );
   };
 
   const proposePolicy = async (): Promise<void> => {
@@ -106,19 +119,21 @@ export function ProviderSessionPolicyPanel({ client, runId }: ProviderSessionPol
       setError(`Choose a JSON target file no larger than ${MAX_UPLOAD_BYTES} bytes.`);
       return;
     }
-    await perform("Migration proposal", async () => {
-      const result = await client.proposeProviderSessionPolicy(
+    await perform(
+      "Migration proposal",
+      async () => client.proposeProviderSessionPolicy(
         runId,
         proposalId,
         sourcePolicy,
         value.revision,
         await targetFile.arrayBuffer(),
-      );
-      setTargetFile(undefined);
-      if (targetInput.current) targetInput.current.value = "";
-      setProposalId("");
-      return result;
-    });
+      ),
+      () => {
+        setTargetFile(undefined);
+        if (targetInput.current) targetInput.current.value = "";
+        setProposalId("");
+      },
+    );
   };
 
   const adoptImported = async (): Promise<void> => {
