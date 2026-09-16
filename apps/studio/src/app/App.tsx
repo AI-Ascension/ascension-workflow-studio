@@ -327,7 +327,7 @@ export function App(): JSX.Element {
         {view === "recordings" ? <RecordingsView {...recording} /> : null}
         {view === "library" ? <LibraryView definitions={definitions} loading={loadingDefinitions} catalogNotice={catalogNotice} onOpen={openDefinition} onCreate={createDraft} onRefresh={() => setCatalogRefresh((current) => current + 1)} /> : null}
         {view === "designer" ? <DesignerView client={client} catalog={definitions} definition={selectedDefinition} initialDocument={activeDocument} initialRawText={rawCandidateTexts[selectedDefinition.id]} mode={mode} onBack={() => setView("library")} onRun={(document) => void runDocument(document)} onRawTextChange={rememberRawCandidate} /> : null}
-        {view === "runs" ? <RunsView client={client} contextClient={contextClient} mode={mode} initialRunId={runId} onRunIdChange={setRunId} linkMappings={linkMappings} /> : null}
+        {view === "runs" ? <RunsView client={client} policyClient={mode === "live" ? liveClient : undefined} contextClient={contextClient} mode={mode} initialRunId={runId} onRunIdChange={setRunId} linkMappings={linkMappings} /> : null}
         {view === "replay" ? <ReplayView client={client} contextClient={contextClient} mode={mode} definition={replayDocument} definitions={definitions} /> : null}
         {view === "compatibility" ? <CompatibilityView mode={mode} onModeChange={setMode} liveClient={liveClient} linkMappings={linkMappings} onAddMapping={(mapping) => setLinkMappings((current) => [...current.filter((candidate) => candidate.id !== mapping.id), mapping])} onRemoveMapping={(id) => setLinkMappings((current) => current.filter((candidate) => candidate.id !== id))} /> : null}
       </div>
