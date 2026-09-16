@@ -98,7 +98,7 @@ jobs:
   live-owner-browser:
     name: Authenticated live-owner browser
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -107,26 +107,55 @@ jobs:
         id: owner
         run: |
           jq -e '.repository == "AI-Ascension/sts2-harness" and
-            (.revision | test("^[0-9a-f]{40}$"))' contracts/live-owner-ci.lock.json > /dev/null
+            (.revision | test("^[0-9a-f]{40}$")) and
+            .gateway_repository == "AI-Ascension/sts2-gateway" and
+            (.gateway_revision | test("^[0-9a-f]{40}$")) and
+            .mcp_repository == "AI-Ascension/sts2-mcp-server" and
+            (.mcp_revision | test("^[0-9a-f]{40}$"))' contracts/live-owner-ci.lock.json > /dev/null
           echo "revision=$(jq -r .revision contracts/live-owner-ci.lock.json)" >> "$GITHUB_OUTPUT"
+          echo "gateway_revision=$(jq -r .gateway_revision contracts/live-owner-ci.lock.json)" >> "$GITHUB_OUTPUT"
+          echo "mcp_revision=$(jq -r .mcp_revision contracts/live-owner-ci.lock.json)" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: AI-Ascension/sts2-harness
           ref: ${{ steps.owner.outputs.revision }}
           path: harness
           persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: AI-Ascension/sts2-gateway
+          ref: ${{ steps.owner.outputs.gateway_revision }}
+          path: gateway
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: AI-Ascension/sts2-mcp-server
+          ref: ${{ steps.owner.outputs.mcp_revision }}
+          path: mcp
+          persist-credentials: false
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24.16.0
           cache: npm
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
+      - run: npx playwright install --with-deps chromium firefox webkit
       - name: Install the pinned owner's Rust toolchain
         working-directory: harness
         run: rustup show active-toolchain
       - name: Build the pinned owner
         working-directory: harness
-        run: cargo build --locked --bin sts2-workflow
+        run: cargo build --locked --bin sts2-workflow --bin sts2-harness-runtime
+      - name: Build the pinned gateway process
+        working-directory: gateway
+        run: cargo build --locked --bin sts2-gateway-runtime
+      - name: Build the pinned MCP process
+        working-directory: mcp
+        run: cargo build --locked --bin sts2-mcp-server
+      - name: Build the policy fixture helper against the pinned owner
+        working-directory: harness
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/harness/target
+        run: cargo build --locked --manifest-path ../tools/provider-policy-production-fixture/Cargo.toml
       - run: STS2_WORKFLOW_TOKEN_STUDIO_LIVE=studio-live-ci-token harness/target/debug/sts2-workflow serve --listen 127.0.0.1:4185 --store /tmp/studio-live.sqlite --auth-profile studio-live > /tmp/studio-live.log 2>&1 &
       - run: |
           for attempt in {1..30}; do
@@ -140,6 +169,14 @@ jobs:
           STS2_WORKFLOW_BIN: harness/target/debug/sts2-workflow
         run: npm run test:owner-restart
       - run: npm run test:live-owner-browser
+      - name: Production served policy routes in Studio
+        env:
+          STUDIO_HARNESS_ROOT: ${{ github.workspace }}/harness
+          STUDIO_HARNESS_RUNTIME_BINARY: ${{ github.workspace }}/harness/target/debug/sts2-harness-runtime
+          STUDIO_GATEWAY_BINARY: ${{ github.workspace }}/gateway/target/debug/sts2-gateway-runtime
+          STUDIO_MCP_BINARY: ${{ github.workspace }}/mcp/target/debug/sts2-mcp-server
+          STUDIO_PROVIDER_POLICY_CARGO_TARGET_DIR: ${{ github.workspace }}/harness/target
+        run: npm run test:production-policy-browser
       - name: Show live owner diagnostics
         if: failure()
         run: cat /tmp/studio-live.log
