@@ -578,6 +578,7 @@ test("imports, proposes, separately approves and adopts saved policy, then switc
   });
 
   await connectLiveOwner(page);
+  await openOwnedDraft(page);
   await startLiveRun(page);
   const policyPanel = page.getByRole("region", { name: "Saved provider-session policy" });
   await expect(policyPanel).toBeVisible();
@@ -613,7 +614,8 @@ test("imports, proposes, separately approves and adopts saved policy, then switc
   await expect(proposal).toContainText("migration.browser");
   await expect(proposal).toContainText("adopted");
 
-  await page.getByRole("button", { name: "Run inspection" }).click();
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await page.getByRole("button", { name: "Open designer" }).first().click();
   await startLiveRun(page);
   await expect(policyPanel).toBeVisible();
   const secondRunId = await runInput.inputValue();
