@@ -1,0 +1,376 @@
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { expect, test, type Page, type TestInfo } from "@playwright/test";
+
+const OWNER_TOKEN = "studio-live-ci-token";
+const POLICY_SCHEMA = "ascension.provider-session.policy.v1";
+
+interface FixturePorts {
+  STUDIO_LIVE_OWNER_PROXY_PORT: string;
+  STUDIO_LIVE_OWNER_STACK_PORT: string;
+}
+
+interface ProductionFixture {
+  run_id: string;
+  request_id: string;
+  instance_id: string;
+  definition_digest: string;
+}
+
+interface PolicyCommandResult {
+  schema_version: string;
+  operation: string;
+  revision: number;
+  policy_sha256: string | null;
+  proposal_sha256: string | null;
+  effect_class: string;
+  inference_calls: number;
+  game_effects: number;
+}
+
+interface RunSubmission {
+  status: number;
+  errorCode: string | null;
+  run: Record<string, any>;
+}
+
+async function connectLiveOwner(page: Page, ownerProxy: string): Promise<void> {
+  await page.goto("about:blank");
+  await page.evaluate((url) => { window.location.assign(url); }, `${ownerProxy}/`);
+  await page.waitForURL(`${ownerProxy}/`);
+  await page.waitForLoadState("load");
+  await page.waitForTimeout(250);
+  await page.getByRole("button", { name: "Open settings" }).click();
+  await page.getByLabel("Bearer token").fill(OWNER_TOKEN);
+  await page.getByLabel("Authenticated actor subject").fill("profile:studio-live");
+  await page.getByRole("button", { name: "Check owner connection" }).click();
+  await expect(page.locator(".connection-message")).toContainText("Owner reports ok.");
+  await page.getByRole("button", { name: /Live owner API/ }).click();
+}
+
+function servedDefinition(): Record<string, any> {
+  const definition = JSON.parse(readFileSync(
+    new URL("../../contracts/accepted/phase1/conformance/valid-strict.json", import.meta.url),
+    "utf8",
+  )) as Record<string, any>;
+  definition.annotations.synthetic = false;
+  definition.game_profile = "sts2-live-v1";
+  definition.policy_ref = "policy.live.v1";
+  definition.graphs[0].nodes[0].config.projection_ref = "fair-play.live.v1";
+  definition.graphs[0].nodes[1].config.decision_profile_ref = "decision.live.v1";
+  definition.graphs[0].nodes[1].config.context_ref = "context.live.v1";
+  definition.capabilities.required[0] = "observe.fair-play.v1";
+  return definition;
+}
+
+function canonicalJson(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
+  const entries = Object.entries(value as Record<string, unknown>)
+    .sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
+  return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalJson(entry)}`).join(",")}}`;
+}
+
+function migrationPolicy(
+  runId: string,
+  version: number,
+  epoch: number,
+  maxCompletedTurns: number,
+): Record<string, unknown> {
+  return {
+    schema: POLICY_SCHEMA,
+    policy_id: "studio-production-migration",
+    scope: {
+      project_id: "served-policy-project",
+      run_id: runId,
+      episode_id: "episode-served-policy-gate",
+      agent_id: "served-policy-agent",
+    },
+    version,
+    mode: "fixture_only",
+    continuity: "strict_reviewed",
+    credential_realm_ref: "studio-fixture-realm",
+    profile_sha256: createHash("sha256").update("codex-app-server-fixture-v1").digest("hex"),
+    cross_scope_fork: false,
+    reconnect_resumes_gameplay: false,
+    compaction_generation_permission_required: true,
+    max_completed_turns: maxCompletedTurns,
+    history_ttl_seconds: 3600,
+    automatic_transform_policy: "deny_and_fence",
+    epoch,
+  };
+}
+
+async function createAdmittedRun(page: Page, fixture: ProductionFixture): Promise<RunSubmission> {
+  const definition = servedDefinition();
+  const definitionDigest = createHash("sha256").update(canonicalJson(definition)).digest("hex");
+  expect(definitionDigest).toBe(fixture.definition_digest);
+
+  return page.evaluate(async ({ definition, definitionDigest, fixture, token }) => {
+    const headers = {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    };
+    const catalogResponse = await fetch("/v1/workflow-targets", { headers });
+    const catalog = await catalogResponse.json();
+    if (!catalogResponse.ok || catalog.schema_version !== "ascension.workflow-targets/v1") {
+      throw new Error(`production target catalog returned ${catalogResponse.status}`);
+    }
+    const descriptor = catalog.targets.find((entry: { instance_id: string }) => entry.instance_id === fixture.instance_id);
+    if (!descriptor) throw new Error("the prebound production target is absent");
+    const target = {
+      instance_id: descriptor.instance_id,
+      execution_profile: "live.workflow.v1",
+      execution_mode: "live",
+      workflow_revision: definition.version,
+      compatibility_revision: descriptor.compatibility_revision,
+      capability_revision: descriptor.capability_revision,
+      game_profile: "sts2-live-v1",
+      save_profile: null,
+      inference_profile: null,
+      context_capability: null,
+      provider_capability: null,
+    };
+    const preflightResponse = await fetch("/v1/workflow-targets/preflight", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        schema_version: "ascension.workflow-admission/v1",
+        request_id: fixture.request_id,
+        workflow_definition_digest: definitionDigest,
+        target,
+      }),
+    });
+    const preflight = await preflightResponse.json();
+    if (!preflightResponse.ok) {
+      throw new Error(`production target preflight returned ${preflightResponse.status}`);
+    }
+    const submissionResponse = await fetch("/v1/workflow-runs", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        schema_version: "ascension.management/v1",
+        request_id: fixture.request_id,
+        definition,
+        artifact_id: null,
+        instance_id: fixture.instance_id,
+        profile: "live.workflow.v1",
+        admission: preflight.admission,
+      }),
+    });
+    const run = await submissionResponse.json();
+    return {
+      status: submissionResponse.status,
+      errorCode: run?.error?.code ?? null,
+      run,
+    };
+  }, { definition, definitionDigest, fixture, token: OWNER_TOKEN });
+
+}
+
+async function readPolicyCommand(response: import("@playwright/test").Response, operation: string): Promise<PolicyCommandResult> {
+  expect(response.status()).toBe(200);
+  const body = await response.json() as PolicyCommandResult;
+  expect(body).toMatchObject({
+    schema_version: "ascension.provider-session.policy-owner-command.v1",
+    operation,
+    effect_class: "local_metadata_only",
+    inference_calls: 0,
+    game_effects: 0,
+  });
+  return body;
+}
+
+test("uses production served policy routes for import, approval, adoption, refresh, switch, and restart", async ({ page }, testInfo: TestInfo) => {
+  const ports = testInfo.project.metadata.fixturePorts as FixturePorts;
+  const ownerProxy = `http://127.0.0.1:${ports.STUDIO_LIVE_OWNER_PROXY_PORT}`;
+  const ownerStack = `http://127.0.0.1:${ports.STUDIO_LIVE_OWNER_STACK_PORT}`;
+  const fixtureResponse = await fetch(`${ownerStack}/fixture`);
+  expect(fixtureResponse.status).toBe(200);
+  const fixture = await fixtureResponse.json() as ProductionFixture;
+  expect(fixture.request_id).toBe("served-policy-gate");
+
+  await connectLiveOwner(page, ownerProxy);
+  const submitted = await createAdmittedRun(page, fixture);
+  if (submitted.status !== 200) {
+    throw new Error(`production run admission failed: ${submitted.errorCode ?? "unknown error"}`);
+  }
+  expect(submitted.run.workflow_run_id).toBe(fixture.run_id);
+  const runId = submitted.run.workflow_run_id as string;
+
+  const authChecks = await page.evaluate(async ({ runId, token }) => {
+    const path = `/v1/workflow-runs/${encodeURIComponent(runId)}/provider-session-policy`;
+    const missing = await fetch(path);
+    const invalid = await fetch(path, { headers: { Authorization: "Bearer invalid-production-fixture-token" } });
+    const commandPath = `${path}/import?expected_revision=3`;
+    const deniedWrite = await fetch(commandPath, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    const invalidWrite = await fetch(commandPath, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer invalid-production-fixture-token",
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+    });
+    const current = await fetch(path, { headers: { Authorization: `Bearer ${token}` } });
+    const value = await current.json();
+    return {
+      missing: missing.status,
+      invalid: invalid.status,
+      current: current.status,
+      deniedWrite: deniedWrite.status,
+      invalidWrite: invalidWrite.status,
+      value,
+    };
+  }, { runId, token: OWNER_TOKEN });
+  expect(authChecks.missing).toBe(401);
+  expect(authChecks.invalid).toBe(401);
+  expect(authChecks.current).toBe(200);
+  expect(authChecks.deniedWrite).toBe(401);
+  expect(authChecks.invalidWrite).toBe(401);
+  expect(authChecks.value).toMatchObject({
+    schema_version: "ascension.provider-session.policy-owner-view.v1",
+    operation: "current",
+    value: { run_id: runId, revision: 3, active: { policy_id: "studio-production-baseline" } },
+    effect_class: "local_metadata_only",
+    inference_calls: 0,
+    game_effects: 0,
+  });
+  expect(JSON.stringify(authChecks.value)).not.toMatch(/policy_bytes|credential_realm_ref|profile_sha256/);
+  await page.getByRole("button", { name: "Runs", exact: true }).click();
+  const runInput = page.getByRole("textbox", { name: "Run ID" });
+  await runInput.fill(runId);
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  const panel = page.getByRole("region", { name: "Saved provider-session policy" });
+  await expect(panel).toBeVisible();
+  await expect(panel).toContainText("studio-production-baseline");
+
+  const sourceBytes = Buffer.from(JSON.stringify(migrationPolicy(runId, 1, 1, 1_024), null, 2));
+  const targetBytes = Buffer.from(JSON.stringify(migrationPolicy(runId, 2, 2, 1), null, 2));
+  const sourceSha = createHash("sha256").update(sourceBytes).digest("hex");
+  const targetSha = createHash("sha256").update(targetBytes).digest("hex");
+
+  await panel.getByLabel("Policy JSON file").setInputFiles({
+    name: "migration-source.json",
+    mimeType: "application/json",
+    buffer: sourceBytes,
+  });
+  const importResponsePromise = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && new URL(response.url()).pathname.endsWith("/provider-session-policy/import"));
+  await panel.getByRole("button", { name: "Import policy" }).click();
+  const importResult = await readPolicyCommand(await importResponsePromise, "import");
+  expect(importResult.policy_sha256).toBe(sourceSha);
+  await expect(panel.getByText(sourceSha)).toBeVisible();
+  const duplicateImport = await page.evaluate(async ({ runId, token, bytes }) => {
+    const response = await fetch(
+      `/v1/workflow-runs/${encodeURIComponent(runId)}/provider-session-policy/import?expected_revision=3`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: bytes,
+      },
+    );
+    return { status: response.status, value: await response.json() };
+  }, { runId, token: OWNER_TOKEN, bytes: sourceBytes.toString("utf8") });
+  expect(duplicateImport.status).toBe(200);
+  expect(duplicateImport.value.revision).toBe(4);
+
+  await panel.getByLabel("Source policy").selectOption(sourceSha);
+  await panel.getByLabel("Proposal ID").fill("migration.studio.production");
+  await panel.getByLabel("Target policy JSON").setInputFiles({
+    name: "migration-target.json",
+    mimeType: "application/json",
+    buffer: targetBytes,
+  });
+  const proposalResponsePromise = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && new URL(response.url()).pathname.endsWith("/proposals/migration.studio.production"));
+  await panel.getByRole("button", { name: "Create proposal" }).click();
+  const proposalResult = await readPolicyCommand(await proposalResponsePromise, "propose");
+  expect(proposalResult.proposal_sha256).toMatch(/^[a-f0-9]{64}$/);
+  const proposalSha = proposalResult.proposal_sha256 as string;
+  await expect(panel.getByText(proposalSha)).toBeVisible();
+
+  const approval = panel.getByRole("region", { name: "Migration approvals and adoption" });
+  await approval.getByLabel("Approval reference for migration.studio.production").fill("approval.studio.production");
+  const approvalResponsePromise = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && new URL(response.url()).pathname.endsWith("/approve"));
+  await approval.getByRole("button", { name: "Record approval" }).click();
+  const approvalResult = await readPolicyCommand(await approvalResponsePromise, "approve");
+  expect(approvalResult.revision).toBe(6);
+  await expect(approval).toContainText("Approval recorded by owner.");
+
+  await approval.getByLabel("Approval reference for migration.studio.production").fill("approval.studio.production");
+  const adoptionResponsePromise = page.waitForResponse((response) =>
+    response.request().method() === "POST"
+    && new URL(response.url()).pathname.endsWith("/adopt"));
+  await approval.getByRole("button", { name: "Adopt approved proposal" }).click();
+  const adoptionResult = await readPolicyCommand(await adoptionResponsePromise, "adopt");
+  expect(adoptionResult.revision).toBe(7);
+  expect(adoptionResult.policy_sha256).toBe(targetSha);
+
+  const staleBytes = Buffer.from(JSON.stringify(migrationPolicy(runId, 3, 3, 1_024), null, 2));
+  const staleWrite = await page.evaluate(async ({ runId, token, bytes }) => {
+    const response = await fetch(
+      `/v1/workflow-runs/${encodeURIComponent(runId)}/provider-session-policy/import?expected_revision=6`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: bytes,
+      },
+    );
+    const current = await fetch(`/v1/workflow-runs/${encodeURIComponent(runId)}/provider-session-policy`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return { status: response.status, current: await current.json() };
+  }, { runId, token: OWNER_TOKEN, bytes: staleBytes.toString("utf8") });
+  expect(staleWrite.status).toBe(409);
+  expect(staleWrite.current.value.revision).toBe(7);
+
+  await panel.getByRole("button", { name: "Refresh history" }).click();
+  await expect(panel.getByRole("region", { name: "Current adopted policy" })).toContainText(targetSha);
+  await expect(panel).toContainText("migration.studio.production");
+  await expect(panel).toContainText("adopted");
+
+  await runInput.fill("run.live.foreign-owner");
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  await expect(page.locator(".notice-danger strong")).toHaveText("Inspection error");
+  await expect(panel).toHaveCount(0);
+  await runInput.fill(runId);
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  await expect(panel).toBeVisible();
+  await expect(panel.getByRole("region", { name: "Current adopted policy" })).toContainText(targetSha);
+
+  const restartResponse = await fetch(`${ownerStack}/restart`, { method: "POST" });
+  expect(restartResponse.status).toBe(200);
+  const restartEvidence = await restartResponse.json();
+  expect(restartEvidence).toMatchObject({
+    restarted: true,
+    durable_owner: {
+      reopened: true,
+      run_id: runId,
+      revision: 7,
+      history_count: 3,
+      proposal_state: "adopted",
+      active_policy_id: "studio-production-migration",
+      effect_class: "local_metadata_only",
+      inference_calls: 0,
+      game_effects: 0,
+    },
+  });
+  await panel.getByRole("button", { name: "Refresh history" }).click();
+  await expect(panel.getByRole("region", { name: "Current adopted policy" })).toContainText(targetSha);
+  await expect(panel).toContainText("migration.studio.production");
+});

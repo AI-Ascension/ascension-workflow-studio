@@ -15,6 +15,7 @@
     "test:browser": "playwright test",
     "test:effective-limits-browser": "playwright test --config playwright.effective-limits.config.ts",
     "test:live-owner-browser": "npm run build && playwright test --config playwright.live-owner.config.ts",
+    "test:production-policy-browser": "npm run build && node tools/production-policy-browser.mjs",
     "test:owner-restart": "node --test tests/process/at-046-owner-restart.test.mjs",
     "test:recorded-browser": "playwright test --config playwright.recorded.config.ts",
     "recording:inspect": "node tools/inspect-recording.mjs",
