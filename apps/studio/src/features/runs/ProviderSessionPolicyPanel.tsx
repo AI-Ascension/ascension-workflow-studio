@@ -52,6 +52,13 @@ export function ProviderSessionPolicyPanel({ client, runId }: ProviderSessionPol
   useEffect(() => {
     setValue(undefined);
     setNotice(undefined);
+    setImportFile(undefined);
+    setTargetFile(undefined);
+    setSelectedPolicy("");
+    setSourcePolicy("");
+    setProposalId("");
+    if (importInput.current) importInput.current.value = "";
+    if (targetInput.current) targetInput.current.value = "";
     void refresh();
     return () => { refreshId.current += 1; };
   }, [refresh]);

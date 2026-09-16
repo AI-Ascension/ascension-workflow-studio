@@ -198,6 +198,45 @@ describe("saved provider-session policy lifecycle", () => {
     await waitFor(() => expect(screen.getByRole("region", { name: "Current adopted policy" })).toHaveTextContent(sourceSha));
   });
 
+  it("clears selected files and policy identities when the active run changes", async () => {
+    const value: ProviderSessionPolicyViewValue = {
+      run_id: runId,
+      revision: 1,
+      active: null,
+      history: [{
+        sha256: sourceSha, policy_id: "saved.policy", version: 1,
+        mode: "enabled", continuity: "strict_reviewed", active: false,
+      }],
+      proposals: [],
+    };
+    const client: ProviderSessionPolicyClient = {
+      providerSessionPolicy: vi.fn(async (requestedRunId) => current({ ...value, run_id: requestedRunId })),
+      importProviderSessionPolicy: vi.fn(),
+      proposeProviderSessionPolicy: vi.fn(),
+      approveProviderSessionPolicy: vi.fn(),
+      adoptProviderSessionPolicyProposal: vi.fn(),
+      adoptImportedProviderSessionPolicy: vi.fn(),
+    };
+
+    const view = render(<ProviderSessionPolicyPanel client={client} runId={runId} />);
+    await screen.findByRole("combobox", { name: "Source policy" });
+    fireEvent.change(screen.getByLabelText("Policy JSON file"), {
+      target: { files: [new File(["{}"], "policy.json", { type: "application/json" })] },
+    });
+    fireEvent.change(screen.getByLabelText("Target policy JSON"), {
+      target: { files: [new File(["{}"], "target.json", { type: "application/json" })] },
+    });
+    fireEvent.change(screen.getByRole("combobox", { name: "Source policy" }), { target: { value: sourceSha } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Proposal ID" }), { target: { value: "migration.1" } });
+
+    view.rerender(<ProviderSessionPolicyPanel client={client} runId="workflow.run.2" />);
+    await screen.findByText((_content, element) => element?.textContent === "Run workflow.run.2 · owner revision 1");
+    expect(screen.getByLabelText("Policy JSON file")).toHaveValue("");
+    expect(screen.getByLabelText("Target policy JSON")).toHaveValue("");
+    expect(screen.getByRole("combobox", { name: "Source policy" })).toHaveValue("");
+    expect(screen.getByRole("textbox", { name: "Proposal ID" })).toHaveValue("");
+  });
+
   it("surfaces a denied owner read without substituting local policy state", async () => {
     const client: ProviderSessionPolicyClient = {
       providerSessionPolicy: vi.fn(async () => { throw new ClientError("missing scope", "missing_scope", 403); }),
