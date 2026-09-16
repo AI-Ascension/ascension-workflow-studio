@@ -5,7 +5,7 @@
   "gateway_revision": "8940fba823a0893b31d1a96301831c182d37ed32",
   "mcp_repository": "AI-Ascension/sts2-mcp-server",
   "mcp_revision": "f3b6eaa8bcf2241b8d6c47587c958388a8fe1031",
-  "scope": "Synthetic authenticated live-owner journeys plus a production serve-workflow browser journey on one explicitly prebound admitted run; policy bytes remain in the encrypted Harness owner and are not logged",
+  "scope": "Synthetic authenticated live-owner journeys plus a production serve-workflow browser journey on one explicitly prebound admitted run; the durable owner journal is encrypted, while temporary fixture JSON stays in a private mode-0700 directory and is not logged",
   "baseline_admission": "contracts/accepted/phase1-integration.lock.json",
   "note": "The Phase 1 admission lock preserves historical contract/source digests. This separate pin identifies the newer owner actually tested by CI; neither record claims game or provider compatibility."
 }
