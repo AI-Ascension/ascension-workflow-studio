@@ -10,7 +10,9 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const serverScript = resolve(root, "tools/live-owner-test-server.mjs");
 const viteCli = resolve(root, "node_modules/vite/bin/vite.js");
 
-test("SIGTERM closes the preview process group after the live-owner browser server stops", async () => {
+test("SIGTERM closes the preview process group after the live-owner browser server stops", {
+  skip: process.platform !== "linux",
+}, async () => {
   const [ownerPort, proxyPort, previewPort] = await allocateLoopbackPorts(3);
   const owner = createHttpServer((_request, response) => {
     response.writeHead(200, { "content-type": "text/plain" });
@@ -44,7 +46,9 @@ test("SIGTERM closes the preview process group after the live-owner browser serv
   }
 });
 
-test("proxy startup failure also reaps its detached preview process group", async () => {
+test("proxy startup failure also reaps its detached preview process group", {
+  skip: process.platform !== "linux",
+}, async () => {
   const [ownerPort, proxyPort, previewPort] = await allocateLoopbackPorts(3);
   const occupied = createNetServer();
   await listen(occupied, proxyPort);
