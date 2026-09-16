@@ -257,6 +257,100 @@ describe("same-origin client boundary", () => {
     expect(requests).toEqual(["/v1/workflow-runs/workflow.run.1/provider-sessions"]);
   });
 
+  it("reads redacted saved-policy history including resumable proposal digests", async () => {
+    const requests: string[] = [];
+    const client = new OwnerApiClient({ baseUrl: "/v1", token: "owner-token", fetcher: async (input, init) => {
+      requests.push(String(input));
+      expect(init?.method).toBe("GET");
+      expect(new Headers(init?.headers).get("authorization")).toBe("Bearer owner-token");
+      return new Response(JSON.stringify({
+        schema_version: "ascension.provider-session.policy-owner-view.v1",
+        operation: "current",
+        value: {
+          run_id: "workflow.run.1",
+          revision: 8,
+          active: null,
+          history: [{
+            sha256: "a".repeat(64), policy_id: "saved.policy", version: 2,
+            mode: "enabled", continuity: "strict_reviewed", active: false,
+          }],
+          proposals: [{
+            proposal_id: "migration.1", proposal_sha256: "b".repeat(64),
+            source_sha256: "a".repeat(64), target_sha256: "c".repeat(64),
+            state: "approved", approval_recorded: true, adopted_policy_sha256: null,
+          }],
+        },
+        effect_class: "local_metadata_only", inference_calls: 0, game_effects: 0,
+      }), { status: 200 });
+    } });
+    await expect(client.providerSessionPolicy("workflow.run.1")).resolves.toMatchObject({
+      value: { revision: 8, proposals: [{ proposal_sha256: "b".repeat(64), state: "approved" }] },
+    });
+    expect(requests).toEqual(["/v1/workflow-runs/workflow.run.1/provider-session-policy"]);
+  });
+
+  it("sends raw policy bytes and revision-bound explicit commands on fixed owner routes", async () => {
+    const calls: Array<{ path: string; method: string; body: unknown }> = [];
+    const client = new OwnerApiClient({ baseUrl: "/v1", token: "owner-token", fetcher: async (input, init) => {
+      const path = String(input);
+      const method = String(init?.method);
+      const body = init?.body;
+      calls.push({ path, method, body });
+      expect(new Headers(init?.headers).get("authorization")).toBe("Bearer owner-token");
+      if (path.includes("/approve?") || path.includes("/adopt?") || path.includes("/adoptions?")) {
+        const parsed = JSON.parse(String(body)) as Record<string, unknown>;
+        expect(parsed.schema_version).toBe("ascension.provider-session.policy-owner-command.v1");
+      }
+      const operation = path.includes("/import?") ? "import"
+        : path.includes("/proposals/migration.1?") ? "propose"
+          : path.includes("/approve?") ? "approve" : "adopt";
+      return new Response(JSON.stringify({
+        schema_version: "ascension.provider-session.policy-owner-command.v1",
+        operation, revision: 4, policy_sha256: operation === "import" ? "a".repeat(64) : operation === "adopt" ? "c".repeat(64) : null,
+        proposal_sha256: operation === "propose" ? "b".repeat(64) : null,
+        effect_class: "local_metadata_only", inference_calls: 0, game_effects: 0,
+      }), { status: 200 });
+    } });
+    const raw = new TextEncoder().encode(' { "policy" : true }\n').buffer;
+    await client.importProviderSessionPolicy("workflow.run.1", 3, raw);
+    await client.proposeProviderSessionPolicy("workflow.run.1", "migration.1", "a".repeat(64), 4, raw);
+    await client.approveProviderSessionPolicy("workflow.run.1", "migration.1", "b".repeat(64), "approval.1", 5);
+    await client.adoptProviderSessionPolicyProposal("workflow.run.1", "migration.1", "b".repeat(64), "approval.1", 6);
+    await client.adoptImportedProviderSessionPolicy("workflow.run.1", "a".repeat(64), 7);
+    expect(calls[0]).toMatchObject({
+      path: "/v1/workflow-runs/workflow.run.1/provider-session-policy/import?expected_revision=3",
+      method: "POST", body: raw,
+    });
+    expect(new TextDecoder().decode(calls[1].body as ArrayBuffer)).toBe(' { "policy" : true }\n');
+    expect(calls.map((call) => call.path)).toEqual([
+      "/v1/workflow-runs/workflow.run.1/provider-session-policy/import?expected_revision=3",
+      `/v1/workflow-runs/workflow.run.1/provider-session-policy/proposals/migration.1?source_sha256=${"a".repeat(64)}&expected_revision=4`,
+      "/v1/workflow-runs/workflow.run.1/provider-session-policy/proposals/migration.1/approve?expected_revision=5",
+      "/v1/workflow-runs/workflow.run.1/provider-session-policy/proposals/migration.1/adopt?expected_revision=6",
+      "/v1/workflow-runs/workflow.run.1/provider-session-policy/adoptions?expected_revision=7",
+    ]);
+    expect(JSON.parse(calls[2].body as string)).toMatchObject({
+      proposal_sha256: "b".repeat(64), approval_ref: "approval.1",
+    });
+    expect(JSON.parse(calls[4].body as string)).toMatchObject({ policy_sha256: "a".repeat(64) });
+  });
+
+  it("rejects a valid command response for the wrong requested operation", async () => {
+    const client = new OwnerApiClient({ baseUrl: "/v1", fetcher: async () => new Response(JSON.stringify({
+      schema_version: "ascension.provider-session.policy-owner-command.v1",
+      operation: "propose",
+      revision: 2,
+      policy_sha256: null,
+      proposal_sha256: "b".repeat(64),
+      effect_class: "local_metadata_only",
+      inference_calls: 0,
+      game_effects: 0,
+    }), { status: 200 }) });
+    const bytes = new TextEncoder().encode('{"policy":true}').buffer;
+    await expect(client.importProviderSessionPolicy("workflow.run.1", 1, bytes))
+      .rejects.toMatchObject({ code: "provider_session_policy_operation_mismatch" });
+  });
+
   it("uses typed, separate same-origin context read routes", async () => {
     const paths: string[] = [];
     let call = 0;

@@ -10,7 +10,11 @@ import {
   ContextSnapshotManifestSchema,
   MemoryCapabilitiesSchema,
   ProviderSessionCapabilitiesSchema,
+  ProviderSessionPolicyCommandResponseSchema,
+  ProviderSessionPolicyViewResponseSchema,
   type ProviderSessionCapabilities,
+  type ProviderSessionPolicyCommandResponse,
+  type ProviderSessionPolicyViewResponse,
   ProviderSessionListSchema,
   CommandResponseSchema,
   DefinitionRecordSchema,
@@ -301,6 +305,17 @@ export interface OwnerApiClientOptions {
   fetcher?: typeof fetch;
 }
 
+export interface ProviderSessionPolicyClient {
+  providerSessionPolicy(runId: string): Promise<ProviderSessionPolicyViewResponse>;
+  importProviderSessionPolicy(runId: string, expectedRevision: number, bytes: ArrayBuffer): Promise<ProviderSessionPolicyCommandResponse>;
+  proposeProviderSessionPolicy(runId: string, proposalId: string, sourceSha256: string, expectedRevision: number, bytes: ArrayBuffer): Promise<ProviderSessionPolicyCommandResponse>;
+  approveProviderSessionPolicy(runId: string, proposalId: string, proposalSha256: string, approvalRef: string, expectedRevision: number): Promise<ProviderSessionPolicyCommandResponse>;
+  adoptProviderSessionPolicyProposal(runId: string, proposalId: string, proposalSha256: string, approvalRef: string, expectedRevision: number): Promise<ProviderSessionPolicyCommandResponse>;
+  adoptImportedProviderSessionPolicy(runId: string, policySha256: string, expectedRevision: number): Promise<ProviderSessionPolicyCommandResponse>;
+}
+
+const MAX_POLICY_UPLOAD_BYTES = 1_048_576;
+
 /** Separate same-origin client for Context Console projections. It intentionally
  * exposes only typed read methods and is not a generic route proxy. */
 export class ContextServiceClient {
@@ -372,7 +387,7 @@ export class ContextServiceClient {
   }
 }
 
-export class OwnerApiClient implements StudioClient {
+export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient {
   public readonly mode = "live" as const;
   private readonly baseUrl: string;
   private readonly fetcher: typeof fetch;
@@ -621,6 +636,124 @@ export class OwnerApiClient implements StudioClient {
     return decodeWith(ProviderSessionListSchema, response, "workflow provider-session list");
   }
 
+  public async providerSessionPolicy(runId: string): Promise<ProviderSessionPolicyViewResponse> {
+    const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}/provider-session-policy`, { method: "GET" });
+    const decoded = decodeWith(ProviderSessionPolicyViewResponseSchema, response, "provider-session policy owner view");
+    if (decoded.value.run_id !== runId) {
+      throw new ClientError("Provider-session policy owner returned a different workflow run", "provider_session_policy_run_mismatch", 409);
+    }
+    return decoded;
+  }
+
+  public async importProviderSessionPolicy(
+    runId: string,
+    expectedRevision: number,
+    bytes: ArrayBuffer,
+  ): Promise<ProviderSessionPolicyCommandResponse> {
+    assertPolicyUpload(bytes);
+    const query = policyRevisionQuery(expectedRevision);
+    const response = await this.request(
+      `/workflow-runs/${encodeIdentifier(runId)}/provider-session-policy/import?${query}`,
+      { method: "POST", body: bytes },
+    );
+    return assertPolicyCommandOperation(
+      decodeWith(ProviderSessionPolicyCommandResponseSchema, response, "provider-session policy import"),
+      "import",
+    );
+  }
+
+  public async proposeProviderSessionPolicy(
+    runId: string,
+    proposalId: string,
+    sourceSha256: string,
+    expectedRevision: number,
+    bytes: ArrayBuffer,
+  ): Promise<ProviderSessionPolicyCommandResponse> {
+    assertPolicyUpload(bytes);
+    const query = new URLSearchParams({
+      source_sha256: sourceSha256,
+      expected_revision: String(expectedRevision),
+    });
+    const response = await this.request(
+      `/workflow-runs/${encodeIdentifier(runId)}/provider-session-policy/proposals/${encodeIdentifier(proposalId)}?${query.toString()}`,
+      { method: "POST", body: bytes },
+    );
+    return assertPolicyCommandOperation(
+      decodeWith(ProviderSessionPolicyCommandResponseSchema, response, "provider-session policy proposal"),
+      "propose",
+    );
+  }
+
+  public async approveProviderSessionPolicy(
+    runId: string,
+    proposalId: string,
+    proposalSha256: string,
+    approvalRef: string,
+    expectedRevision: number,
+  ): Promise<ProviderSessionPolicyCommandResponse> {
+    return this.providerSessionPolicyCommand(
+      runId,
+      `/proposals/${encodeIdentifier(proposalId)}/approve`,
+      expectedRevision,
+      { proposal_sha256: proposalSha256, approval_ref: approvalRef },
+      "approve",
+    );
+  }
+
+  public async adoptProviderSessionPolicyProposal(
+    runId: string,
+    proposalId: string,
+    proposalSha256: string,
+    approvalRef: string,
+    expectedRevision: number,
+  ): Promise<ProviderSessionPolicyCommandResponse> {
+    return this.providerSessionPolicyCommand(
+      runId,
+      `/proposals/${encodeIdentifier(proposalId)}/adopt`,
+      expectedRevision,
+      { proposal_sha256: proposalSha256, approval_ref: approvalRef },
+      "adopt",
+    );
+  }
+
+  public async adoptImportedProviderSessionPolicy(
+    runId: string,
+    policySha256: string,
+    expectedRevision: number,
+  ): Promise<ProviderSessionPolicyCommandResponse> {
+    return this.providerSessionPolicyCommand(
+      runId,
+      "/adoptions",
+      expectedRevision,
+      { policy_sha256: policySha256 },
+      "adopt",
+    );
+  }
+
+  private async providerSessionPolicyCommand(
+    runId: string,
+    suffix: string,
+    expectedRevision: number,
+    body: { proposal_sha256?: string; policy_sha256?: string; approval_ref?: string },
+    operation: ProviderSessionPolicyCommandResponse["operation"],
+  ): Promise<ProviderSessionPolicyCommandResponse> {
+    const query = policyRevisionQuery(expectedRevision);
+    const response = await this.request(
+      `/workflow-runs/${encodeIdentifier(runId)}/provider-session-policy${suffix}?${query}`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          schema_version: "ascension.provider-session.policy-owner-command.v1",
+          ...body,
+        }),
+      },
+    );
+    return assertPolicyCommandOperation(
+      decodeWith(ProviderSessionPolicyCommandResponseSchema, response, `provider-session policy ${operation}`),
+      operation,
+    );
+  }
+
   public async command(runId: string, expectedRevision: number, kind: CommandKind, commandId?: string): Promise<CommandResponse> {
     const actorScope = this.actorScope;
     if (!actorScope) {
@@ -691,6 +824,36 @@ export class OwnerApiClient implements StudioClient {
     }
     return body;
   }
+}
+
+function assertPolicyUpload(bytes: ArrayBuffer): void {
+  if (bytes.byteLength === 0 || bytes.byteLength > MAX_POLICY_UPLOAD_BYTES) {
+    throw new ClientError(
+      `Policy upload must contain 1 to ${MAX_POLICY_UPLOAD_BYTES} bytes`,
+      "provider_session_policy_upload_size",
+    );
+  }
+}
+
+function assertPolicyCommandOperation(
+  response: ProviderSessionPolicyCommandResponse,
+  expected: ProviderSessionPolicyCommandResponse["operation"],
+): ProviderSessionPolicyCommandResponse {
+  if (response.operation !== expected) {
+    throw new ClientError(
+      "Provider-session policy owner returned a different command operation",
+      "provider_session_policy_operation_mismatch",
+      409,
+    );
+  }
+  return response;
+}
+
+function policyRevisionQuery(revision: number): string {
+  if (!Number.isSafeInteger(revision) || revision <= 0) {
+    throw new ClientError("Policy owner revision must be a positive safe integer", "invalid_revision");
+  }
+  return new URLSearchParams({ expected_revision: String(revision) }).toString();
 }
 
 export function normalizeRelativeBase(baseUrl: string): string {

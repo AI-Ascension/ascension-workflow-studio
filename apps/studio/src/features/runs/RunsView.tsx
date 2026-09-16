@@ -2,14 +2,16 @@ import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "reac
 
 import type { CommandKind, CommandResponse, ContextAssociation, ContextEventPage, ContextSnapshotManifest, EventPage, RunEvent, StatusResponse } from "@studio/contracts";
 import { effectiveLimit, effectiveLimitDisclosure } from "@studio/contracts";
-import { ClientError, applyEventPage, createProjection, type ContextServiceClient, type RunProjection, type StudioClient } from "@studio/client";
+import { ClientError, applyEventPage, createProjection, type ContextServiceClient, type ProviderSessionPolicyClient, type RunProjection, type StudioClient } from "@studio/client";
 import { mapProjectionSupport, pinnedMapIdentity, resolveApprovedLink, VisibleMapProjectionSchema, type ApprovedLinkMapping, type VisibleMapProjection } from "@studio/document";
 
 import { Notice } from "../../components/Notice";
 import { StatusBadge } from "../../components/StatusBadge";
+import { ProviderSessionPolicyPanel } from "./ProviderSessionPolicyPanel";
 
 interface RunsViewProps {
   client: StudioClient;
+  policyClient?: ProviderSessionPolicyClient;
   contextClient: ContextServiceClient;
   mode: "fixture" | "live";
   initialRunId: string;
@@ -17,7 +19,7 @@ interface RunsViewProps {
   linkMappings: ApprovedLinkMapping[];
 }
 
-export function RunsView({ client, contextClient, mode, initialRunId, onRunIdChange, linkMappings }: RunsViewProps): JSX.Element {
+export function RunsView({ client, policyClient, contextClient, mode, initialRunId, onRunIdChange, linkMappings }: RunsViewProps): JSX.Element {
   const [runId, setRunId] = useState(initialRunId);
   const [runInput, setRunInput] = useState(initialRunId);
   const [status, setStatus] = useState<StatusResponse | undefined>();
@@ -301,6 +303,9 @@ export function RunsView({ client, contextClient, mode, initialRunId, onRunIdCha
         <div className="panel-title"><div><p className="eyebrow">Provider session</p><h2>Read-only continuity</h2></div><StatusBadge tone="muted">no controls</StatusBadge></div>
         <p className="muted">{sessionMessage}</p>
       </section>
+      {mode === "live" && policyClient && state === "ready" && status?.run.workflow_run_id === runId
+        ? <ProviderSessionPolicyPanel client={policyClient} runId={runId} />
+        : null}
       <section className="panel-card" aria-label="Approved reference links"><div className="panel-title"><div><p className="eyebrow">References</p><h2>Approved links</h2></div><span className="muted">mapping only</span></div>
         <p className="muted">Only operator-approved https mappings resolve here. Identifiers that are raw URLs or redirects are rejected; nothing is proxied.</p>
         <label className="field-label">Reference identifier probe<input aria-label="Reference identifier probe" value={referenceProbe} onChange={(event) => setReferenceProbe(event.target.value)} placeholder={status.run.workflow_run_id} /></label>
