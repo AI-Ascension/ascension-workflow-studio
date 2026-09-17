@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "generated_on": "2026-09-10",
+  "corrected_on": "2026-09-17",
   "commands": [
     {
       "command": "npm ci",
@@ -110,14 +111,20 @@
     {
       "command": "LD_LIBRARY_PATH=/tmp/ascension-browser-libs/root-20260910/usr/lib/x86_64-linux-gnu:/tmp/ascension-browser-libs/root-20260910/lib/x86_64-linux-gnu FONTCONFIG_FILE=/tmp/ascension-browser-libs/fontconfig-runtime.conf ./node_modules/.bin/playwright test tests/browser/studio.spec.ts --workers=1",
       "status": "partial",
-      "scope": "Chromium 2/2 passed; Firefox/WebKit launch blocked by missing host libraries"
+      "scope": "Chromium 2/2 passed; Firefox/WebKit launch blocked by host libraries missing from the 2026-09-10 verification image (historical local result; both engines pass in GitHub-hosted CI, see corrections)"
     }
   ],
   "unverified": [
-    "Firefox and WebKit browser-engine journeys because the verification image lacks their GTK/media libraries",
     "full responsive, 200/400 percent zoom, keyboard and manual screen-reader matrix",
     "live browser attachment and browser pairing/session routes",
     "production static host CSP/routing headers",
     "native D0-D1-D2-D3 Luna Max child-session lineage"
+  ],
+  "corrections": [
+    {
+      "date": "2026-09-17",
+      "removed_unverified": "Firefox and WebKit browser-engine journeys because the verification image lacks their GTK/media libraries",
+      "reason": "Stale: .github/workflows/validate.yml runs the Browser (firefox) and Browser (webkit) jobs (npm run test:browser and npm run test:effective-limits-browser) on every push and pull request; GitHub Actions Studio validation run 35251289403 at head f2fe5bc053b17491a00283f9f73b7bb392a0ceff passed both. The 2026-09-10 local partial result above is retained as history only."
+    }
   ]
 }

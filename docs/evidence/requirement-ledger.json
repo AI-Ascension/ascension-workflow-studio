@@ -2,9 +2,9 @@
   "schema_version": 1,
   "source": "docs/reference/phase2-package/quality/requirements.json",
   "status_summary": {
-    "blocked": 28,
-    "implemented": 75,
-    "partial": 17
+    "blocked": 26,
+    "implemented": 76,
+    "partial": 18
   },
   "requirements": [
     {
@@ -272,7 +272,7 @@
       "mandatory": true,
       "work_package": "WP-08",
       "status": "partial",
-      "evidence": "Fixture validation and live owner validation are wired; merged owner PR #57 supplies a publication route with digest and validation checks, and the synthetic live process completed validation/publication. Studio CI run 34631851055 verified authenticated Chromium pairing, live-mode selection, draft autosave, and an owner validation digest through the same-origin adapter. Browser publication and native-gameplay evidence remain unavailable.",
+      "evidence": "Fixture validation and live owner validation are wired; merged owner PR #57 supplies a publication route with digest and validation checks, and the synthetic live process completed validation/publication. Studio CI run 34631851055 verified authenticated Chromium pairing, live-mode selection, draft autosave, and an owner validation digest through the same-origin adapter. Studio CI run 34633623345 (head ade3db33dd1534f4e9f68881e790441d1851b7ae) subsequently verified authenticated Chromium publication and published-definition reload through the same-origin adapter (see AT-055), so the earlier statement that browser publication evidence was unavailable is withdrawn. Residue for this case: canonical owner rejection after a browser-side pass is demonstrated only for a removed/undisclosed context reference (tests/browser/live-owner.spec.ts \"discovers, selects, saves, reloads, and owner-rejects a context reference\", Studio validation run 35251289403 at f2fe5bc053b17491a00283f9f73b7bb392a0ceff); the case's setup (delayed compiler responses and registry changes) and a generally lint-clean-but-invalid definition are not exercised, and native-gameplay evidence remains unavailable.",
       "acceptance_cases": [
         "AT-027"
       ]
@@ -552,7 +552,7 @@
       "mandatory": true,
       "work_package": "WP-18",
       "status": "partial",
-      "evidence": "Merged owner PR #57 supplies an immutable publication route through the existing definition authority; the synthetic live process completed publication and reloaded the published definition. Studio CI run 34633623345 verified authenticated Chromium publication, Library refresh, and published-definition reload through the same-origin adapter.",
+      "evidence": "Merged owner PR #57 supplies an immutable publication route through the existing definition authority; the synthetic live process completed publication and reloaded the published definition. Studio CI run 34633623345 verified authenticated Chromium publication, Library refresh, and published-definition reload through the same-origin adapter. Residue: at head f2fe5bc053b17491a00283f9f73b7bb392a0ceff, tests/browser/live-owner.spec.ts \"publishes adaptive region edits as a new revision and leaves the active run pinned\" (Studio validation run 35251289403, Authenticated live-owner browser job, pinned owner a42b6419cc5460b95900eeb3e1d48f815b7f8ee3) publishes a validated draft revision to the real owner process, observes the immutable owner revision and asserts the active run stays pinned to its prior definition digest with no apply/hot-swap control, which covers the no-publish-means-run assertion; the case's explicit inspection of zero external-effect counters after publication is not asserted (the CI owner has no game or provider attachment, so no launch was possible, but no counter is read), so the case stays partial until that inspection is recorded.",
       "acceptance_cases": [
         "AT-055"
       ]
@@ -892,7 +892,7 @@
       "mandatory": true,
       "work_package": "WP-29",
       "status": "partial",
-      "evidence": "Merged Studio PR #95 (head a672d41; merge 86eac15, Studio CI run 34678238388 passed all six jobs) adds a committed production benchmark harness with in-page performance marks (apps/studio/src/features/benchmark/benchmark.ts, enabled by ?benchmark=<nodes>x<edges>) and the selective-rendering work it measured: unchanged flow nodes and cached edges keep object identity, React Flow handler/option identities are stable, history retains entries by reference and copies only on read, updateNode validates only the edited node, and ensureLayout no longer builds a full node+edge projection. Measured on the production build at 250 nodes / 500 edges (the harness caps at the owner's 256-node / 1024-edge per-graph limit): PERF-01 first useful render is met on chromium (508ms), firefox (936ms) and webkit (912ms) against 2000ms. PERF-02 input-to-visible-feedback p95 is met on chromium (36.9ms) and firefox (97ms, no margin) but missed on webkit (335ms) against the 100ms target; the authoritative edit handler is ~1ms on every engine, so the residual cost is engine rasterization of the 500-edge SVG layer. PERF-03/04/05/06/07/08 remain unmeasured. P2-089 stays partial until the webkit edit path meets the target; the measured bottleneck and scoped fix are recorded in docs/evidence/benchmark-results.json.",
+      "evidence": "Merged Studio PR #95 (head a672d41; merge 86eac15, Studio CI run 34678238388 passed all six jobs) adds a committed production benchmark harness with in-page performance marks (apps/studio/src/features/benchmark/benchmark.ts, enabled by ?benchmark=<nodes>x<edges>) and the selective-rendering work it measured: unchanged flow nodes and cached edges keep object identity, React Flow handler/option identities are stable, history retains entries by reference and copies only on read, updateNode validates only the edited node, and ensureLayout no longer builds a full node+edge projection. Measured on the production build at 250 nodes / 500 edges (the harness caps at the owner's 256-node / 1024-edge per-graph limit): PERF-01 first useful render is met on chromium (508ms), firefox (936ms) and webkit (912ms) against 2000ms. PERF-02 input-to-visible-feedback p95 is met on chromium (36.9ms) and firefox (97ms, no margin) but missed on webkit (335ms) against the 100ms target; the authoritative edit handler is ~1ms on every engine, so the residual cost is engine rasterization of the 500-edge SVG layer. PERF-08 (232,677 gzip bytes of core-route JavaScript against 1,500,000, tools/measure-bundle-budget.mjs at f2fe5bc053b17491a00283f9f73b7bb392a0ceff) and PERF-03 (1000/2000 not admitted; measured at the admitted 256x1024 ceiling: first-useful-render p95 2147.2 ms Chromium / 2780 ms Firefox against 5000 ms, local headless run) were recorded in docs/evidence/benchmark-results.json on 2026-09-17; PERF-04/05/06/07 remain unmeasured because no owner stream is admitted (AT-064). P2-089 stays partial until the webkit edit path meets the target; the measured bottleneck and scoped fix are recorded in docs/evidence/benchmark-results.json.",
       "acceptance_cases": [
         "AT-089"
       ]
@@ -1151,8 +1151,8 @@
       "id": "P2-115",
       "mandatory": true,
       "work_package": "WP-38",
-      "status": "blocked",
-      "evidence": "Final combined source-head verification remains.",
+      "status": "partial",
+      "evidence": "Studio validation run 35251289403 at head f2fe5bc053b17491a00283f9f73b7bb392a0ceff verified the combined heads (owner a42b6419cc5460b95900eeb3e1d48f815b7f8ee3, gateway 8940fba823a0893b31d1a96301831c182d37ed32, MCP f3b6eaa8bcf2241b8d6c47587c958388a8fe1031 from contracts/live-owner-ci.lock.json) in one integrated run of all six jobs, covering the unit/build, three-engine browser, recorded-run, owner-restart, negative-auth, live-owner and production policy-route suites. The heads are not yet declared final and the independent security review (AT-100/AT-102) and native lineage (AT-117) remain open; see AT-115.",
       "acceptance_cases": [
         "AT-115"
       ]
@@ -1161,8 +1161,8 @@
       "id": "P2-116",
       "mandatory": true,
       "work_package": "WP-38",
-      "status": "blocked",
-      "evidence": "The ledger exists, but unresolved mandatory entries remain.",
+      "status": "implemented",
+      "evidence": "The mandatory-ledger mapping is delivered: docs/evidence/PHASE2_RECONCILIATION.md and phase2-reconciliation.json (Studio #134, PR #135, merge 66132277a9e2bd8dd1493f58a620ab4ec56e7cc1; regenerated at head f2fe5bc053b17491a00283f9f73b7bb392a0ceff on 2026-09-17) map all 120 requirements and cases to current evidence or an explicit owner/blocker, and tools/verify-phase2-reconciliation.test.mjs enforces that mapping in CI (Studio validation run 35251289403). Unresolved mandatory entries remain and are listed with owners; see AT-116.",
       "acceptance_cases": [
         "AT-116"
       ]
