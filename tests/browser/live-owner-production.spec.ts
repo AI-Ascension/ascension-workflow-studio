@@ -167,22 +167,46 @@ async function createAdmittedRun(page: Page, fixture: ProductionFixture): Promis
       admission: preflight.admission,
     });
     let transportError = false;
+    let submissionResponse: Response | undefined;
     try {
-      const submissionResponse = await fetch("/v1/workflow-runs", {
+      submissionResponse = await fetch("/v1/workflow-runs", {
         method: "POST",
         headers,
         body,
       });
-      const text = await submissionResponse.text();
-      if (text) {
-        const run = JSON.parse(text);
+    } catch {
+      // The served live submission can durably reserve the run before its
+      // response transport closes. Recover that accepted state below.
+      transportError = true;
+    }
+    if (!transportError && submissionResponse) {
+      let text: string;
+      try {
+        text = await submissionResponse.text();
+      } catch {
+        // A response body read can fail after the server durably accepted the
+        // run, so this remains a genuine transport ambiguity.
+        transportError = true;
+        text = "";
+      }
+      if (!transportError && text) {
+        let run: any;
+        try {
+          run = JSON.parse(text);
+        } catch {
+          return {
+            status: submissionResponse.status,
+            errorCode: "malformed_submission_response",
+            run: {},
+          };
+        }
         return {
           status: submissionResponse.status,
           errorCode: run?.error?.code ?? null,
           run,
         };
       }
-      if (!submissionResponse.ok) {
+      if (!transportError && !submissionResponse.ok) {
         return {
           status: submissionResponse.status,
           errorCode: "empty_submission_response",
@@ -191,11 +215,6 @@ async function createAdmittedRun(page: Page, fixture: ProductionFixture): Promis
       }
       // A successful response with no body leaves admission ambiguous: recover
       // the durable run by identity and validate the recovered admission below.
-      transportError = true;
-    } catch {
-      // The served live submission can durably reserve the run before its
-      // response transport closes. Recover that accepted state below.
-      transportError = true;
     }
     for (let attempt = 0; attempt < 10; attempt += 1) {
       const statusResponse = await fetch(
