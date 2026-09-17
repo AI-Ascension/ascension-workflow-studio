@@ -1,16 +1,16 @@
 {
   "schema_version": 1,
   "source": "docs/reference/phase2-package/quality/{requirements,acceptance-cases}.json",
-  "source_commit": "06b780a8f198c989f13f4a5e6e98f3c0361e3cf7",
-  "reviewed_at": "2026-09-15",
+  "source_commit": "f2fe5bc053b17491a00283f9f73b7bb392a0ceff",
+  "reviewed_at": "2026-09-17",
   "requirement_counts": {
-    "blocked": 28,
-    "implemented": 75,
-    "partial": 17
+    "blocked": 26,
+    "implemented": 76,
+    "partial": 18
   },
   "acceptance_counts": {
-    "blocked": 28,
-    "evidenced": 63,
+    "blocked": 26,
+    "evidenced": 65,
     "partial": 23,
     "implemented": 6
   },
@@ -36,7 +36,6 @@
         "AT-035",
         "AT-036",
         "AT-038",
-        "AT-040",
         "AT-053",
         "AT-054",
         "AT-089",
@@ -104,14 +103,6 @@
       "cases": [
         "AT-019",
         "AT-020"
-      ]
-    },
-    {
-      "owner": "Studio #134",
-      "kind": "reconciliation-task",
-      "note": "This task: map every mandatory requirement to evidence or an explicit blocker.",
-      "cases": [
-        "AT-116"
       ]
     }
   ],
@@ -659,7 +650,7 @@
       "negativeAssertion": "No frontend-only security/compiler acceptance.",
       "acceptanceStatus": "partial",
       "requirementStatus": "partial",
-      "evidence": "Fixture validation and live owner validation are wired; merged owner PR #57 supplies a publication route with digest and validation checks, and the synthetic live process completed validation/publication. Studio CI run 34631851055 verified authenticated Chromium pairing, live-mode selection, draft autosave, and an owner validation digest through the same-origin adapter. Browser publication and native-gameplay evidence remain unavailable.",
+      "evidence": "Fixture validation and live owner validation are wired; merged owner PR #57 supplies a publication route with digest and validation checks, and the synthetic live process completed validation/publication. Studio CI run 34631851055 verified authenticated Chromium pairing, live-mode selection, draft autosave, and an owner validation digest through the same-origin adapter. Studio CI run 34633623345 (head ade3db33dd1534f4e9f68881e790441d1851b7ae) subsequently verified authenticated Chromium publication and published-definition reload through the same-origin adapter (see AT-055), so the earlier statement that browser publication evidence was unavailable is withdrawn. Residue for this case: canonical owner rejection after a browser-side pass is demonstrated only for a removed/undisclosed context reference (tests/browser/live-owner.spec.ts \"discovers, selects, saves, reloads, and owner-rejects a context reference\", Studio validation run 35251289403 at f2fe5bc053b17491a00283f9f73b7bb392a0ceff); the case's setup (delayed compiler responses and registry changes) and a generally lint-clean-but-invalid definition are not exercised, and native-gameplay evidence remains unavailable.",
       "actualCommand": null,
       "actualSourceHeads": {},
       "owner": "Studio #108",
@@ -929,16 +920,16 @@
       "action": "Type malformed JSON, navigate/save draft, repair and apply.",
       "expected": "Preserve invalid raw text separately and apply valid text atomically.",
       "negativeAssertion": "No silent text loss or half-parsed canvas mutation.",
-      "acceptanceStatus": "partial",
+      "acceptanceStatus": "evidenced",
       "requirementStatus": "implemented",
-      "evidence": "Studio CI runs 34639729580 and 34642971172 verified malformed JSON remains visible after Library navigation, does not replace the saved draft, and can be repaired, atomically applied, autosaved, and reopened; duplicate keys are rejected without draft mutation; unsupported future-schema text is retained read-only.",
-      "actualCommand": "npm test -- --run",
+      "evidence": "Studio CI runs 34639729580 and 34642971172 verified malformed JSON remains visible after Library navigation, does not replace the saved draft, and can be repaired, atomically applied, autosaved, and reopened; duplicate keys are rejected without draft mutation; unsupported future-schema text is retained read-only. At head f2fe5bc053b17491a00283f9f73b7bb392a0ceff the browser tier is covered on Chromium, Firefox and WebKit by tests/browser/studio.spec.ts \"retains malformed JSON locally and only persists a repaired atomic candidate\" (types malformed JSON, applies it, navigates to Library and back, finds the raw text retained and the saved draft unchanged, repairs it, applies the repaired candidate atomically, autosaves and reopens it), \"rejects duplicate-key JSON without mutating the draft\" and \"keeps an unsupported import as exact read-only text\"; Studio validation run 35251289403 passed all three Browser jobs. The 2026-09-15 partial stated no residue; none remains for the case's action, expected result or negative assertion, so the row is corrected to evidenced.",
+      "actualCommand": "npm run test:browser -- --project=<chromium|firefox|webkit> (GitHub Actions Studio validation run 35251289403, Browser (chromium), Browser (firefox) and Browser (webkit) jobs)",
       "actualSourceHeads": {
-        "studio": "4b4788c"
+        "studio": "f2fe5bc053b17491a00283f9f73b7bb392a0ceff"
       },
-      "owner": "Studio #1",
-      "ownerKind": "original-tracker",
-      "ownerNote": "Remaining browser coverage for invalid-text preservation."
+      "owner": null,
+      "ownerKind": "completed",
+      "ownerNote": "Invalid-text preservation browser coverage is evidenced on all three engines (AT-040, Studio validation run 35251289403); retained for any regression of the original acceptance."
     },
     {
       "acceptanceId": "AT-041",
@@ -960,7 +951,7 @@
       },
       "owner": null,
       "ownerKind": "completed",
-      "ownerNote": "Remaining browser coverage for invalid-text preservation."
+      "ownerNote": "Invalid-text preservation browser coverage is evidenced on all three engines (AT-040, Studio validation run 35251289403); retained for any regression of the original acceptance."
     },
     {
       "acceptanceId": "AT-042",
@@ -982,7 +973,7 @@
       },
       "owner": null,
       "ownerKind": "completed",
-      "ownerNote": "Remaining browser coverage for invalid-text preservation."
+      "ownerNote": "Invalid-text preservation browser coverage is evidenced on all three engines (AT-040, Studio validation run 35251289403); retained for any regression of the original acceptance."
     },
     {
       "acceptanceId": "AT-043",
@@ -1257,7 +1248,7 @@
       "negativeAssertion": "No publish-means-run behavior.",
       "acceptanceStatus": "partial",
       "requirementStatus": "partial",
-      "evidence": "Merged owner PR #57 supplies an immutable publication route through the existing definition authority; the synthetic live process completed publication and reloaded the published definition. Studio CI run 34633623345 verified authenticated Chromium publication, Library refresh, and published-definition reload through the same-origin adapter.",
+      "evidence": "Merged owner PR #57 supplies an immutable publication route through the existing definition authority; the synthetic live process completed publication and reloaded the published definition. Studio CI run 34633623345 verified authenticated Chromium publication, Library refresh, and published-definition reload through the same-origin adapter. Residue: at head f2fe5bc053b17491a00283f9f73b7bb392a0ceff, tests/browser/live-owner.spec.ts \"publishes adaptive region edits as a new revision and leaves the active run pinned\" (Studio validation run 35251289403, Authenticated live-owner browser job, pinned owner a42b6419cc5460b95900eeb3e1d48f815b7f8ee3) publishes a validated draft revision to the real owner process, observes the immutable owner revision and asserts the active run stays pinned to its prior definition digest with no apply/hot-swap control, which covers the no-publish-means-run assertion; the case's explicit inspection of zero external-effect counters after publication is not asserted (the CI owner has no game or provider attachment, so no launch was possible, but no counter is read), so the case stays partial until that inspection is recorded.",
       "actualCommand": null,
       "actualSourceHeads": {},
       "owner": "Studio #107",
@@ -1966,7 +1957,7 @@
       "negativeAssertion": "No post-hoc threshold change or reduced fixture masking.",
       "acceptanceStatus": "partial",
       "requirementStatus": "partial",
-      "evidence": "A committed production-build benchmark harness (apps/studio/src/features/benchmark/benchmark.ts) measured PERF-01 and PERF-02 at 250 nodes / 500 edges with 100 sequential edits driven through the real node-kind control. PERF-01 is met on all engines (chromium 508ms, firefox 936ms, webkit 912ms against 2000ms). PERF-02 input-to-visible-feedback p95 is met on chromium (36.9ms) and firefox (97ms) but missed on webkit (335ms) against 100ms; the edit handler is ~1ms on every engine, so the residual cost is SVG rasterization of the 500-edge canvas layer. No threshold was changed and no fixture was reduced. The engine measurements and the scoped fix are recorded in docs/evidence/benchmark-results.json; AT-089 stays partial until the webkit path meets the target.",
+      "evidence": "A committed production-build benchmark harness (apps/studio/src/features/benchmark/benchmark.ts) measured PERF-01 and PERF-02 at 250 nodes / 500 edges with 100 sequential edits driven through the real node-kind control. PERF-01 is met on all engines (chromium 508ms, firefox 936ms, webkit 912ms against 2000ms). PERF-02 input-to-visible-feedback p95 is met on chromium (36.9ms) and firefox (97ms) but missed on webkit (335ms) against 100ms; the edit handler is ~1ms on every engine, so the residual cost is SVG rasterization of the 500-edge canvas layer. No threshold was changed and no fixture was reduced. The engine measurements and the scoped fix are recorded in docs/evidence/benchmark-results.json; AT-089 stays partial until the webkit path meets the target. 2026-09-17 supplement at head f2fe5bc053b17491a00283f9f73b7bb392a0ceff: PERF-08 was measured by node tools/measure-bundle-budget.mjs after npm run build; the initial core route JavaScript (assets/index-D9zULoe3.js, the only script dist/index.html loads eagerly) is 890,908 raw / 232,677 gzip bytes (zlib level 6) against the 1,500,000 gzip-byte target, so PERF-08 is met, and all emitted JavaScript including the lazily loaded import worker is 1,308,694 raw / 324,362 gzip bytes. PERF-03's 1000-node/2000-edge input is not admitted (owner per-graph ceiling 256 nodes / 1024 edges; the harness caps at 512/2048), so the same production harness was run at the admitted ceiling 256x1024 against a vite preview of the head build on this host (local headless run, not CI hardware): first-useful-render over five cold loads had p95 2147.2 ms on Chromium 153.0.8010.12 and 2780 ms on Firefox 155.0 against the 5000 ms target, so PERF-03 is met at the admitted ceiling; WebKit was not measured locally. Residue: PERF-02 on WebKit (335 ms against 100 ms; product fix pending) and PERF-04/05/06/07 (no owner stream is admitted, AT-064). Details in docs/evidence/benchmark-results.json.",
       "actualCommand": "GitHub Actions Studio validation run 34678238388 (unit/type/build, chromium, firefox, webkit, recorded-run, live-owner); browser test “keeps medium-graph edits responsive in the production build”",
       "actualSourceHeads": {
         "studio": "a672d41"
@@ -2494,11 +2485,16 @@
       "action": "Run final strict/dynamic/draft/command/replay/security vertical slices.",
       "expected": "Reverify critical invariants and affected suites at the final combined source heads.",
       "negativeAssertion": "No disjoint branch passes treated as integrated proof.",
-      "acceptanceStatus": "blocked",
-      "requirementStatus": "blocked",
-      "evidence": "Final combined source-head verification remains.",
-      "actualCommand": null,
-      "actualSourceHeads": {},
+      "acceptanceStatus": "partial",
+      "requirementStatus": "partial",
+      "evidence": "Combined-head verification recorded: Studio validation run 35251289403 (push to main, head f2fe5bc053b17491a00283f9f73b7bb392a0ceff, 2026-09-17) passed all six jobs against one combined set of pinned heads from contracts/live-owner-ci.lock.json: owner sts2-harness a42b6419cc5460b95900eeb3e1d48f815b7f8ee3, gateway sts2-gateway 8940fba823a0893b31d1a96301831c182d37ed32, MCP sts2-mcp-server f3b6eaa8bcf2241b8d6c47587c958388a8fe1031. At those heads the run re-executed the affected suites: unit/type/production build with contract-pin, effective-limit validator and reconciliation verification; the strict/dynamic fixture designer, draft, guard, import and replay/compare journeys on Chromium, Firefox and WebKit (npm run test:browser, npm run test:effective-limits-browser); the recorded-run browser regression; and the authenticated live-owner job, which built the pinned owner, gateway and MCP processes and ran draft persistence across an owner restart (npm run test:owner-restart), unauthenticated/Origin/CSRF refusal (npm run test:owner-negative-auth), the live-owner draft/validate/publish/command/conflict journeys (npm run test:live-owner-browser) and the production served policy routes (npm run test:production-policy-browser). This is one integrated run at one combined head, not disjoint branch passes. Residue: no reviewer has declared these the final combined candidate heads, and the security vertical slice is limited to the owner negative-auth and same-origin checks (the independent review in AT-100/AT-102 and the native lineage in AT-117 remain open), so the case stays partial until the final heads are declared and the run is repeated at them.",
+      "actualCommand": "GitHub Actions Studio validation run 35251289403 (push to main, all six jobs: Unit, type, and production build; Browser (chromium); Browser (firefox); Browser (webkit); Recorded-run browser regression; Authenticated live-owner browser)",
+      "actualSourceHeads": {
+        "studio": "f2fe5bc053b17491a00283f9f73b7bb392a0ceff",
+        "owner": "a42b6419cc5460b95900eeb3e1d48f815b7f8ee3",
+        "gateway": "8940fba823a0893b31d1a96301831c182d37ed32",
+        "mcp": "f3b6eaa8bcf2241b8d6c47587c958388a8fe1031"
+      },
       "owner": "Studio #1",
       "ownerKind": "original-tracker",
       "ownerNote": "Final combined-head, mandatory-ledger and lineage acceptance."
@@ -2514,14 +2510,16 @@
       "action": "Audit 120 requirement/case links and stale evidence states.",
       "expected": "Map every mandatory requirement to actual evidence or explicit blocker.",
       "negativeAssertion": "No omitted failed requirement or default passed template.",
-      "acceptanceStatus": "blocked",
-      "requirementStatus": "blocked",
-      "evidence": "The ledger exists, but unresolved mandatory entries remain.",
-      "actualCommand": null,
-      "actualSourceHeads": {},
-      "owner": "Studio #134",
-      "ownerKind": "reconciliation-task",
-      "ownerNote": "This task: map every mandatory requirement to evidence or an explicit blocker."
+      "acceptanceStatus": "evidenced",
+      "requirementStatus": "implemented",
+      "evidence": "The 120-entry requirement/case audit exists and is verified: docs/evidence/PHASE2_RECONCILIATION.md and docs/evidence/phase2-reconciliation.json (generated by tools/build-phase2-reconciliation.mjs; delivered by Studio #134 through PR #135, merge commit 66132277a9e2bd8dd1493f58a620ab4ec56e7cc1; regenerated at head f2fe5bc053b17491a00283f9f73b7bb392a0ceff on 2026-09-17) map every mandatory requirement and acceptance case to its current status, ledger evidence, actual command and source heads, and give every non-evidenced case an explicit owner and blocker note from tools/phase2-owner-map.json. tools/verify-phase2-reconciliation.test.mjs asserts 120/120 coverage of both ledgers, recomputed status summaries, that every unresolved case carries an owner, and that the projection matches the ledger rows; it passed in Studio validation run 35251289403 at head f2fe5bc053b17491a00283f9f73b7bb392a0ceff and again after the regeneration. Unresolved mandatory entries still exist and are listed with owners in the reconciliation; the case's expected result is the mapping to evidence or an explicit blocker, not resolution, so the earlier row text (\"the ledger exists, but unresolved mandatory entries remain\") mis-stated the case and is corrected.",
+      "actualCommand": "node --test tools/verify-phase2-reconciliation.test.mjs (GitHub Actions Studio validation run 35251289403, job \"Unit, type, and production build\", step \"Verify Phase 2 requirement/acceptance reconciliation\")",
+      "actualSourceHeads": {
+        "studio": "f2fe5bc053b17491a00283f9f73b7bb392a0ceff"
+      },
+      "owner": null,
+      "ownerKind": "completed",
+      "ownerNote": "Mapping delivered by Studio #134 (closed 2026-09-15; PR #135, merge 66132277a9e2bd8dd1493f58a620ab4ec56e7cc1) and re-verified at head; the case is evidenced, so this entry only records the closure and any residual audit belongs to the original tracker."
     },
     {
       "acceptanceId": "AT-117",

@@ -46,7 +46,9 @@
   ],
   "targets": {
     "PERF-01": { "metric": "first_useful_render_p95_ms", "target_max": 2000 },
-    "PERF-02": { "metric": "input_to_visible_feedback_p95_ms", "target_max": 100 }
+    "PERF-02": { "metric": "input_to_visible_feedback_p95_ms", "target_max": 100 },
+    "PERF-03": { "metric": "parse_and_useful_view_p95_ms", "target_max": 5000 },
+    "PERF-08": { "metric": "gzip_javascript_bytes", "target_max": 1500000 }
   },
   "recorded_failure": {
     "target": "PERF-02 on WebKit",
@@ -54,6 +56,62 @@
     "bottleneck": "WebKit paints the canvas SVG (250 nodes / 500 edges) roughly five times slower than Chromium for the same DOM; the authoritative edit handler is ~1 ms, so the cost is engine rasterization of the edge layer, not application JavaScript.",
     "scoped_fix": "Reduce the painted edge payload for admitted-size graphs on engines without efficient SVG rasterization, for example by virtualizing edges to the viewport, batching edge label rendering, or moving the edge layer to a canvas renderer. This is not yet implemented.",
     "reviewed_decision": "The strict PERF-02 assertion is enforced on chromium, where the target is met with margin, and recorded on the other engines. Thresholds and corpus size are unchanged."
+  },
+  "supplementary_measurements": {
+    "recorded_on": "2026-09-17",
+    "head_commit": "f2fe5bc053b17491a00283f9f73b7bb392a0ceff",
+    "scope": "PERF-08 and PERF-03 recorded at the Studio head; no threshold, workload or assertion was changed and the CI PERF-01/PERF-02 results above are unchanged",
+    "PERF-08": {
+      "status": "measured",
+      "target": "met",
+      "command": "npm run build && node tools/measure-bundle-budget.mjs --json",
+      "definition": "initial core route = every JavaScript file dist/index.html loads eagerly (script src and modulepreload); lazy chunks and workers are excluded from the core figure and reported separately",
+      "gzip_level": 6,
+      "core_route": { "files": ["assets/index-D9zULoe3.js"], "raw_bytes": 890908, "gzip_bytes": 232677 },
+      "all_javascript": { "files": ["assets/import.worker-BIDftc_z.js", "assets/index-D9zULoe3.js"], "raw_bytes": 1308694, "gzip_bytes": 324362 },
+      "target_max_gzip_bytes": 1500000,
+      "test": "tools/measure-bundle-budget.test.mjs"
+    },
+    "PERF-03": {
+      "status": "measured_at_admitted_ceiling",
+      "target": "met_at_admitted_ceiling",
+      "profile_input": "1000 nodes / 2000 edges if admitted",
+      "admission": "not admitted: the owner per-graph ceiling is 256 nodes / 1024 edges (see corpus.owner_ceiling) and the benchmark harness caps at 512 nodes / 2048 edges, so the 1000/2000 workload cannot be produced or admitted; measured at the admitted ceiling instead",
+      "workload": { "nodes": 256, "edges": 1024 },
+      "method": "same production harness as PERF-01/02 (?benchmark=256x1024 against a vite preview of the head production build); first-useful-render is navigation start to the first painted designer graph, sampled over five cold page loads per engine (p95 = highest of five); the 100-edit workload was then run once for context",
+      "environment": "local headless run through the orchestration browser-runtime wrapper on AMD Ryzen 5 5600X (12 threads), Linux 7.0.0, Node 24.16.0; Firefox ran with MOZ_DISABLE_CONTENT_SANDBOX=1; this is not the GitHub-hosted CI hardware that produced the PERF-01/02 rows",
+      "results": [
+        {
+          "engine": "chromium",
+          "engine_version": "153.0.8010.12",
+          "first_useful_render_ms": [2147.2, 1467.7, 878.4, 1955.8, 1810],
+          "first_useful_render_p95_ms": 2147.2,
+          "edit_p50_ms": 110,
+          "edit_p95_ms": 222.8,
+          "handler_p95_ms": 0.2,
+          "idle_frame_ms": 16.7
+        },
+        {
+          "engine": "firefox",
+          "engine_version": "155.0",
+          "first_useful_render_ms": [1654, 2401, 2283, 2780, 2738],
+          "first_useful_render_p95_ms": 2780,
+          "edit_p50_ms": 91,
+          "edit_p95_ms": 204,
+          "handler_p95_ms": 1,
+          "idle_frame_ms": 17
+        }
+      ],
+      "not_measured": ["webkit (not run locally; the CI WebKit job runs only the 250x500 PERF-01/02 workload)"],
+      "target_max_ms": 5000,
+      "note": "The edit latency at 256x1024 is recorded for context only; PERF-02 is defined at 250x500 and its recorded results are unchanged."
+    },
+    "not_measured": {
+      "PERF-04": "no deterministic owner stream is admitted (AT-064)",
+      "PERF-05": "no owner stream is admitted (AT-064)",
+      "PERF-06": "no owner history window is admitted (AT-064)",
+      "PERF-07": "no owner attachment lifecycle is admitted (AT-064)"
+    }
   },
   "measured_thresholds_unchanged": true
 }

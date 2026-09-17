@@ -110,3 +110,17 @@ test('implemented acceptance retains an owner for outstanding verification', () 
     assert.notEqual(entry.ownerKind, 'completed');
   }
 });
+test('the reconciliation projection reflects the current ledger rows rather than a stale generation', () => {
+  assert.match(reconciliation.source_commit, /^[0-9a-f]{40}$/);
+  const ledgerById = Object.fromEntries(acceptanceLedger.cases.map((c) => [c.id, c]));
+  const requirementById = Object.fromEntries(requirementLedger.requirements.map((r) => [r.id, r]));
+  for (const entry of reconciliation.cases) {
+    const ledger = ledgerById[entry.acceptanceId];
+    assert.ok(ledger, `${entry.acceptanceId} is not in the acceptance ledger`);
+    assert.equal(entry.acceptanceStatus, ledger.status, `${entry.acceptanceId} status is stale in the projection`);
+    assert.equal(entry.evidence, ledger.evidence ?? null, `${entry.acceptanceId} evidence text is stale in the projection`);
+    assert.equal(entry.actualCommand, ledger.actual_command ?? null, `${entry.acceptanceId} command is stale in the projection`);
+    assert.deepEqual(entry.actualSourceHeads, ledger.actual_source_heads ?? {}, `${entry.acceptanceId} source heads are stale in the projection`);
+    assert.equal(entry.requirementStatus, requirementById[entry.requirementId].status, `${entry.acceptanceId} requirement status is stale`);
+  }
+});

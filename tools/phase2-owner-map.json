@@ -13,7 +13,7 @@
     "WP-10": { "owner": "Studio #107", "kind": "feature-backlog", "note": "Real browser add/connect/reconnect/delete journey against the live owner." },
     "WP-11": { "owner": "Studio #1", "kind": "original-tracker", "note": "Remaining nested browser remap acceptance for the original editor." },
     "WP-12": { "owner": "Studio #1", "kind": "original-tracker", "note": "Remaining browser coverage for ordered guard branches." },
-    "WP-13": { "owner": "Studio #1", "kind": "original-tracker", "note": "Remaining browser coverage for invalid-text preservation." },
+    "WP-13": { "owner": "Studio #1", "kind": "original-tracker", "note": "Invalid-text preservation browser coverage is evidenced on all three engines (AT-040, Studio validation run 35251289403); retained for any regression of the original acceptance." },
     "WP-14": { "owner": "Studio #108", "kind": "feature-backlog", "note": "Adaptive operation/policy editing and generated plan-layer projection." },
     "WP-15": { "owner": "Studio #107", "kind": "feature-backlog", "note": "Draft persistence through admitted owner ports; owner-restart case already evidenced." },
     "WP-16": { "owner": "Studio #1", "kind": "original-tracker", "note": "Remaining offline/crash-recovery original acceptance." },
@@ -54,9 +54,9 @@
       "note": "Production static-host CSP/worker/routing acceptance is outside the Studio repository."
     },
     "AT-116": {
-      "owner": "Studio #134",
-      "kind": "reconciliation-task",
-      "note": "This task: map every mandatory requirement to evidence or an explicit blocker."
+      "owner": "Studio #1",
+      "kind": "original-tracker",
+      "note": "Mapping delivered by Studio #134 (closed 2026-09-15; PR #135, merge 66132277a9e2bd8dd1493f58a620ab4ec56e7cc1) and re-verified at head; the case is evidenced, so this entry only records the closure and any residual audit belongs to the original tracker."
     },
     "AT-117": {
       "owner": "Studio #1",

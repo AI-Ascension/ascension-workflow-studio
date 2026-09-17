@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: MIT
 //
-// Build the Phase 2 requirement/acceptance reconciliation mapping (Studio #134).
+// Build the Phase 2 requirement/acceptance reconciliation mapping (Studio #134;
+// regenerated for Studio #1 ledger hygiene). Set RECONCILE_HEAD / RECONCILE_DATE
+// to the reviewed Studio commit and review date when regenerating.
 //
 // Inputs (immutable, checked in):
 //   docs/reference/phase2-package/quality/requirements.json
@@ -100,8 +102,8 @@ for (const c of cases) {
 const report = {
   schema_version: 1,
   source: "docs/reference/phase2-package/quality/{requirements,acceptance-cases}.json",
-  source_commit: process.env.RECONCILE_HEAD ?? "06b780a8f198c989f13f4a5e6e98f3c0361e3cf7",
-  reviewed_at: "2026-09-15",
+  source_commit: process.env.RECONCILE_HEAD ?? "f2fe5bc053b17491a00283f9f73b7bb392a0ceff",
+  reviewed_at: process.env.RECONCILE_DATE ?? "2026-09-17",
   requirement_counts: statusCounts(requirementLedger.requirements.map((r) => r.status)),
   acceptance_counts: statusCounts(acceptanceLedger.cases.map((c) => c.status)),
   unresolved_by_owner: Object.values(ownerGroups).sort((a, b) =>
@@ -134,16 +136,20 @@ const EXPLICIT_COVERAGE = [
   {
     area: "Performance (AT-089 / PERF-01-08)",
     disposition:
-      "Partial. A committed production-build benchmark measures the 250-node/500-edge workload; the recorded WebKit edit p95 of 335 ms is retained against the 100 ms target and PERF-03-08 remain unmeasured. Do not label these passed. Owner: Studio #1 remaining performance task.",
+      "Partial. A committed production-build benchmark measures the 250-node/500-edge workload; the recorded WebKit edit p95 of 335 ms is retained against the 100 ms target. PERF-08 (232,677 gzip bytes of core-route JavaScript against 1,500,000) and PERF-03 (the 1000/2000 input is not admitted; measured at the admitted 256x1024 ceiling, first-useful-render p95 2147.2 ms Chromium / 2780 ms Firefox against 5000 ms, local headless run) were recorded on 2026-09-17 in docs/evidence/benchmark-results.json. PERF-04-07 remain unmeasured because no owner stream is admitted. Do not label the WebKit PERF-02 result passed. Owner: Studio #1 remaining performance task.",
   },
   {
     area: "Final combined-head / mandatory-ledger / lineage (AT-115/116/117)",
     disposition:
-      "Partial. This reconciliation supplies the criterion-to-evidence mapping (AT-116); the final combined source-head re-verification (AT-115) and native lineage/model/worker closure (AT-117) require the authorized combined-head and orchestration environment. Owner: Studio #1 and Studio #134.",
+      "Partial. This reconciliation supplies the criterion-to-evidence mapping (AT-116, evidenced; Studio #134 closed through PR #135). A combined-head verification is recorded for AT-115 (Studio validation run 35251289403 at f2fe5bc053b17491a00283f9f73b7bb392a0ceff with the pinned owner a42b6419, gateway 8940fba and MCP f3b6eaa heads, all six jobs passed) but the heads are not yet declared final and the independent security review remains open, so AT-115 is partial. Native lineage/model/worker closure (AT-117) requires the authorized orchestration environment. Owner: Studio #1.",
   },
 ];
 
 const CORRECTIONS = [
+  "2026-09-17 (Studio #1 ledger hygiene at f2fe5bc053b17491a00283f9f73b7bb392a0ceff): AT-116/P2-116 blocked → evidenced/implemented. The case expects the 120-entry mapping, which this reconciliation supplies and `tools/verify-phase2-reconciliation.test.mjs` enforces in CI (Studio validation run 35251289403); the prior row text conflated mapping with resolution.",
+  "2026-09-17: AT-115/P2-115 blocked → partial. Studio validation run 35251289403 verified the combined heads (Studio f2fe5bc0, owner a42b6419, gateway 8940fba8, MCP f3b6eaa8) in one integrated run of all six jobs; the heads are not yet declared final and the independent security review remains open.",
+  "2026-09-17: AT-040 partial → evidenced. The browser tier is covered on Chromium, Firefox and WebKit by `tests/browser/studio.spec.ts` (malformed-JSON retention/repair, duplicate-key rejection, unsupported-import archival) in run 35251289403; the prior partial stated no residue.",
+  "2026-09-17: AT-027 and AT-055 stay partial with their residue now stated explicitly; AT-027 no longer claims browser publication evidence is unavailable (run 34633623345 verified it). AT-089 stays partial with PERF-08 and PERF-03 (at the admitted 256x1024 ceiling; 1000/2000 not admitted) recorded in `docs/evidence/benchmark-results.json`; the residue is PERF-02 on WebKit and PERF-04-07.",
   "Acceptance ownership (2026-09-15 review): `implemented` cases are no longer treated as resolved. AT-026/AT-034/AT-036/AT-047/AT-053/AT-054 are implemented in source but their required `phase1_process`/`browser` evidence tier is not demonstrated, so they retain an owner for outstanding verification instead of being recorded as completed. Only `evidenced` acceptance is ownerless.",
   "AT-091/AT-092 (P2-091/P2-092): blocked → partial. Later merged CI (`.github/workflows/validate.yml`) runs real Chromium/Firefox/WebKit journeys and an authenticated job against the pinned real owner; the prior 'engines and attached owner process are not yet available' statement was stale.",
   "AT-097 (P2-097): blocked → evidenced/implemented. The lost-save/publication/command and concurrent-editor tests are merged in `tests/browser/live-owner.spec.ts` and run against the pinned real owner process.",
@@ -179,7 +185,7 @@ md.push(
   "AT-046/P2-046 (owner-restart draft persistence) remains evidenced/implemented from Studio PR #130 (`b26a2707cfdc99152064dca83b63e69d99aabfb8`). All other resolved entries in the ledgers are preserved unchanged.",
 );
 md.push("");
-md.push("## 2026-09-15 evidence-backed corrections");
+md.push("## Evidence-backed corrections (2026-09-15 and 2026-09-17)");
 md.push("");
 for (const c of CORRECTIONS) md.push(`- ${c}`);
 md.push("");
