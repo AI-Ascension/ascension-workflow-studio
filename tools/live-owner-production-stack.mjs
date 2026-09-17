@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { createHash, randomBytes } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
+import { connect as connectTcp } from "node:net";
 import { chmod, rm, stat, writeFile } from "node:fs/promises";
 import {
   chmodSync,
@@ -357,10 +358,20 @@ async function waitForWorkflowService() {
 async function waitForPort(port) {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${port}/`);
-      if (response.status < 500) return;
-    } catch {}
+    const connected = await new Promise((resolveConnected) => {
+      const socket = connectTcp({ host: "127.0.0.1", port });
+      let settled = false;
+      const settle = (value) => {
+        if (settled) return;
+        settled = true;
+        socket.destroy();
+        resolveConnected(value);
+      };
+      socket.once("connect", () => settle(true));
+      socket.once("error", () => settle(false));
+      socket.setTimeout(500, () => settle(false));
+    });
+    if (connected) return;
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 100));
   }
   throw new Error(`local fixture peer did not bind port ${port}`);
