@@ -23,6 +23,7 @@ describe("pinned original harness-library synthetic capability vectors", () => {
             expect(preview).toEqual({ state: "unavailable", reason: "disabled" });
           } else {
             expect(preview).toMatchObject({ state: "available", ceiling: row.executable_ceiling });
+            expect(admitEffectiveLimit(descriptor, preview, 1)).toEqual(preview);
             expect(admitEffectiveLimit(descriptor, preview, row.executable_ceiling)).toEqual(preview);
             expect(admitEffectiveLimit(descriptor, preview, row.executable_ceiling + 1))
               .toEqual({ state: "unavailable", reason: "effective_limit_exceeded" });
