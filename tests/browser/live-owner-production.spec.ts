@@ -179,6 +179,52 @@ async function createAdmittedRun(page: Page, fixture: ProductionFixture): Promis
 
 }
 
+async function readRun(page: Page, runId: string): Promise<Record<string, any>> {
+  return page.evaluate(async ({ runId, token }) => {
+    const response = await fetch(`/v1/workflow-runs/${encodeURIComponent(runId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error(`run status returned ${response.status}`);
+    return response.json();
+  }, { runId, token: OWNER_TOKEN });
+}
+
+async function stepRun(
+  page: Page,
+  runId: string,
+  expectedRevision: number,
+  commandId: string,
+): Promise<{ status: number; body: Record<string, any> }> {
+  return page.evaluate(async ({ runId, expectedRevision, commandId, token }) => {
+    const response = await fetch(`/v1/workflow-runs/${encodeURIComponent(runId)}/commands`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        schema_version: "ascension.management/v1",
+        command_id: commandId,
+        run_id: runId,
+        expected_revision: expectedRevision,
+        actor_scope: "profile:studio-live",
+        kind: "step",
+        parameters: {},
+      }),
+    });
+    return { status: response.status, body: await response.json() };
+  }, { runId, expectedRevision, commandId, token: OWNER_TOKEN });
+}
+
+async function readEffects(page: Page, ownerStack: string): Promise<{
+  dispatches: Array<{ operation_id: string | null; action_id: string | null }>;
+  settlements: Array<{ operation_id: string }>;
+}> {
+  const response = await page.request.get(`${ownerStack}/effects`);
+  expect(response.status()).toBe(200);
+  return response.json();
+}
+
 async function exerciseContextOwner(page: Page, fixture: ProductionFixture): Promise<{
   command: ContextControlCommand;
   receipt: ContextControlReceipt;
@@ -554,4 +600,66 @@ test("uses production served policy routes for import, approval, adoption, refre
   await panel.getByRole("button", { name: "Refresh history" }).click();
   await expect(panel.getByRole("region", { name: "Current adopted policy" })).toContainText(targetSha);
   await expect(panel).toContainText("migration.studio.production");
+
+  // The browser has authenticated against the real served workflow. The Mod and
+  // provider peers are synthetic fixture processes; no native gameplay claim is
+  // made by this acceptance journey.
+  let current = await readRun(page, runId);
+  expect(current.run.cursor.node_id).toBe("decide");
+  const decided = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.decide");
+  expect(decided.status).toBe(200);
+  current = await readRun(page, runId);
+  expect(current.run.cursor.node_id).toBe("execute");
+
+  const dispatched = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.dispatch");
+  expect(dispatched.status).toBe(200);
+  current = await readRun(page, runId);
+  expect(current.run.status).toBe("needs_operator");
+  expect(current.run.pending_operation?.state).toBe("unknown");
+  const operationId = current.run.pending_operation.operation_id as string;
+  const beforeReload = await readEffects(page, ownerStack);
+  expect(beforeReload.dispatches).toHaveLength(1);
+  expect(beforeReload.dispatches[0].operation_id).toBe(operationId);
+
+  const secondRestart = await fetch(`${ownerStack}/restart`, { method: "POST" });
+  expect(secondRestart.status).toBe(200);
+  await page.reload();
+  await page.waitForLoadState("load");
+  await connectLiveOwner(page, ownerProxy);
+
+  const reloaded = await readRun(page, runId);
+  expect(reloaded.run.pending_operation).toMatchObject({
+    operation_id: operationId,
+    state: "unknown",
+  });
+  await page.getByRole("button", { name: "Runs", exact: true }).click();
+  await page.getByRole("textbox", { name: "Run ID" }).fill(runId);
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
+  await expect(page.locator(".detail-list")).toContainText(`${operationId} · unknown`);
+
+  const reconciled = await stepRun(
+    page,
+    runId,
+    reloaded.run.run_revision,
+    "studio.browser.ac3.reconcile",
+  );
+  expect(reconciled.status).toBe(200);
+  current = await readRun(page, runId);
+  if (current.run.pending_operation) {
+    const terminal = await stepRun(
+      page,
+      runId,
+      current.run.run_revision,
+      "studio.browser.ac3.terminal",
+    );
+    expect(terminal.status).toBe(200);
+    current = await readRun(page, runId);
+  }
+  expect(current.run.status).toBe("completed");
+  const afterReconcile = await readEffects(page, ownerStack);
+  expect(afterReconcile.dispatches).toHaveLength(1);
+  expect(afterReconcile.dispatches[0].operation_id).toBe(operationId);
+  expect(afterReconcile.settlements.length).toBeGreaterThanOrEqual(1);
+  expect(afterReconcile.settlements.every((entry) => entry.operation_id === operationId)).toBe(true);
 });

@@ -86,6 +86,10 @@ let fixtureInfo;
 let modServer;
 let workflowService;
 let shutdownPromise;
+const effectLedger = {
+  dispatches: [],
+  settlements: [],
+};
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
@@ -193,6 +197,11 @@ async function startFixtureStack() {
         context_source_digest: contextSourceDigest,
         context_source_document: contextSourceDocument,
       }));
+      return;
+    }
+    if (request.method === "GET" && request.url === "/effects") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify(effectLedger));
       return;
     }
     if (request.method === "POST" && request.url === "/restart") {
@@ -417,9 +426,16 @@ function startModServer(port) {
     } else if (request.url === "/api/v4/runtime/expert-state") {
       value = { ...expertObservation, state_id: "live:7", generation: 7 };
     } else if (request.url === "/api/v4/runtime/expert-action") {
+      effectLedger.dispatches.push({
+        operation_id: body.operation_id ?? null,
+        action_id: body.action?.action_id ?? null,
+      });
       status = 503;
       value = { ...settledAction, status: "unknown", error_code: "transport_timeout", operation_id: body.operation_id };
     } else if (request.url?.startsWith("/api/v4/runtime/expert-actions/")) {
+      effectLedger.settlements.push({
+        operation_id: request.url.slice("/api/v4/runtime/expert-actions/".length),
+      });
       value = { ...settledAction, status: "settled" };
     } else {
       status = 404;
