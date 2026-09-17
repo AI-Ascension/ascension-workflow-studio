@@ -86,6 +86,10 @@ let fixtureInfo;
 let modServer;
 let workflowService;
 let shutdownPromise;
+const effectLedger = {
+  dispatches: [],
+  settlements: [],
+};
 
 for (const signal of ["SIGINT", "SIGTERM"]) {
   process.on(signal, () => {
@@ -110,7 +114,7 @@ async function startFixtureStack() {
   await writeFile(fixtureRecordPath, JSON.stringify(fixtureInfo), { mode: 0o600 });
   await writeFile(
     bridgePath,
-    "#!/bin/sh\ncat >/dev/null\nprintf '%s' '{\"decision\":\"action\",\"action_id\":\"potion:7:potion:fire:enemy:1\",\"rationale\":\"use the visible potion\"}'\n",
+    "#!/bin/sh\ncat >/dev/null\nprintf '%s\\n' '{\"decision\":\"action\",\"action_id\":\"potion:7:potion:fire:enemy:1\",\"rationale\":\"use the visible potion\"}'\n",
     { mode: 0o700 },
   );
   await chmod(bridgePath, 0o700);
@@ -193,6 +197,11 @@ async function startFixtureStack() {
         context_source_digest: contextSourceDigest,
         context_source_document: contextSourceDocument,
       }));
+      return;
+    }
+    if (request.method === "GET" && request.url === "/effects") {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(JSON.stringify(effectLedger));
       return;
     }
     if (request.method === "POST" && request.url === "/restart") {
@@ -410,6 +419,18 @@ function startModServer(port) {
     }
     let status = 200;
     let value;
+    const header = (name, fallback) => request.headers[name] ?? fallback;
+    const identity = (operationId, generation, stateId, action) => ({
+      correlation_id: header("x-sts2-correlation-id", "request"),
+      instance_id: header("x-sts2-instance-id", body.instance_id ?? "instance-1"),
+      session_id: header("x-sts2-session-id", body.session_id ?? "session-1"),
+      lease_id: header("x-sts2-lease-id", body.lease_id ?? "lease-1"),
+      lease_epoch: Number(header("x-sts2-lease-epoch", body.lease_epoch ?? 1)),
+      generation,
+      state_id: stateId,
+      operation_id: operationId,
+      action,
+    });
     if (request.url === "/api/v3/runtime/state") {
       value = v3Response(normalObservation, "state_response", request.headers);
     } else if (request.url === "/api/v3/runtime/legal-actions") {
@@ -417,10 +438,29 @@ function startModServer(port) {
     } else if (request.url === "/api/v4/runtime/expert-state") {
       value = { ...expertObservation, state_id: "live:7", generation: 7 };
     } else if (request.url === "/api/v4/runtime/expert-action") {
-      status = 503;
-      value = { ...settledAction, status: "unknown", error_code: "transport_timeout", operation_id: body.operation_id };
+      const operationId = body.operation_id;
+      effectLedger.dispatches.push({
+        operation_id: operationId ?? null,
+        action_id: body.action?.action_id ?? null,
+      });
+      value = {
+        ...settledAction,
+        ...identity(operationId, body.generation ?? 7, body.state_id ?? "live:7", body.action ?? null),
+        status: "unknown",
+        observation: null,
+        transition: null,
+        error_code: "transport_timeout",
+      };
     } else if (request.url?.startsWith("/api/v4/runtime/expert-actions/")) {
-      value = { ...settledAction, status: "settled" };
+      const operationId = request.url.slice("/api/v4/runtime/expert-actions/".length);
+      effectLedger.settlements.push({
+        operation_id: operationId,
+      });
+      value = {
+        ...settledAction,
+        ...identity(operationId, settledAction.generation, settledAction.state_id, settledAction.action),
+        status: "settled",
+      };
     } else {
       status = 404;
       value = { error_code: "fixture_route_missing" };

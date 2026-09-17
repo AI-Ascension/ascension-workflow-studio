@@ -43,6 +43,7 @@ interface RunSubmission {
   status: number;
   errorCode: string | null;
   run: Record<string, any>;
+  transportRecovered?: boolean;
 }
 
 async function connectLiveOwner(page: Page, ownerProxy: string): Promise<void> {
@@ -156,27 +157,173 @@ async function createAdmittedRun(page: Page, fixture: ProductionFixture): Promis
     if (!preflightResponse.ok) {
       throw new Error(`production target preflight returned ${preflightResponse.status}`);
     }
-    const submissionResponse = await fetch("/v1/workflow-runs", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        schema_version: "ascension.management/v1",
-        request_id: fixture.request_id,
-        definition,
-        artifact_id: null,
-        instance_id: fixture.instance_id,
-        profile: "live.workflow.v1",
-        admission: preflight.admission,
-      }),
+    const body = JSON.stringify({
+      schema_version: "ascension.management/v1",
+      request_id: fixture.request_id,
+      definition,
+      artifact_id: null,
+      instance_id: fixture.instance_id,
+      profile: "live.workflow.v1",
+      admission: preflight.admission,
     });
-    const run = await submissionResponse.json();
-    return {
-      status: submissionResponse.status,
-      errorCode: run?.error?.code ?? null,
-      run,
-    };
+    let transportError = false;
+    let submissionResponse: Response | undefined;
+    try {
+      submissionResponse = await fetch("/v1/workflow-runs", {
+        method: "POST",
+        headers,
+        body,
+      });
+    } catch {
+      // The served live submission can durably reserve the run before its
+      // response transport closes. Recover that accepted state below.
+      transportError = true;
+    }
+    if (!transportError && submissionResponse) {
+      // A concrete non-2xx response is an authoritative refusal. Preserve
+      // that status even if its body is empty, malformed, or unreadable;
+      // durable recovery is only for a missing response or ambiguous success.
+      if (!submissionResponse.ok) {
+        let text = "";
+        try {
+          text = await submissionResponse.text();
+        } catch {
+          return {
+            status: submissionResponse.status,
+            errorCode: `submission_refused_${submissionResponse.status}`,
+            run: {},
+          };
+        }
+        if (text) {
+          let run: any;
+          try {
+            run = JSON.parse(text);
+          } catch {
+            return {
+              status: submissionResponse.status,
+              errorCode: "malformed_submission_response",
+              run: {},
+            };
+          }
+          return {
+            status: submissionResponse.status,
+            errorCode: run?.error?.code ?? `submission_refused_${submissionResponse.status}`,
+            run,
+          };
+        }
+        return {
+          status: submissionResponse.status,
+          errorCode: `submission_refused_${submissionResponse.status}`,
+          run: {},
+        };
+      }
+      let text: string;
+      try {
+        text = await submissionResponse.text();
+      } catch {
+        // A response body read can fail after the server durably accepted the
+        // run, so this remains a genuine transport ambiguity.
+        transportError = true;
+        text = "";
+      }
+      if (!transportError && text) {
+        let run: any;
+        try {
+          run = JSON.parse(text);
+        } catch {
+          return {
+            status: submissionResponse.status,
+            errorCode: "malformed_submission_response",
+            run: {},
+          };
+        }
+        return {
+          status: submissionResponse.status,
+          errorCode: run?.error?.code ?? null,
+          run,
+        };
+      }
+      // A successful response with no body leaves admission ambiguous: recover
+      // the durable run by identity and validate the recovered admission below.
+    }
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const statusResponse = await fetch(
+        `/v1/workflow-runs/${encodeURIComponent(fixture.run_id)}`,
+        { headers },
+      );
+      if (statusResponse.ok) {
+        const status = await statusResponse.json();
+        const recovered = status.run;
+        const admission = recovered?.admission;
+        if (
+          recovered?.workflow_run_id === fixture.run_id
+          && recovered.definition_digest === definitionDigest
+          && admission?.schema_version === "ascension.workflow-admission/v1"
+          && admission.request_id === fixture.request_id
+          && admission.workflow_definition_digest === definitionDigest
+          && admission.target?.instance_id === fixture.instance_id
+          && admission.target?.execution_profile === "live.workflow.v1"
+          && admission.target?.execution_mode === "live"
+        ) {
+          return {
+            status: 200,
+            errorCode: null,
+            run: recovered,
+            transportRecovered: true,
+          };
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    throw new Error("workflow submission response and durable run recovery both failed");
   }, { definition, definitionDigest, fixture, token: OWNER_TOKEN });
 
+}
+
+async function readRun(page: Page, runId: string): Promise<Record<string, any>> {
+  return page.evaluate(async ({ runId, token }) => {
+    const response = await fetch(`/v1/workflow-runs/${encodeURIComponent(runId)}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!response.ok) throw new Error(`run status returned ${response.status}`);
+    return response.json();
+  }, { runId, token: OWNER_TOKEN });
+}
+
+async function stepRun(
+  page: Page,
+  runId: string,
+  expectedRevision: number,
+  commandId: string,
+): Promise<{ status: number; body: Record<string, any> }> {
+  return page.evaluate(async ({ runId, expectedRevision, commandId, token }) => {
+    const response = await fetch(`/v1/workflow-runs/${encodeURIComponent(runId)}/commands`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        schema_version: "ascension.management/v1",
+        command_id: commandId,
+        run_id: runId,
+        expected_revision: expectedRevision,
+        actor_scope: "profile:studio-live",
+        kind: "step",
+        parameters: {},
+      }),
+    });
+    return { status: response.status, body: await response.json() };
+  }, { runId, expectedRevision, commandId, token: OWNER_TOKEN });
+}
+
+async function readEffects(page: Page, ownerStack: string): Promise<{
+  dispatches: Array<{ operation_id: string | null; action_id: string | null }>;
+  settlements: Array<{ operation_id: string }>;
+}> {
+  const response = await page.request.get(`${ownerStack}/effects`);
+  expect(response.status()).toBe(200);
+  return response.json();
 }
 
 async function exerciseContextOwner(page: Page, fixture: ProductionFixture): Promise<{
@@ -202,7 +349,9 @@ async function exerciseContextOwner(page: Page, fixture: ProductionFixture): Pro
           parameters: {},
         }),
       });
-      if (!stepResponse.ok) throw new Error(`context owner step returned ${stepResponse.status}`);
+      if (!stepResponse.ok) {
+        throw new Error(`context owner step returned ${stepResponse.status}: ${await stepResponse.text()}`);
+      }
       statusResponse = await fetch(`/v1/workflow-runs/${encodeURIComponent(fixture.run_id)}`, { headers });
       status = await statusResponse.json();
     }
@@ -509,6 +658,32 @@ test("uses production served policy routes for import, approval, adoption, refre
   await expect(panel).toBeVisible();
   await expect(panel.getByRole("region", { name: "Current adopted policy" })).toContainText(targetSha);
 
+  // The browser has authenticated against the real served workflow. The Mod and
+  // provider peers are synthetic fixture processes; no native gameplay claim is
+  // made by this acceptance journey. Inspect the decide-bound context owner
+  // before advancing the cursor to execute, where that invocation-specific
+  // binding is expected to become unavailable.
+  let current = await readRun(page, runId);
+  expect(current.run.cursor.node_id).toBe("decide");
+  const decided = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.decide");
+  expect(decided.status).toBe(200);
+  current = await readRun(page, runId);
+  if (current.run.cursor.node_id !== "execute") {
+    throw new Error(`decide command did not advance: ${JSON.stringify(decided.body)}`);
+  }
+  expect(current.run.cursor.node_id).toBe("execute");
+
+  const dispatched = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.dispatch");
+  expect(dispatched.status).toBe(200);
+  current = await readRun(page, runId);
+  expect(current.run.status).toBe("needs_operator");
+  expect(current.run.pending_operation?.state).toBe("unknown");
+  const operationId = current.run.pending_operation.operation_id as string;
+  const beforeReload = await readEffects(page, ownerStack);
+  expect(beforeReload.dispatches).toHaveLength(1);
+  expect(beforeReload.dispatches[0].operation_id).toBe(operationId);
+  expect(beforeReload.dispatches[0].action_id).toBe("potion:7:potion:fire:enemy:1");
+
   const restartResponse = await fetch(`${ownerStack}/restart`, { method: "POST" });
   expect(restartResponse.status).toBe(200);
   const restartEvidence = await restartResponse.json();
@@ -554,4 +729,58 @@ test("uses production served policy routes for import, approval, adoption, refre
   await panel.getByRole("button", { name: "Refresh history" }).click();
   await expect(panel.getByRole("region", { name: "Current adopted policy" })).toContainText(targetSha);
   await expect(panel).toContainText("migration.studio.production");
+
+  const secondRestart = await fetch(`${ownerStack}/restart`, { method: "POST" });
+  expect(secondRestart.status).toBe(200);
+  await page.reload();
+  await page.waitForLoadState("load");
+  await connectLiveOwner(page, ownerProxy);
+
+  const reloaded = await readRun(page, runId);
+  expect(reloaded.run.pending_operation).toMatchObject({
+    operation_id: operationId,
+    state: "unknown",
+  });
+  await page.getByRole("button", { name: "Runs", exact: true }).click();
+  await page.getByRole("textbox", { name: "Run ID" }).fill(runId);
+  await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Control plane state" }).locator("dl.detail-list"),
+  ).toContainText(`${operationId} · unknown`);
+
+  const reconciled = await stepRun(
+    page,
+    runId,
+    reloaded.run.run_revision,
+    "studio.browser.ac3.reconcile",
+  );
+  // Harness #94 AC3 requires that "uncertain settlement remains unknown/blocked". A live
+  // session is not re-admitted after the service restarts: the live execution port fails
+  // closed for any run outside its in-memory map, and the durable run keeps its pending
+  // operation with recovery admission `needs_operator`. Advancing the cursor here is not a
+  // supported path (the `live.workflow.resume.v1` capability has no consuming route), so an
+  // attempt to reconcile must be refused rather than observed as a second settlement. Do not
+  // assert 200 here: that would contract for a post-restart live reconcile that does not exist.
+  expect(reconciled.status).toBe(409);
+  expect(reconciled.body.error.code).toBe("live_runtime_after_restart");
+  current = await readRun(page, runId);
+  // The run identity and the uncertain operation survive the restart and stay blocked, so the
+  // journey leaves the run exactly where the restart found it.
+  expect(current.run.status).toBe(reloaded.run.status);
+  expect(current.run.pending_operation).toMatchObject({
+    operation_id: operationId,
+    state: "unknown",
+  });
+  expect(current.run.run_revision).toBe(reloaded.run.run_revision);
+  const afterReconcile = await readEffects(page, ownerStack);
+  // The refused reconcile must not duplicate the accepted mutation or fabricate a settlement.
+  // A settlement is only recorded when the operation is read back and reconciled, so a
+  // fail-closed refusal means the ledger is exactly what it was before the restart: one
+  // dispatch, and no read-back settlement for an operation that is still unknown.
+  expect(afterReconcile.dispatches).toEqual(beforeReload.dispatches);
+  expect(afterReconcile.settlements).toEqual(beforeReload.settlements);
+  expect(afterReconcile.dispatches).toHaveLength(1);
+  expect(afterReconcile.dispatches[0].operation_id).toBe(operationId);
+  expect(afterReconcile.settlements).toHaveLength(0);
 });
