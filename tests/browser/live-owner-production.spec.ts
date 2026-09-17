@@ -1,11 +1,14 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import { OwnerApiClient } from "../../packages/client/src";
 import {
   ContextControlCommandSchema,
   ContextControlReceiptSchema,
   ContextOwnerAssociationSchema,
   ContextOwnerEffectiveLimitsSchema,
+  type ContextControlCommand,
+  type ContextControlReceipt,
 } from "../../packages/contracts/src";
 
 const OWNER_TOKEN = "studio-live-ci-token";
@@ -177,8 +180,8 @@ async function createAdmittedRun(page: Page, fixture: ProductionFixture): Promis
 }
 
 async function exerciseContextOwner(page: Page, fixture: ProductionFixture): Promise<{
-  command: Record<string, unknown>;
-  receipt: Record<string, unknown>;
+  command: ContextControlCommand;
+  receipt: ContextControlReceipt;
 }> {
   const result = await page.evaluate(async ({ fixture, token }) => {
     const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
@@ -523,32 +526,27 @@ test("uses production served policy routes for import, approval, adoption, refre
       game_effects: 0,
     },
   });
-  const recovered = await page.evaluate(async ({ runId, token, command }) => {
-    const response = await fetch(
-      `/v1/workflow-runs/${encodeURIComponent(runId)}/context-control-receipts/lookup`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(command),
-      },
-    );
-    const body = await response.json();
+  const typedOwnerClient = new OwnerApiClient({
+    baseUrl: "/v1",
+    token: OWNER_TOKEN,
+    actorScope: "profile:studio-live",
+    fetcher: (input, init) => fetch(new URL(String(input), ownerProxy), init),
+  });
+  const recoveredReceipt = await typedOwnerClient.lookupContextControlReceipt(
+    runId,
+    contextEvidence.command,
+  );
+  const recovered = await page.evaluate(async ({ runId, token }) => {
     const association = await fetch(
       `/v1/workflow-runs/${encodeURIComponent(runId)}/context-owner-association`,
       { headers: { Authorization: `Bearer ${token}` } },
     );
     return {
-      receiptStatus: response.status,
-      receipt: body,
       associationStatus: association.status,
       association: await association.json(),
     };
-  }, { runId, token: OWNER_TOKEN, command: contextEvidence.command });
-  expect(recovered.receiptStatus).toBe(200);
-  expect(ContextControlReceiptSchema.parse(recovered.receipt)).toEqual(contextEvidence.receipt);
+  }, { runId, token: OWNER_TOKEN });
+  expect(recoveredReceipt).toEqual(contextEvidence.receipt);
   expect(recovered.associationStatus).toBe(503);
   expect(recovered.association.error.code).toBe("context_owner_association_unavailable");
   await page.getByRole("button", { name: "Refresh", exact: true }).click();

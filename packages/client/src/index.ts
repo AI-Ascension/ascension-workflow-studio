@@ -82,7 +82,7 @@ import {
   type WorkflowDefinition,
 } from "@studio/contracts";
 import { canonicalJson, cloneDocument, definitionIdentityDigest, diffDocuments, semanticDigest, sha256Hex, validateNodeBindings } from "@studio/document";
-import contextCatalogFixture from "../../../contracts/accepted/context-control/catalog-conformance.json";
+import contextCatalogFixture from "../../../contracts/accepted/context-control/catalog-conformance.json" with { type: "json" };
 import { readContextCatalogBody } from "./context-owner-catalog";
 
 export type ClientMode = "fixture" | "live";
