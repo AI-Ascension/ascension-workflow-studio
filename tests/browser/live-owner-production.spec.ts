@@ -745,7 +745,9 @@ test("uses production served policy routes for import, approval, adoption, refre
   await page.getByRole("textbox", { name: "Run ID" }).fill(runId);
   await page.getByRole("button", { name: "Inspect", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
-  await expect(page.locator(".detail-list")).toContainText(`${operationId} · unknown`);
+  await expect(
+    page.getByRole("region", { name: "Control plane state" }).locator("dl.detail-list"),
+  ).toContainText(`${operationId} · unknown`);
 
   const reconciled = await stepRun(
     page,
