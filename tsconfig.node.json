@@ -3,6 +3,11 @@
     "skipLibCheck": true,
     "module": "ESNext",
     "moduleResolution": "Bundler",
+    "paths": {
+      "@studio/contracts": ["./packages/contracts/src/index.ts"],
+      "@studio/document": ["./packages/document/src/index.ts"],
+      "@studio/client": ["./packages/client/src/index.ts"]
+    },
     "allowSyntheticDefaultImports": true,
     "strict": true,
     "noEmit": true,

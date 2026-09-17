@@ -2,9 +2,9 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 import { z } from "zod";
 
-import memorySchema from "../../../contracts/accepted/effective-limits/context-memory-capabilities.schema.json";
-import sessionSchema from "../../../contracts/accepted/effective-limits/provider-session-capabilities.schema.json";
-import pins from "../../../contracts/effective-limits.lock.json";
+import memorySchema from "../../../contracts/accepted/effective-limits/context-memory-capabilities.schema.json" with { type: "json" };
+import sessionSchema from "../../../contracts/accepted/effective-limits/provider-session-capabilities.schema.json" with { type: "json" };
+import pins from "../../../contracts/effective-limits.lock.json" with { type: "json" };
 import type { MemoryCapabilitiesV3, ProviderSessionCapabilitiesV1, ProviderSessionCapabilitiesV3 } from "./effective-limit-types";
 import { validateMemoryV3, validateSessionV3, validateSessionV1 } from "./effective-limit-validators.js";
 

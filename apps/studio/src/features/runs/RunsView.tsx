@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent } from "react";
 
-import type { CommandKind, CommandResponse, ContextAssociation, ContextEventPage, ContextSnapshotManifest, EventPage, RunEvent, StatusResponse } from "@studio/contracts";
+import type { CommandKind, CommandResponse, ContextAssociation, ContextEventPage, ContextOwnerAssociation, ContextOwnerEffectiveLimits, ContextSnapshotManifest, EventPage, RunEvent, StatusResponse } from "@studio/contracts";
 import { effectiveLimit, effectiveLimitDisclosure } from "@studio/contracts";
 import { ClientError, applyEventPage, createProjection, type ContextServiceClient, type ProviderSessionPolicyClient, type RunProjection, type StudioClient } from "@studio/client";
 import { mapProjectionSupport, pinnedMapIdentity, resolveApprovedLink, VisibleMapProjectionSchema, type ApprovedLinkMapping, type VisibleMapProjection } from "@studio/document";
@@ -25,6 +25,9 @@ export function RunsView({ client, policyClient, contextClient, mode, initialRun
   const [status, setStatus] = useState<StatusResponse | undefined>();
   const [projection, setProjection] = useState<RunProjection | undefined>();
   const [contextAssociation, setContextAssociation] = useState<ContextAssociation | undefined>();
+  const [ownerAssociation, setOwnerAssociation] = useState<ContextOwnerAssociation | undefined>();
+  const [ownerLimits, setOwnerLimits] = useState<ContextOwnerEffectiveLimits | undefined>();
+  const [ownerMessage, setOwnerMessage] = useState<string | undefined>();
   const [contextMessage, setContextMessage] = useState<string | undefined>();
   const [contextSnapshotMessage, setContextSnapshotMessage] = useState<string | undefined>();
   const [contextManifest, setContextManifest] = useState<ContextSnapshotManifest | undefined>();
@@ -50,19 +53,64 @@ export function RunsView({ client, policyClient, contextClient, mode, initialRun
     const setCurrentSessionMessage = (value: string): void => {
       if (refreshId === latestRefresh.current) setSessionMessage(value);
     };
+    const isCurrentRefresh = (): boolean => refreshId === latestRefresh.current;
     setCurrentMemoryMessage("Effective input limits unavailable while the current owner association is refreshed.");
     setCurrentSessionMessage("Effective input limits unavailable while the current owner association is refreshed.");
+    setOwnerAssociation(undefined);
+    setOwnerLimits(undefined);
+    setOwnerMessage("Current context owner association is refreshing.");
     setState("loading");
     setMessage("");
     try {
       const nextStatus = await client.status(requestedRunId);
       const nextProjection = createProjection(requestedRunId, nextStatus.run.definition_digest);
-      const [page, association] = await Promise.all([
+      const [page, association, currentOwner] = await Promise.all([
         client.events(requestedRunId, 0),
         client.contextAssociation(requestedRunId).then((value) => ({ value })).catch((error: unknown) => ({ error })),
+        client.contextOwnerAssociation(requestedRunId).then((value) => ({ value })).catch((error: unknown) => ({ error })),
       ]);
+      if (!isCurrentRefresh()) return;
       const applied = applyEventPage(nextProjection, page);
       setStatus(nextStatus);
+      if ("value" in currentOwner) {
+        const binding = currentOwner.value.binding;
+        if (binding.workflow_run_id !== requestedRunId
+          || binding.boundary.run_id !== requestedRunId
+          || binding.definition_digest !== nextStatus.run.definition_digest) {
+          setOwnerAssociation(undefined);
+          setOwnerLimits(undefined);
+          setOwnerMessage("Current context owner association was rejected because it names a different workflow run.");
+        } else {
+          setOwnerAssociation(currentOwner.value);
+          setOwnerMessage(undefined);
+          try {
+            const limits = await client.contextOwnerEffectiveLimits(requestedRunId);
+            if (!isCurrentRefresh()) return;
+            if (limits.owner_id !== binding.owner_id
+              || limits.owner_version !== binding.owner_version
+              || limits.binding_id !== binding.binding_id
+              || limits.binding_version !== binding.binding_version
+              || limits.binding_digest !== binding.binding_digest
+              || limits.context_ref !== binding.context_ref
+              || limits.node_kind !== binding.node_kind
+              || limits.adapter_revision !== binding.boundary.adapter_revision
+              || limits.model_revision !== binding.boundary.model_revision) {
+              throw new Error("Effective limits were rejected because they name a different current owner binding.");
+            }
+            setOwnerLimits(limits);
+          } catch (error: unknown) {
+            if (!isCurrentRefresh()) return;
+            setOwnerLimits(undefined);
+            setOwnerMessage(error instanceof Error ? error.message : "Current owner effective limits are unavailable.");
+          }
+        }
+      } else {
+        setOwnerAssociation(undefined);
+        setOwnerLimits(undefined);
+        setOwnerMessage(currentOwner.error instanceof ClientError && currentOwner.error.code === "context_owner_association_unavailable"
+          ? "Current context owner association is unavailable."
+          : currentOwner.error instanceof Error ? currentOwner.error.message : "Current context owner association is unavailable.");
+      }
       if ("value" in association) {
         setContextAssociation(association.value);
         setContextMessage(undefined);
@@ -151,6 +199,10 @@ export function RunsView({ client, policyClient, contextClient, mode, initialRun
       setState(applied.kind === "resnapshot" ? "resnapshot" : "ready");
       setMessage(applied.kind === "resnapshot" ? applied.reason : `Loaded ${page.events.length} retained event${page.events.length === 1 ? "" : "s"}.`);
     } catch (error: unknown) {
+      if (!isCurrentRefresh()) return;
+      setOwnerAssociation(undefined);
+      setOwnerLimits(undefined);
+      setOwnerMessage(error instanceof Error ? error.message : "Current context owner association is unavailable.");
       setState("error");
       setMessage(error instanceof Error ? error.message : "Run inspection failed.");
     }
@@ -294,6 +346,23 @@ export function RunsView({ client, policyClient, contextClient, mode, initialRun
         {contextEvents ? <div><p className="muted">{contextEvents.events.length} retained Context event(s){contextEvents.gap ? " · capture gap reported" : ""}.</p><ul className="plain-list">{contextEvents.events.map((event) => <li key={event.event_id}><code>{event.sequence}</code> · {event.event_type} · snapshot {event.snapshot_id}</li>)}</ul>{contextEvents.next_cursor ? <button className="button button-quiet" onClick={() => void loadMoreContextEvents()}>Load more Context events</button> : null}</div> : null}
         {contextEventsMessage ? <p className="field-unknown" role="status">{contextEventsMessage}</p> : null}
         {historical ? <p className="field-unknown" role="status">Historical cursor: context controls remain unavailable in this view.</p> : null}
+      </section>
+      <section className="panel-card" aria-label="Current context owner association">
+        <div className="panel-title"><div><p className="eyebrow">Current owner binding</p><h2>Context authority metadata</h2></div><StatusBadge tone={ownerAssociation ? "success" : "muted"}>{ownerAssociation ? ownerAssociation.binding.state : "unavailable"}</StatusBadge></div>
+        <p className="muted">This projection is read-only. Owner grants and continuity claims describe the selected binding; they do not grant control to this inspection view.</p>
+        {ownerAssociation ? <dl className="detail-list">
+          <div><dt>Owner</dt><dd>{ownerAssociation.binding.owner_id} · {ownerAssociation.binding.owner_version}</dd></div>
+          <div><dt>Invocation</dt><dd>{ownerAssociation.binding.invocation_id}</dd></div>
+          <div><dt>Binding</dt><dd>{ownerAssociation.binding.binding_id} · v{ownerAssociation.binding.binding_version}</dd></div>
+          <div><dt>Node</dt><dd>{ownerAssociation.binding.graph_id} / {ownerAssociation.binding.node_id} · {ownerAssociation.binding.node_execution_id}</dd></div>
+          <div><dt>Grants</dt><dd>metadata {ownerAssociation.binding.grants.metadata_read ? "read" : "none"} · content {ownerAssociation.binding.grants.content_read ? "read" : "none"} · edit {ownerAssociation.binding.grants.edit ? "yes" : "no"} · control {ownerAssociation.binding.grants.control ? "yes" : "no"}</dd></div>
+          <div><dt>Continuity</dt><dd>restart {ownerAssociation.binding.continuity.survives_controller_restart ? "survives" : "does not survive"} · receipt recovery {ownerAssociation.binding.continuity.receipt_recovery ? "advertised" : "unavailable"} · provider session {ownerAssociation.binding.continuity.provider_session_continuity ? "continuous" : "separate"}</dd></div>
+        </dl> : null}
+        {ownerLimits ? <dl className="detail-list">
+          <div><dt>Effective limits</dt><dd>{ownerLimits.effective_limits.max_items} items · {ownerLimits.effective_limits.max_notes} notes · {ownerLimits.effective_limits.max_context_bytes} context bytes · {ownerLimits.effective_limits.max_objective_bytes} objective bytes · {ownerLimits.effective_limits.max_control_events} control events</dd></div>
+          <div><dt>Owner revisions</dt><dd>{ownerLimits.adapter_revision} · {ownerLimits.model_revision}</dd></div>
+        </dl> : null}
+        {ownerMessage ? <p className="field-unknown" role="status">{ownerMessage}</p> : null}
       </section>
       <section className="panel-card" aria-label="Memory evidence">
         <div className="panel-title"><div><p className="eyebrow">Memory</p><h2>Read-only provenance</h2></div><StatusBadge tone="muted">no controls</StatusBadge></div>

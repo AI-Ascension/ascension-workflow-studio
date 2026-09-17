@@ -1,6 +1,7 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { ContextServiceClient, FixtureClient } from "@studio/client";
+import type { ContextOwnerAssociation, ContextOwnerEffectiveLimits } from "@studio/contracts";
 import vectors from "../../../../../contracts/accepted/effective-limits/producer.json";
 import { fixtureDefinitions } from "../../fixtures/catalog";
 import { RunsView } from "./RunsView";
@@ -85,3 +86,146 @@ for (const delayedSurface of ["memory", "session"] as const) {
     expect(sessionPanel).toHaveTextContent("current owner association is unavailable");
   });
 }
+
+function ownerAssociation(runId: string, definitionDigest: string, ownerId: string): ContextOwnerAssociation {
+  const digest = "a".repeat(64);
+  return {
+    schema_version: "ascension.harness.context-owner-association-view.v1",
+    binding: {
+      schema_version: "ascension.context-control.owner-binding.v1",
+      owner_id: ownerId,
+      owner_version: "v1",
+      invocation_id: `${runId}.invocation`,
+      binding_id: "binding.fixture",
+      binding_version: 1,
+      binding_digest: digest,
+      context_ref: "context.fixture.v1",
+      instance_id: "instance-fixture",
+      node_kind: "decide",
+      state: "available",
+      workflow_run_id: runId,
+      definition_digest: definitionDigest,
+      graph_id: "graph",
+      node_id: "decide",
+      node_execution_id: `${runId}.node`,
+      boundary: {
+        run_id: runId,
+        episode_id: "episode",
+        agent_id: "agent",
+        state_id: "state",
+        generation: 1,
+        observation_sha256: digest,
+        catalog_sha256: digest,
+        adapter_revision: "adapter.v1",
+        model_revision: "model.v1",
+        configuration_sha256: digest,
+        output_schema_sha256: digest,
+        controller_epoch: 1,
+        gate_epoch: 1,
+        control_version: 1,
+      },
+      lease_epoch: 1,
+      snapshot_id: "snapshot",
+      approved_revision_id: "revision",
+      plan_epoch: 1,
+      grants: { metadata_read: true, content_read: true, edit: false, control: true },
+      continuity: { survives_controller_restart: true, receipt_recovery: true, provider_session_continuity: false },
+    },
+  };
+}
+
+function ownerLimits(association: ContextOwnerAssociation): ContextOwnerEffectiveLimits {
+  const binding = association.binding;
+  return {
+    schema_version: "ascension.harness.context-owner-effective-limits-view.v1",
+    owner_id: binding.owner_id,
+    owner_version: binding.owner_version,
+    catalog_digest: "b".repeat(64),
+    binding_id: binding.binding_id,
+    binding_version: binding.binding_version,
+    binding_digest: binding.binding_digest,
+    context_ref: binding.context_ref,
+    node_kind: binding.node_kind,
+    adapter_revision: binding.boundary.adapter_revision,
+    model_revision: binding.boundary.model_revision,
+    effective_limits: { max_items: 64, max_notes: 16, max_context_bytes: 131072, max_objective_bytes: 512, max_control_events: 64 },
+  };
+}
+
+it("does not let a delayed owner response from the previous run replace the selected run", async () => {
+  vi.spyOn(window, "setInterval").mockImplementation(() => ({}) as ReturnType<typeof window.setInterval>);
+  vi.spyOn(window, "clearInterval").mockImplementation(() => {});
+  const client = new FixtureClient(fixtureDefinitions);
+  const status = client.status.bind(client);
+  const ownerPending = deferred<ContextOwnerAssociation>();
+  const runB = await status("run-b");
+  const ownerB = ownerAssociation("run-b", runB.run.definition_digest, "owner-run-b");
+  vi.spyOn(client, "contextOwnerAssociation").mockImplementation(async (runId) =>
+    runId === "run-a" ? ownerPending.promise : ownerB);
+  vi.spyOn(client, "contextOwnerEffectiveLimits").mockImplementation(async (runId) => {
+    if (runId !== "run-b") return ownerLimits(ownerB);
+    return ownerLimits(ownerB);
+  });
+  const contextClient = new ContextServiceClient({ fetcher: async () => new Response("unavailable", { status: 503 }) });
+  render(<RunsView client={client} contextClient={contextClient} mode="fixture"
+    initialRunId="run-a" onRunIdChange={() => {}} linkMappings={[]} />);
+  const input = screen.getByRole("textbox", { name: "Run ID" });
+  fireEvent.change(input, { target: { value: "run-b" } });
+  fireEvent.click(screen.getByRole("button", { name: "Inspect" }));
+  const ownerPanel = await vi.waitFor(() => screen.getByRole("region", { name: "Current context owner association" }));
+  await vi.waitFor(() => expect(ownerPanel).toHaveTextContent("owner-run-b"));
+  ownerPending.resolve(ownerAssociation("run-a", (await status("run-a")).run.definition_digest, "owner-run-a"));
+  await act(async () => {});
+  expect(screen.getByRole("region", { name: "Current context owner association" })).toHaveTextContent("owner-run-b");
+  expect(screen.getByRole("region", { name: "Current context owner association" })).not.toHaveTextContent("owner-run-a");
+});
+
+it("keeps the owner binding visible while refusing mismatched effective limits", async () => {
+  vi.spyOn(window, "setInterval").mockImplementation(() => ({}) as ReturnType<typeof window.setInterval>);
+  vi.spyOn(window, "clearInterval").mockImplementation(() => {});
+  const client = new FixtureClient(fixtureDefinitions);
+  const run = await client.status("run-limits");
+  const association = ownerAssociation("run-limits", run.run.definition_digest, "owner-limits");
+  vi.spyOn(client, "contextOwnerAssociation").mockResolvedValue(association);
+  vi.spyOn(client, "contextOwnerEffectiveLimits").mockResolvedValue({
+    ...ownerLimits(association),
+    adapter_revision: "adapter.other",
+  });
+  const contextClient = new ContextServiceClient({ fetcher: async () => new Response("unavailable", { status: 503 }) });
+  render(<RunsView client={client} contextClient={contextClient} mode="fixture"
+    initialRunId="run-limits" onRunIdChange={() => {}} linkMappings={[]} />);
+  const ownerPanel = await vi.waitFor(() => screen.getByRole("region", { name: "Current context owner association" }));
+  await vi.waitFor(() => expect(ownerPanel).toHaveTextContent("owner-limits"));
+  expect(ownerPanel).toHaveTextContent("different current owner binding");
+  expect(ownerPanel).not.toHaveTextContent("64 items");
+});
+
+it("clears a previously loaded owner binding when the next status refresh fails", async () => {
+  let poll!: () => void;
+  vi.spyOn(window, "setInterval").mockImplementation((handler) => {
+    poll = () => handler();
+    return {} as ReturnType<typeof window.setInterval>;
+  });
+  vi.spyOn(window, "clearInterval").mockImplementation(() => {});
+  const client = new FixtureClient(fixtureDefinitions);
+  const status = client.status.bind(client);
+  const run = await status("run-error");
+  const association = ownerAssociation("run-error", run.run.definition_digest, "owner-before-error");
+  let statusReads = 0;
+  vi.spyOn(client, "status").mockImplementation(async (runId) => {
+    if (++statusReads > 1) throw new Error("status refresh failed");
+    return status(runId);
+  });
+  vi.spyOn(client, "contextOwnerAssociation").mockResolvedValue(association);
+  vi.spyOn(client, "contextOwnerEffectiveLimits").mockResolvedValue(ownerLimits(association));
+  const contextClient = new ContextServiceClient({ fetcher: async () => new Response("unavailable", { status: 503 }) });
+  render(<RunsView client={client} contextClient={contextClient} mode="fixture"
+    initialRunId="run-error" onRunIdChange={() => {}} linkMappings={[]} />);
+  const ownerPanel = await vi.waitFor(() => screen.getByRole("region", { name: "Current context owner association" }));
+  await vi.waitFor(() => expect(ownerPanel).toHaveTextContent("owner-before-error"));
+  await act(async () => { poll(); });
+  await vi.waitFor(() => expect(screen.queryAllByText("status refresh failed").length).toBeGreaterThan(0));
+  const unavailablePanel = screen.getByRole("region", { name: "Current context owner association" });
+  expect(unavailablePanel).not.toHaveTextContent("owner-before-error");
+  expect(unavailablePanel).toHaveTextContent("status refresh failed");
+});

@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
+import { connect as connectTcp } from "node:net";
 import { chmod, rm, stat, writeFile } from "node:fs/promises";
 import {
   chmodSync,
@@ -42,6 +43,39 @@ const targetPolicyPath = join(targetDir, "migration-target.json");
 const fixtureRecordPath = join(targetDir, "fixture.json");
 const bridgePath = join(targetDir, "bounded-exo-bridge.sh");
 const runtimeLogPath = join(targetDir, "serve-workflow.log");
+const contextSourceBytes = Buffer.from("studio browser context source", "utf8");
+const contextSourceItemDigest = createHash("sha256").update(contextSourceBytes).digest("hex");
+const contextSourceDocument = {
+  draft: {
+    schema: "ascension.context-control.draft.v1",
+    draft_id: "studio-browser-context",
+    version: 1,
+    base_revision_id: "context.revision.1",
+    selected_items: [{
+      item_id: "studio-browser-context",
+      version: 1,
+      sha256: contextSourceItemDigest,
+    }],
+    pinned_item_ids: [],
+    notes: [],
+    objective: null,
+    author_ref: "studio-browser",
+  },
+  items: {
+    "studio-browser-context:1": {
+      reference: {
+        item_id: "studio-browser-context",
+        version: 1,
+        sha256: contextSourceItemDigest,
+      },
+      kind: "strategy",
+      bytes: [...contextSourceBytes],
+      protected: false,
+      expires_at: 4_000_000_000,
+    },
+  },
+};
+const contextSourceDigest = createHash("sha256").update(JSON.stringify(contextSourceDocument)).digest("hex");
 const gatewayLogPath = join(targetDir, "gateway.log");
 const ownedChildrenPath = join(targetDir, "owned-child-pids.json");
 const children = new Map();
@@ -97,6 +131,8 @@ async function startFixtureStack() {
       owner_id: "served-context-owner",
       owner_version: "v1",
       context_ref: "context.live.v1",
+      render_required: true,
+      sources: [{ source_id: "strategy", version: 1, digest: contextSourceDigest }],
       limits: {
         max_items: 64,
         max_notes: 16,
@@ -154,6 +190,8 @@ async function startFixtureStack() {
         request_id: fixtureInfo.request_id,
         instance_id: fixtureInfo.instance_id,
         definition_digest: fixtureInfo.definition_digest,
+        context_source_digest: contextSourceDigest,
+        context_source_document: contextSourceDocument,
       }));
       return;
     }
@@ -320,10 +358,20 @@ async function waitForWorkflowService() {
 async function waitForPort(port) {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${port}/`);
-      if (response.status < 500) return;
-    } catch {}
+    const connected = await new Promise((resolveConnected) => {
+      const socket = connectTcp({ host: "127.0.0.1", port });
+      let settled = false;
+      const settle = (value) => {
+        if (settled) return;
+        settled = true;
+        socket.destroy();
+        resolveConnected(value);
+      };
+      socket.once("connect", () => settle(true));
+      socket.once("error", () => settle(false));
+      socket.setTimeout(500, () => settle(false));
+    });
+    if (connected) return;
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 100));
   }
   throw new Error(`local fixture peer did not bind port ${port}`);
