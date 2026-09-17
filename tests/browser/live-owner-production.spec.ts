@@ -43,6 +43,7 @@ interface RunSubmission {
   status: number;
   errorCode: string | null;
   run: Record<string, any>;
+  transportRecovered?: boolean;
 }
 
 async function connectLiveOwner(page: Page, ownerProxy: string): Promise<void> {
@@ -156,25 +157,53 @@ async function createAdmittedRun(page: Page, fixture: ProductionFixture): Promis
     if (!preflightResponse.ok) {
       throw new Error(`production target preflight returned ${preflightResponse.status}`);
     }
-    const submissionResponse = await fetch("/v1/workflow-runs", {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        schema_version: "ascension.management/v1",
-        request_id: fixture.request_id,
-        definition,
-        artifact_id: null,
-        instance_id: fixture.instance_id,
-        profile: "live.workflow.v1",
-        admission: preflight.admission,
-      }),
+    const body = JSON.stringify({
+      schema_version: "ascension.management/v1",
+      request_id: fixture.request_id,
+      definition,
+      artifact_id: null,
+      instance_id: fixture.instance_id,
+      profile: "live.workflow.v1",
+      admission: preflight.admission,
     });
-    const run = await submissionResponse.json();
-    return {
-      status: submissionResponse.status,
-      errorCode: run?.error?.code ?? null,
-      run,
-    };
+    try {
+      const submissionResponse = await fetch("/v1/workflow-runs", {
+        method: "POST",
+        headers,
+        body,
+      });
+      const text = await submissionResponse.text();
+      if (text) {
+        const run = JSON.parse(text);
+        return {
+          status: submissionResponse.status,
+          errorCode: run?.error?.code ?? null,
+          run,
+        };
+      }
+    } catch {
+      // The served live submission can durably reserve the run before its
+      // response transport closes. Recover that accepted state below.
+    }
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const statusResponse = await fetch(
+        `/v1/workflow-runs/${encodeURIComponent(fixture.run_id)}`,
+        { headers },
+      );
+      if (statusResponse.ok) {
+        const status = await statusResponse.json();
+        if (status.run?.workflow_run_id === fixture.run_id) {
+          return {
+            status: 200,
+            errorCode: null,
+            run: status.run,
+            transportRecovered: true,
+          };
+        }
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    throw new Error("workflow submission response and durable run recovery both failed");
   }, { definition, definitionDigest, fixture, token: OWNER_TOKEN });
 
 }
@@ -248,7 +277,9 @@ async function exerciseContextOwner(page: Page, fixture: ProductionFixture): Pro
           parameters: {},
         }),
       });
-      if (!stepResponse.ok) throw new Error(`context owner step returned ${stepResponse.status}`);
+      if (!stepResponse.ok) {
+        throw new Error(`context owner step returned ${stepResponse.status}: ${await stepResponse.text()}`);
+      }
       statusResponse = await fetch(`/v1/workflow-runs/${encodeURIComponent(fixture.run_id)}`, { headers });
       status = await statusResponse.json();
     }
@@ -392,6 +423,27 @@ test("uses production served policy routes for import, approval, adoption, refre
   expect(submitted.run.workflow_run_id).toBe(fixture.run_id);
   const runId = submitted.run.workflow_run_id as string;
   const contextEvidence = await exerciseContextOwner(page, fixture);
+
+  // The browser has authenticated against the real served workflow. The Mod and
+  // provider peers are synthetic fixture processes; no native gameplay claim is
+  // made by this acceptance journey.
+  let current = await readRun(page, runId);
+  expect(current.run.cursor.node_id).toBe("decide");
+  const decided = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.decide");
+  expect(decided.status).toBe(200);
+  current = await readRun(page, runId);
+  expect(current.run.cursor.node_id).toBe("execute");
+
+  const dispatched = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.dispatch");
+  expect(dispatched.status).toBe(200);
+  current = await readRun(page, runId);
+  expect(current.run.status).toBe("needs_operator");
+  expect(current.run.pending_operation?.state).toBe("unknown");
+  const operationId = current.run.pending_operation.operation_id as string;
+  const beforeReload = await readEffects(page, ownerStack);
+  expect(beforeReload.dispatches).toHaveLength(1);
+  expect(beforeReload.dispatches[0].operation_id).toBe(operationId);
+  expect(beforeReload.dispatches[0].action_id).toBe("potion:7:potion:fire:enemy:1");
 
   const authChecks = await page.evaluate(async ({ runId, token }) => {
     const path = `/v1/workflow-runs/${encodeURIComponent(runId)}/provider-session-policy`;
@@ -600,26 +652,6 @@ test("uses production served policy routes for import, approval, adoption, refre
   await panel.getByRole("button", { name: "Refresh history" }).click();
   await expect(panel.getByRole("region", { name: "Current adopted policy" })).toContainText(targetSha);
   await expect(panel).toContainText("migration.studio.production");
-
-  // The browser has authenticated against the real served workflow. The Mod and
-  // provider peers are synthetic fixture processes; no native gameplay claim is
-  // made by this acceptance journey.
-  let current = await readRun(page, runId);
-  expect(current.run.cursor.node_id).toBe("decide");
-  const decided = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.decide");
-  expect(decided.status).toBe(200);
-  current = await readRun(page, runId);
-  expect(current.run.cursor.node_id).toBe("execute");
-
-  const dispatched = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.dispatch");
-  expect(dispatched.status).toBe(200);
-  current = await readRun(page, runId);
-  expect(current.run.status).toBe("needs_operator");
-  expect(current.run.pending_operation?.state).toBe("unknown");
-  const operationId = current.run.pending_operation.operation_id as string;
-  const beforeReload = await readEffects(page, ownerStack);
-  expect(beforeReload.dispatches).toHaveLength(1);
-  expect(beforeReload.dispatches[0].operation_id).toBe(operationId);
 
   const secondRestart = await fetch(`${ownerStack}/restart`, { method: "POST" });
   expect(secondRestart.status).toBe(200);

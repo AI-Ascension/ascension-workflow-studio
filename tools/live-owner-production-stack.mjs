@@ -114,7 +114,7 @@ async function startFixtureStack() {
   await writeFile(fixtureRecordPath, JSON.stringify(fixtureInfo), { mode: 0o600 });
   await writeFile(
     bridgePath,
-    "#!/bin/sh\ncat >/dev/null\nprintf '%s' '{\"decision\":\"action\",\"action_id\":\"potion:7:potion:fire:enemy:1\",\"rationale\":\"use the visible potion\"}'\n",
+    "#!/bin/sh\ncat >/dev/null\nprintf '%s\\n' '{\"decision\":\"action\",\"action_id\":\"potion:7:potion:fire:enemy:1\",\"rationale\":\"use the visible potion\"}'\n",
     { mode: 0o700 },
   );
   await chmod(bridgePath, 0o700);
