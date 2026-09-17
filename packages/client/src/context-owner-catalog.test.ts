@@ -2,6 +2,28 @@ import { describe, expect, it, vi } from "vitest";
 import { OwnerApiClient } from "./index";
 import { CATALOG_RESPONSE_MAX_BYTES, readContextCatalogBody } from "./context-owner-catalog";
 import { catalogFixture } from "../../contracts/src/context-owner-catalog.test-fixtures";
+import type { WorkflowDefinition } from "@studio/contracts";
+
+function boundedDefinition(): WorkflowDefinition {
+  return {
+    schema_version: "ascension.workflow/v1",
+    workflow_id: "studio109.negative",
+    version: "0.1.0",
+    mode: "strict",
+    game_profile: "synthetic",
+    policy_ref: "policy.fixture",
+    capabilities: { required: [], optional: [] },
+    limits: {
+      max_steps: 10,
+      max_subworkflow_depth: 2,
+      max_provider_calls: 2,
+      max_parallel_analyses: 1,
+      max_output_tokens: 128,
+    },
+    entry_graph: "main",
+    graphs: [{ id: "main", entry_node: "start", nodes: [{ id: "start", kind: "observe", config: {} }], edges: [] }],
+  };
+}
 
 const bytes = (value: string): Uint8Array => new TextEncoder().encode(value);
 describe("bounded management catalog response", () => {
@@ -104,6 +126,87 @@ describe("bounded management catalog response", () => {
     const denied = new OwnerApiClient({ baseUrl: "/v1", fetcher: async () => new Response(
       JSON.stringify({ error: { code: "permission_denied", message: "Catalog access denied" } }), { status: 403 }) });
     await expect(denied.listContextBindings()).rejects.toMatchObject({ status: 403 });
+  });
+});
+
+// Studio #109 AC5: negative authentication and Origin/CSRF refusal. These pin
+// what the live Studio consumer can actually observe from the pinned owner's
+// `authentication_required`, `origin_forbidden`, `method_not_allowed` and
+// `content_type_required` refusals, so the browser layer never has to infer
+// authority from a bare status code.
+describe("owner negative-auth and origin refusals", () => {
+  const ownerError = (status: number, code: string, message: string, className: string): Response =>
+    new Response(JSON.stringify({
+      schema_version: "ascension.management/v1",
+      error: { class: className, code, message },
+    }), { status, headers: { "content-type": "application/json" } });
+
+  it("surfaces the owner's authentication refusal as a typed 401 without inventing a catalog", async () => {
+    for (const token of [undefined, "studio-109-wrong-token"]) {
+      let authorization: string | null = "unset";
+      const client = new OwnerApiClient({
+        baseUrl: "/v1",
+        token: token as string | undefined,
+        fetcher: async (_input, init) => {
+          authorization = new Headers(init?.headers).get("authorization");
+          return ownerError(401, "authentication_required", "authentication failed", "authentication");
+        },
+      });
+      await expect(client.listContextBindings()).rejects.toMatchObject({
+        code: "authentication_required",
+        status: 401,
+      });
+      expect(authorization).toBe(token ? `Bearer ${token}` : null);
+    }
+  });
+
+  it("keeps an origin refusal distinct from an authentication refusal", async () => {
+    // A rejected Origin is `forbidden`, not `authentication`. Collapsing the
+    // two would make a CSRF refusal indistinguishable from a bad credential.
+    const client = new OwnerApiClient({
+      baseUrl: "/v1",
+      token: "studio-109-ci-token",
+      fetcher: async () => ownerError(403, "origin_forbidden", "browser-origin requests are not accepted", "forbidden"),
+    });
+    await expect(client.listContextBindings()).rejects.toMatchObject({
+      code: "origin_forbidden",
+      status: 403,
+    });
+  });
+
+  it("refuses a state-changing request that the owner rejected before parsing it", async () => {
+    const attempted: string[] = [];
+    const client = new OwnerApiClient({
+      baseUrl: "/v1",
+      token: "studio-109-ci-token",
+      fetcher: async (input, init) => {
+        attempted.push(`${init?.method ?? "GET"} ${String(input)}`);
+        return ownerError(400, "content_type_required", "POST and PUT requests require Content-Type: application/json", "invalid_input");
+      },
+    });
+    await expect(client.saveDraft({
+      draftId: "draft.studio109.negative",
+      definitionId: "studio109.negative",
+      revision: 0,
+      etag: "0".repeat(64),
+      document: boundedDefinition(),
+      layout: {},
+    })).rejects.toMatchObject({ code: "content_type_required", status: 400 });
+    expect(attempted).toEqual(["PUT /v1/studio/drafts/draft.studio109.negative"]);
+  });
+
+  it("does not retry a refused request, so a declined mutation is never replayed", async () => {
+    let calls = 0;
+    const client = new OwnerApiClient({
+      baseUrl: "/v1",
+      token: "studio-109-ci-token",
+      fetcher: async () => {
+        calls += 1;
+        return ownerError(403, "origin_forbidden", "browser-origin requests are not accepted", "forbidden");
+      },
+    });
+    await expect(client.listContextBindings()).rejects.toMatchObject({ status: 403 });
+    expect(calls).toBe(1);
   });
 });
 

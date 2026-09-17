@@ -168,6 +168,10 @@ jobs:
         env:
           STS2_WORKFLOW_BIN: harness/target/debug/sts2-workflow
         run: npm run test:owner-restart
+      - name: Owner negative authentication, Origin and CSRF (Studio #109 AC5)
+        env:
+          STS2_WORKFLOW_BIN: harness/target/debug/sts2-workflow
+        run: npm run test:owner-negative-auth
       - run: npm run test:live-owner-browser
       - name: Production served policy routes in Studio
         env:
