@@ -179,3 +179,53 @@ it("does not let a delayed owner response from the previous run replace the sele
   expect(screen.getByRole("region", { name: "Current context owner association" })).toHaveTextContent("owner-run-b");
   expect(screen.getByRole("region", { name: "Current context owner association" })).not.toHaveTextContent("owner-run-a");
 });
+
+it("keeps the owner binding visible while refusing mismatched effective limits", async () => {
+  vi.spyOn(window, "setInterval").mockImplementation(() => ({}) as ReturnType<typeof window.setInterval>);
+  vi.spyOn(window, "clearInterval").mockImplementation(() => {});
+  const client = new FixtureClient(fixtureDefinitions);
+  const run = await client.status("run-limits");
+  const association = ownerAssociation("run-limits", run.run.definition_digest, "owner-limits");
+  vi.spyOn(client, "contextOwnerAssociation").mockResolvedValue(association);
+  vi.spyOn(client, "contextOwnerEffectiveLimits").mockResolvedValue({
+    ...ownerLimits(association),
+    adapter_revision: "adapter.other",
+  });
+  const contextClient = new ContextServiceClient({ fetcher: async () => new Response("unavailable", { status: 503 }) });
+  render(<RunsView client={client} contextClient={contextClient} mode="fixture"
+    initialRunId="run-limits" onRunIdChange={() => {}} linkMappings={[]} />);
+  const ownerPanel = await vi.waitFor(() => screen.getByRole("region", { name: "Current context owner association" }));
+  await vi.waitFor(() => expect(ownerPanel).toHaveTextContent("owner-limits"));
+  expect(ownerPanel).toHaveTextContent("different current owner binding");
+  expect(ownerPanel).not.toHaveTextContent("64 items");
+});
+
+it("clears a previously loaded owner binding when the next status refresh fails", async () => {
+  let poll!: () => void;
+  vi.spyOn(window, "setInterval").mockImplementation((handler) => {
+    poll = () => handler();
+    return {} as ReturnType<typeof window.setInterval>;
+  });
+  vi.spyOn(window, "clearInterval").mockImplementation(() => {});
+  const client = new FixtureClient(fixtureDefinitions);
+  const status = client.status.bind(client);
+  const run = await status("run-error");
+  const association = ownerAssociation("run-error", run.run.definition_digest, "owner-before-error");
+  let statusReads = 0;
+  vi.spyOn(client, "status").mockImplementation(async (runId) => {
+    if (++statusReads > 1) throw new Error("status refresh failed");
+    return status(runId);
+  });
+  vi.spyOn(client, "contextOwnerAssociation").mockResolvedValue(association);
+  vi.spyOn(client, "contextOwnerEffectiveLimits").mockResolvedValue(ownerLimits(association));
+  const contextClient = new ContextServiceClient({ fetcher: async () => new Response("unavailable", { status: 503 }) });
+  render(<RunsView client={client} contextClient={contextClient} mode="fixture"
+    initialRunId="run-error" onRunIdChange={() => {}} linkMappings={[]} />);
+  const ownerPanel = await vi.waitFor(() => screen.getByRole("region", { name: "Current context owner association" }));
+  await vi.waitFor(() => expect(ownerPanel).toHaveTextContent("owner-before-error"));
+  await act(async () => { poll(); });
+  await vi.waitFor(() => expect(screen.queryAllByText("status refresh failed").length).toBeGreaterThan(0));
+  const unavailablePanel = screen.getByRole("region", { name: "Current context owner association" });
+  expect(unavailablePanel).not.toHaveTextContent("owner-before-error");
+  expect(unavailablePanel).toHaveTextContent("status refresh failed");
+});

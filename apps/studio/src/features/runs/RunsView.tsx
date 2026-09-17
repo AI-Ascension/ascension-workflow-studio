@@ -357,7 +357,7 @@ export function RunsView({ client, policyClient, contextClient, mode, initialRun
           <div><dt>Node</dt><dd>{ownerAssociation.binding.graph_id} / {ownerAssociation.binding.node_id} · {ownerAssociation.binding.node_execution_id}</dd></div>
           <div><dt>Grants</dt><dd>metadata {ownerAssociation.binding.grants.metadata_read ? "read" : "none"} · content {ownerAssociation.binding.grants.content_read ? "read" : "none"} · edit {ownerAssociation.binding.grants.edit ? "yes" : "no"} · control {ownerAssociation.binding.grants.control ? "yes" : "no"}</dd></div>
           <div><dt>Continuity</dt><dd>restart {ownerAssociation.binding.continuity.survives_controller_restart ? "survives" : "does not survive"} · receipt recovery {ownerAssociation.binding.continuity.receipt_recovery ? "advertised" : "unavailable"} · provider session {ownerAssociation.binding.continuity.provider_session_continuity ? "continuous" : "separate"}</dd></div>
-        </dl> : <p className="field-unknown" role="status">{ownerMessage ?? "Current owner association has not been loaded."}</p>}
+        </dl> : null}
         {ownerLimits ? <dl className="detail-list">
           <div><dt>Effective limits</dt><dd>{ownerLimits.effective_limits.max_items} items · {ownerLimits.effective_limits.max_notes} notes · {ownerLimits.effective_limits.max_context_bytes} context bytes · {ownerLimits.effective_limits.max_objective_bytes} objective bytes · {ownerLimits.effective_limits.max_control_events} control events</dd></div>
           <div><dt>Owner revisions</dt><dd>{ownerLimits.adapter_revision} · {ownerLimits.model_revision}</dd></div>
