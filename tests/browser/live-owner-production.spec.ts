@@ -755,22 +755,32 @@ test("uses production served policy routes for import, approval, adoption, refre
     reloaded.run.run_revision,
     "studio.browser.ac3.reconcile",
   );
-  expect(reconciled.status).toBe(200);
+  // Harness #94 AC3 requires that "uncertain settlement remains unknown/blocked". A live
+  // session is not re-admitted after the service restarts: the live execution port fails
+  // closed for any run outside its in-memory map, and the durable run keeps its pending
+  // operation with recovery admission `needs_operator`. Advancing the cursor here is not a
+  // supported path (the `live.workflow.resume.v1` capability has no consuming route), so an
+  // attempt to reconcile must be refused rather than observed as a second settlement. Do not
+  // assert 200 here: that would contract for a post-restart live reconcile that does not exist.
+  expect(reconciled.status).toBe(409);
+  expect(reconciled.body.error.code).toBe("live_runtime_after_restart");
   current = await readRun(page, runId);
-  if (current.run.pending_operation) {
-    const terminal = await stepRun(
-      page,
-      runId,
-      current.run.run_revision,
-      "studio.browser.ac3.terminal",
-    );
-    expect(terminal.status).toBe(200);
-    current = await readRun(page, runId);
-  }
-  expect(current.run.status).toBe("completed");
+  // The run identity and the uncertain operation survive the restart and stay blocked, so the
+  // journey leaves the run exactly where the restart found it.
+  expect(current.run.status).toBe(reloaded.run.status);
+  expect(current.run.pending_operation).toMatchObject({
+    operation_id: operationId,
+    state: "unknown",
+  });
+  expect(current.run.run_revision).toBe(reloaded.run.run_revision);
   const afterReconcile = await readEffects(page, ownerStack);
+  // The refused reconcile must not duplicate the accepted mutation or fabricate a settlement.
+  // A settlement is only recorded when the operation is read back and reconciled, so a
+  // fail-closed refusal means the ledger is exactly what it was before the restart: one
+  // dispatch, and no read-back settlement for an operation that is still unknown.
+  expect(afterReconcile.dispatches).toEqual(beforeReload.dispatches);
+  expect(afterReconcile.settlements).toEqual(beforeReload.settlements);
   expect(afterReconcile.dispatches).toHaveLength(1);
   expect(afterReconcile.dispatches[0].operation_id).toBe(operationId);
-  expect(afterReconcile.settlements.length).toBeGreaterThanOrEqual(1);
-  expect(afterReconcile.settlements.every((entry) => entry.operation_id === operationId)).toBe(true);
+  expect(afterReconcile.settlements).toHaveLength(0);
 });
