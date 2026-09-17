@@ -53,8 +53,12 @@ export function RunsView({ client, policyClient, contextClient, mode, initialRun
     const setCurrentSessionMessage = (value: string): void => {
       if (refreshId === latestRefresh.current) setSessionMessage(value);
     };
+    const isCurrentRefresh = (): boolean => refreshId === latestRefresh.current;
     setCurrentMemoryMessage("Effective input limits unavailable while the current owner association is refreshed.");
     setCurrentSessionMessage("Effective input limits unavailable while the current owner association is refreshed.");
+    setOwnerAssociation(undefined);
+    setOwnerLimits(undefined);
+    setOwnerMessage("Current context owner association is refreshing.");
     setState("loading");
     setMessage("");
     try {
@@ -65,22 +69,40 @@ export function RunsView({ client, policyClient, contextClient, mode, initialRun
         client.contextAssociation(requestedRunId).then((value) => ({ value })).catch((error: unknown) => ({ error })),
         client.contextOwnerAssociation(requestedRunId).then((value) => ({ value })).catch((error: unknown) => ({ error })),
       ]);
+      if (!isCurrentRefresh()) return;
       const applied = applyEventPage(nextProjection, page);
       setStatus(nextStatus);
       if ("value" in currentOwner) {
-        setOwnerAssociation(currentOwner.value);
-        setOwnerMessage(undefined);
-        try {
-          const limits = await client.contextOwnerEffectiveLimits(requestedRunId);
-          if (limits.binding_id !== currentOwner.value.binding.binding_id
-            || limits.binding_digest !== currentOwner.value.binding.binding_digest
-            || limits.context_ref !== currentOwner.value.binding.context_ref) {
-            throw new Error("Effective limits were rejected because they name a different current owner binding.");
-          }
-          setOwnerLimits(limits);
-        } catch (error: unknown) {
+        const binding = currentOwner.value.binding;
+        if (binding.workflow_run_id !== requestedRunId
+          || binding.boundary.run_id !== requestedRunId
+          || binding.definition_digest !== nextStatus.run.definition_digest) {
+          setOwnerAssociation(undefined);
           setOwnerLimits(undefined);
-          setOwnerMessage(error instanceof Error ? error.message : "Current owner effective limits are unavailable.");
+          setOwnerMessage("Current context owner association was rejected because it names a different workflow run.");
+        } else {
+          setOwnerAssociation(currentOwner.value);
+          setOwnerMessage(undefined);
+          try {
+            const limits = await client.contextOwnerEffectiveLimits(requestedRunId);
+            if (!isCurrentRefresh()) return;
+            if (limits.owner_id !== binding.owner_id
+              || limits.owner_version !== binding.owner_version
+              || limits.binding_id !== binding.binding_id
+              || limits.binding_version !== binding.binding_version
+              || limits.binding_digest !== binding.binding_digest
+              || limits.context_ref !== binding.context_ref
+              || limits.node_kind !== binding.node_kind
+              || limits.adapter_revision !== binding.boundary.adapter_revision
+              || limits.model_revision !== binding.boundary.model_revision) {
+              throw new Error("Effective limits were rejected because they name a different current owner binding.");
+            }
+            setOwnerLimits(limits);
+          } catch (error: unknown) {
+            if (!isCurrentRefresh()) return;
+            setOwnerLimits(undefined);
+            setOwnerMessage(error instanceof Error ? error.message : "Current owner effective limits are unavailable.");
+          }
         }
       } else {
         setOwnerAssociation(undefined);
@@ -177,6 +199,10 @@ export function RunsView({ client, policyClient, contextClient, mode, initialRun
       setState(applied.kind === "resnapshot" ? "resnapshot" : "ready");
       setMessage(applied.kind === "resnapshot" ? applied.reason : `Loaded ${page.events.length} retained event${page.events.length === 1 ? "" : "s"}.`);
     } catch (error: unknown) {
+      if (!isCurrentRefresh()) return;
+      setOwnerAssociation(undefined);
+      setOwnerLimits(undefined);
+      setOwnerMessage(error instanceof Error ? error.message : "Current context owner association is unavailable.");
       setState("error");
       setMessage(error instanceof Error ? error.message : "Run inspection failed.");
     }
@@ -336,6 +362,7 @@ export function RunsView({ client, policyClient, contextClient, mode, initialRun
           <div><dt>Effective limits</dt><dd>{ownerLimits.effective_limits.max_items} items · {ownerLimits.effective_limits.max_notes} notes · {ownerLimits.effective_limits.max_context_bytes} context bytes · {ownerLimits.effective_limits.max_objective_bytes} objective bytes · {ownerLimits.effective_limits.max_control_events} control events</dd></div>
           <div><dt>Owner revisions</dt><dd>{ownerLimits.adapter_revision} · {ownerLimits.model_revision}</dd></div>
         </dl> : null}
+        {ownerMessage ? <p className="field-unknown" role="status">{ownerMessage}</p> : null}
       </section>
       <section className="panel-card" aria-label="Memory evidence">
         <div className="panel-title"><div><p className="eyebrow">Memory</p><h2>Read-only provenance</h2></div><StatusBadge tone="muted">no controls</StatusBadge></div>
