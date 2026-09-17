@@ -166,6 +166,7 @@ async function createAdmittedRun(page: Page, fixture: ProductionFixture): Promis
       profile: "live.workflow.v1",
       admission: preflight.admission,
     });
+    let transportError = false;
     try {
       const submissionResponse = await fetch("/v1/workflow-runs", {
         method: "POST",
@@ -181,9 +182,20 @@ async function createAdmittedRun(page: Page, fixture: ProductionFixture): Promis
           run,
         };
       }
+      if (!submissionResponse.ok) {
+        return {
+          status: submissionResponse.status,
+          errorCode: "empty_submission_response",
+          run: {},
+        };
+      }
+      // A successful response with no body leaves admission ambiguous: recover
+      // the durable run by identity and validate the recovered admission below.
+      transportError = true;
     } catch {
       // The served live submission can durably reserve the run before its
       // response transport closes. Recover that accepted state below.
+      transportError = true;
     }
     for (let attempt = 0; attempt < 10; attempt += 1) {
       const statusResponse = await fetch(
@@ -192,11 +204,22 @@ async function createAdmittedRun(page: Page, fixture: ProductionFixture): Promis
       );
       if (statusResponse.ok) {
         const status = await statusResponse.json();
-        if (status.run?.workflow_run_id === fixture.run_id) {
+        const recovered = status.run;
+        const admission = recovered?.admission;
+        if (
+          recovered?.workflow_run_id === fixture.run_id
+          && recovered.definition_digest === definitionDigest
+          && admission?.schema_version === "ascension.workflow-admission/v1"
+          && admission.request_id === fixture.request_id
+          && admission.workflow_definition_digest === definitionDigest
+          && admission.target?.instance_id === fixture.instance_id
+          && admission.target?.execution_profile === "live.workflow.v1"
+          && admission.target?.execution_mode === "live"
+        ) {
           return {
             status: 200,
             errorCode: null,
-            run: status.run,
+            run: recovered,
             transportRecovered: true,
           };
         }
@@ -432,6 +455,9 @@ test("uses production served policy routes for import, approval, adoption, refre
   const decided = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.decide");
   expect(decided.status).toBe(200);
   current = await readRun(page, runId);
+  if (current.run.cursor.node_id !== "execute") {
+    throw new Error(`decide command did not advance: ${JSON.stringify(decided.body)}`);
+  }
   expect(current.run.cursor.node_id).toBe("execute");
 
   const dispatched = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.dispatch");
