@@ -180,6 +180,43 @@ async function createAdmittedRun(page: Page, fixture: ProductionFixture): Promis
       transportError = true;
     }
     if (!transportError && submissionResponse) {
+      // A concrete non-2xx response is an authoritative refusal. Preserve
+      // that status even if its body is empty, malformed, or unreadable;
+      // durable recovery is only for a missing response or ambiguous success.
+      if (!submissionResponse.ok) {
+        let text = "";
+        try {
+          text = await submissionResponse.text();
+        } catch {
+          return {
+            status: submissionResponse.status,
+            errorCode: `submission_refused_${submissionResponse.status}`,
+            run: {},
+          };
+        }
+        if (text) {
+          let run: any;
+          try {
+            run = JSON.parse(text);
+          } catch {
+            return {
+              status: submissionResponse.status,
+              errorCode: "malformed_submission_response",
+              run: {},
+            };
+          }
+          return {
+            status: submissionResponse.status,
+            errorCode: run?.error?.code ?? `submission_refused_${submissionResponse.status}`,
+            run,
+          };
+        }
+        return {
+          status: submissionResponse.status,
+          errorCode: `submission_refused_${submissionResponse.status}`,
+          run: {},
+        };
+      }
       let text: string;
       try {
         text = await submissionResponse.text();
@@ -204,13 +241,6 @@ async function createAdmittedRun(page: Page, fixture: ProductionFixture): Promis
           status: submissionResponse.status,
           errorCode: run?.error?.code ?? null,
           run,
-        };
-      }
-      if (!transportError && !submissionResponse.ok) {
-        return {
-          status: submissionResponse.status,
-          errorCode: "empty_submission_response",
-          run: {},
         };
       }
       // A successful response with no body leaves admission ambiguous: recover
@@ -466,30 +496,6 @@ test("uses production served policy routes for import, approval, adoption, refre
   const runId = submitted.run.workflow_run_id as string;
   const contextEvidence = await exerciseContextOwner(page, fixture);
 
-  // The browser has authenticated against the real served workflow. The Mod and
-  // provider peers are synthetic fixture processes; no native gameplay claim is
-  // made by this acceptance journey.
-  let current = await readRun(page, runId);
-  expect(current.run.cursor.node_id).toBe("decide");
-  const decided = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.decide");
-  expect(decided.status).toBe(200);
-  current = await readRun(page, runId);
-  if (current.run.cursor.node_id !== "execute") {
-    throw new Error(`decide command did not advance: ${JSON.stringify(decided.body)}`);
-  }
-  expect(current.run.cursor.node_id).toBe("execute");
-
-  const dispatched = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.dispatch");
-  expect(dispatched.status).toBe(200);
-  current = await readRun(page, runId);
-  expect(current.run.status).toBe("needs_operator");
-  expect(current.run.pending_operation?.state).toBe("unknown");
-  const operationId = current.run.pending_operation.operation_id as string;
-  const beforeReload = await readEffects(page, ownerStack);
-  expect(beforeReload.dispatches).toHaveLength(1);
-  expect(beforeReload.dispatches[0].operation_id).toBe(operationId);
-  expect(beforeReload.dispatches[0].action_id).toBe("potion:7:potion:fire:enemy:1");
-
   const authChecks = await page.evaluate(async ({ runId, token }) => {
     const path = `/v1/workflow-runs/${encodeURIComponent(runId)}/provider-session-policy`;
     const missing = await fetch(path);
@@ -651,6 +657,32 @@ test("uses production served policy routes for import, approval, adoption, refre
   await page.getByRole("button", { name: "Inspect", exact: true }).click();
   await expect(panel).toBeVisible();
   await expect(panel.getByRole("region", { name: "Current adopted policy" })).toContainText(targetSha);
+
+  // The browser has authenticated against the real served workflow. The Mod and
+  // provider peers are synthetic fixture processes; no native gameplay claim is
+  // made by this acceptance journey. Inspect the decide-bound context owner
+  // before advancing the cursor to execute, where that invocation-specific
+  // binding is expected to become unavailable.
+  let current = await readRun(page, runId);
+  expect(current.run.cursor.node_id).toBe("decide");
+  const decided = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.decide");
+  expect(decided.status).toBe(200);
+  current = await readRun(page, runId);
+  if (current.run.cursor.node_id !== "execute") {
+    throw new Error(`decide command did not advance: ${JSON.stringify(decided.body)}`);
+  }
+  expect(current.run.cursor.node_id).toBe("execute");
+
+  const dispatched = await stepRun(page, runId, current.run.run_revision, "studio.browser.ac3.dispatch");
+  expect(dispatched.status).toBe(200);
+  current = await readRun(page, runId);
+  expect(current.run.status).toBe("needs_operator");
+  expect(current.run.pending_operation?.state).toBe("unknown");
+  const operationId = current.run.pending_operation.operation_id as string;
+  const beforeReload = await readEffects(page, ownerStack);
+  expect(beforeReload.dispatches).toHaveLength(1);
+  expect(beforeReload.dispatches[0].operation_id).toBe(operationId);
+  expect(beforeReload.dispatches[0].action_id).toBe("potion:7:potion:fire:enemy:1");
 
   const restartResponse = await fetch(`${ownerStack}/restart`, { method: "POST" });
   expect(restartResponse.status).toBe(200);
