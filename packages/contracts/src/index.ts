@@ -231,6 +231,7 @@ const ContextScopeSchema = z.object({
 
 export * from "./effective-limits";
 export * from "./provider-session-policy";
+export * from "./context-owner-runtime";
 
 export const ProviderSessionListSchema = z.object({
   schema: z.literal("ascension.provider-session.api-result.v1"),

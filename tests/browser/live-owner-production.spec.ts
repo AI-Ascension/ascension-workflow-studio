@@ -1,6 +1,12 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
+import {
+  ContextControlCommandSchema,
+  ContextControlReceiptSchema,
+  ContextOwnerAssociationSchema,
+  ContextOwnerEffectiveLimitsSchema,
+} from "../../packages/contracts/src";
 
 const OWNER_TOKEN = "studio-live-ci-token";
 const POLICY_SCHEMA = "ascension.provider-session.policy.v1";
@@ -15,6 +21,8 @@ interface ProductionFixture {
   request_id: string;
   instance_id: string;
   definition_digest: string;
+  context_source_digest: string;
+  context_source_document: Record<string, unknown>;
 }
 
 interface PolicyCommandResult {
@@ -168,6 +176,143 @@ async function createAdmittedRun(page: Page, fixture: ProductionFixture): Promis
 
 }
 
+async function exerciseContextOwner(page: Page, fixture: ProductionFixture): Promise<{
+  command: Record<string, unknown>;
+  receipt: Record<string, unknown>;
+}> {
+  const result = await page.evaluate(async ({ fixture, token }) => {
+    const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
+    const json = async (response: Response): Promise<any> => ({ status: response.status, body: await response.json() });
+    let statusResponse = await fetch(`/v1/workflow-runs/${encodeURIComponent(fixture.run_id)}`, { headers });
+    let status = await statusResponse.json();
+    if (status.run?.cursor?.node_id !== "decide") {
+      const stepResponse = await fetch(`/v1/workflow-runs/${encodeURIComponent(fixture.run_id)}/commands`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          schema_version: "ascension.management/v1",
+          command_id: "studio.context-owner.step",
+          run_id: fixture.run_id,
+          expected_revision: status.run.run_revision,
+          actor_scope: "profile:studio-live",
+          kind: "step",
+          parameters: {},
+        }),
+      });
+      if (!stepResponse.ok) throw new Error(`context owner step returned ${stepResponse.status}`);
+      statusResponse = await fetch(`/v1/workflow-runs/${encodeURIComponent(fixture.run_id)}`, { headers });
+      status = await statusResponse.json();
+    }
+    if (status.run?.cursor?.node_id !== "decide") {
+      throw new Error(`context owner run cursor is ${status.run?.cursor?.node_id ?? "missing"}, expected decide`);
+    }
+    const catalogResponse = await fetch("/v1/context-bindings", { headers });
+    const catalog = await catalogResponse.json();
+    if (!catalogResponse.ok) throw new Error(`context owner catalog returned ${catalogResponse.status}`);
+    const descriptor = catalog.descriptors.find((candidate: any) =>
+      candidate.context_ref === "context.live.v1" && candidate.node_kinds.includes("decide"));
+    if (!descriptor) throw new Error("context owner catalog omitted the decide descriptor");
+
+    const sourceDocument = fixture.context_source_document;
+    const sourceResponse = await fetch(
+      `/v1/workflow-runs/${encodeURIComponent(fixture.run_id)}/context-sources/strategy`,
+      { method: "PUT", headers, body: JSON.stringify({
+        schema_version: "ascension.context-owner.context-source-upload.v1",
+        document: sourceDocument,
+      }) },
+    );
+    if (!sourceResponse.ok) throw new Error(`context source publication returned ${sourceResponse.status}`);
+    const bindingRequest = {
+      workflow_run_id: fixture.run_id,
+      definition_digest: status.run.definition_digest,
+      instance_id: fixture.instance_id,
+      graph_id: status.run.cursor.graph_id,
+      node_id: status.run.cursor.node_id,
+      node_execution_id: status.run.cursor.node_execution_id,
+      node_kind: "decide",
+      context_ref: descriptor.context_ref,
+      binding_id: descriptor.binding_id,
+      binding_version: descriptor.version,
+      binding_digest: descriptor.digest,
+    };
+    const bindResponse = await fetch("/v1/context-bindings/bind", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(bindingRequest),
+    });
+    if (!bindResponse.ok) throw new Error(`context owner bind returned ${bindResponse.status}`);
+
+    const associationResponse = await fetch(
+      `/v1/workflow-runs/${encodeURIComponent(fixture.run_id)}/context-owner-association`,
+      { headers },
+    );
+    const association = await associationResponse.json();
+    if (!associationResponse.ok) throw new Error(`context owner association returned ${associationResponse.status}`);
+    const limitsResponse = await fetch(
+      `/v1/workflow-runs/${encodeURIComponent(fixture.run_id)}/context-owner-effective-limits`,
+      { headers },
+    );
+    const limits = await limitsResponse.json();
+    if (!limitsResponse.ok) throw new Error(`context owner limits returned ${limitsResponse.status}`);
+
+    const sourceStatusResponse = await fetch(
+      `/v1/workflow-runs/${encodeURIComponent(fixture.run_id)}/context-owner-source-status`,
+      { headers },
+    );
+    const sourceStatus = await sourceStatusResponse.json();
+    if (!sourceStatusResponse.ok) throw new Error(`context owner source status returned ${sourceStatusResponse.status}`);
+    const command = {
+      commit: {
+        idempotency_key: "studio.context-owner.receipt",
+        expected_control_version: sourceStatus.boundary.control_version,
+        expected_revision_id: sourceStatus.active_revision_id,
+        expected_boundary: sourceStatus.boundary,
+        preview_manifest_digest: fixture.context_source_digest,
+        approved_manifest_digest: fixture.context_source_digest,
+      },
+    };
+    const adoptionResponse = await fetch(
+      `/v1/workflow-runs/${encodeURIComponent(fixture.run_id)}/context-sources/strategy/adopt`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          schema_version: "ascension.context-owner.context-source-adoption.v1",
+          idempotency_key: command.commit.idempotency_key,
+          expected_control_version: command.commit.expected_control_version,
+          expected_revision_id: command.commit.expected_revision_id,
+          expected_boundary: command.commit.expected_boundary,
+        }),
+      },
+    );
+    const receipt = await adoptionResponse.json();
+    if (!adoptionResponse.ok) throw new Error(`context source adoption returned ${adoptionResponse.status}`);
+    return { association, limits, command, receipt, sourceStatus };
+  }, { fixture, token: OWNER_TOKEN });
+
+  const association = ContextOwnerAssociationSchema.parse(result.association);
+  const limits = ContextOwnerEffectiveLimitsSchema.parse(result.limits);
+  const command = ContextControlCommandSchema.parse(result.command);
+  const receipt = ContextControlReceiptSchema.parse(result.receipt);
+  expect(association.binding.owner_id).toBe("served-context-owner");
+  expect(association.binding.workflow_run_id).toBe(fixture.run_id);
+  expect(association.binding.grants).toEqual({
+    metadata_read: true,
+    content_read: true,
+    edit: false,
+    control: true,
+  });
+  expect(association.binding.continuity).toEqual({
+    survives_controller_restart: true,
+    receipt_recovery: true,
+    provider_session_continuity: false,
+  });
+  expect(limits.binding_digest).toBe(association.binding.binding_digest);
+  expect(limits.effective_limits.max_control_events).toBe(64);
+  expect(receipt.idempotency_key).toBe("studio.context-owner.receipt");
+  return { command, receipt };
+}
+
 async function readPolicyCommand(response: import("@playwright/test").Response, operation: string): Promise<PolicyCommandResult> {
   expect(response.status()).toBe(200);
   const body = await response.json() as PolicyCommandResult;
@@ -197,6 +342,7 @@ test("uses production served policy routes for import, approval, adoption, refre
   }
   expect(submitted.run.workflow_run_id).toBe(fixture.run_id);
   const runId = submitted.run.workflow_run_id as string;
+  const contextEvidence = await exerciseContextOwner(page, fixture);
 
   const authChecks = await page.evaluate(async ({ runId, token }) => {
     const path = `/v1/workflow-runs/${encodeURIComponent(runId)}/provider-session-policy`;
@@ -245,6 +391,13 @@ test("uses production served policy routes for import, approval, adoption, refre
   const runInput = page.getByRole("textbox", { name: "Run ID" });
   await runInput.fill(runId);
   await page.getByRole("button", { name: "Inspect", exact: true }).click();
+  const ownerPanel = page.getByRole("region", { name: "Current context owner association" });
+  await expect(ownerPanel).toBeVisible();
+  await expect(ownerPanel).toContainText("served-context-owner");
+  await expect(ownerPanel).toContainText("control yes");
+  await expect(ownerPanel).toContainText("edit no");
+  await expect(ownerPanel).toContainText("receipt recovery advertised");
+  await expect(ownerPanel).toContainText("64 control events");
   const panel = page.getByRole("region", { name: "Saved provider-session policy" });
   await expect(panel).toBeVisible();
   await expect(panel).toContainText("studio-production-baseline");
@@ -370,6 +523,36 @@ test("uses production served policy routes for import, approval, adoption, refre
       game_effects: 0,
     },
   });
+  const recovered = await page.evaluate(async ({ runId, token, command }) => {
+    const response = await fetch(
+      `/v1/workflow-runs/${encodeURIComponent(runId)}/context-control-receipts/lookup`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(command),
+      },
+    );
+    const body = await response.json();
+    const association = await fetch(
+      `/v1/workflow-runs/${encodeURIComponent(runId)}/context-owner-association`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    return {
+      receiptStatus: response.status,
+      receipt: body,
+      associationStatus: association.status,
+      association: await association.json(),
+    };
+  }, { runId, token: OWNER_TOKEN, command: contextEvidence.command });
+  expect(recovered.receiptStatus).toBe(200);
+  expect(ContextControlReceiptSchema.parse(recovered.receipt)).toEqual(contextEvidence.receipt);
+  expect(recovered.associationStatus).toBe(503);
+  expect(recovered.association.error.code).toBe("context_owner_association_unavailable");
+  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await expect(ownerPanel).toContainText("Current context owner association is unavailable");
   await panel.getByRole("button", { name: "Refresh history" }).click();
   await expect(panel.getByRole("region", { name: "Current adopted policy" })).toContainText(targetSha);
   await expect(panel).toContainText("migration.studio.production");

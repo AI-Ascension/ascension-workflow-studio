@@ -3,6 +3,10 @@ import { z } from "zod";
 import {
   CapabilityResponseSchema,
   ContextOwnerCatalogSchema,
+  ContextOwnerAssociationSchema,
+  ContextOwnerEffectiveLimitsSchema,
+  ContextControlCommandSchema,
+  ContextControlReceiptSchema,
   ContextAssociationSchema,
   ContextComparisonSchema,
   ContextEventPageSchema,
@@ -43,6 +47,10 @@ import {
   decodeWith,
   type CapabilityResponse,
   type ContextOwnerCatalog,
+  type ContextOwnerAssociation,
+  type ContextOwnerEffectiveLimits,
+  type ContextControlCommand,
+  type ContextControlReceipt,
   type ContextAssociation,
   type ContextComparison,
   type ContextEventPage,
@@ -259,6 +267,9 @@ export interface StudioClient {
   health(): Promise<{ status: string }>;
   capabilities(): Promise<CapabilityResponse>;
   listContextBindings(): Promise<ContextOwnerCatalog>;
+  contextOwnerAssociation(runId: string): Promise<ContextOwnerAssociation>;
+  contextOwnerEffectiveLimits(runId: string): Promise<ContextOwnerEffectiveLimits>;
+  lookupContextControlReceipt(runId: string, command: ContextControlCommand): Promise<ContextControlReceipt>;
   validate(definition: WorkflowDefinition): Promise<ValidateResponse>;
   inspect(definition: WorkflowDefinition): Promise<InspectResponse>;
   diff(oldDefinition: WorkflowDefinition, newDefinition: WorkflowDefinition): Promise<{
@@ -494,6 +505,25 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
   public async listContextBindings(): Promise<ContextOwnerCatalog> {
     const response = await this.request("/context-bindings", { method: "GET" }, true);
     return decodeWith(ContextOwnerCatalogSchema, response, "context binding catalog");
+  }
+
+  public async contextOwnerAssociation(runId: string): Promise<ContextOwnerAssociation> {
+    const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}/context-owner-association`, { method: "GET" });
+    return decodeWith(ContextOwnerAssociationSchema, response, "current context owner association");
+  }
+
+  public async contextOwnerEffectiveLimits(runId: string): Promise<ContextOwnerEffectiveLimits> {
+    const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}/context-owner-effective-limits`, { method: "GET" });
+    return decodeWith(ContextOwnerEffectiveLimitsSchema, response, "current context owner effective limits");
+  }
+
+  public async lookupContextControlReceipt(runId: string, command: ContextControlCommand): Promise<ContextControlReceipt> {
+    const checked = ContextControlCommandSchema.parse(command);
+    const response = await this.request(`/workflow-runs/${encodeIdentifier(runId)}/context-control-receipts/lookup`, {
+      method: "POST",
+      body: JSON.stringify(checked),
+    });
+    return decodeWith(ContextControlReceiptSchema, response, "historical context control receipt");
   }
 
   public async validate(definition: WorkflowDefinition): Promise<ValidateResponse> {
@@ -1155,6 +1185,18 @@ export class FixtureClient implements StudioClient {
 
   public async listContextBindings(): Promise<ContextOwnerCatalog> {
     return fixtureContextOwnerCatalog();
+  }
+
+  public async contextOwnerAssociation(_runId: string): Promise<ContextOwnerAssociation> {
+    throw new ClientError("The fixture has no current context owner association.", "context_owner_association_unavailable", 503);
+  }
+
+  public async contextOwnerEffectiveLimits(_runId: string): Promise<ContextOwnerEffectiveLimits> {
+    throw new ClientError("The fixture has no current context owner effective limits.", "context_owner_effective_limits_unavailable", 503);
+  }
+
+  public async lookupContextControlReceipt(_runId: string, _command: ContextControlCommand): Promise<ContextControlReceipt> {
+    throw new ClientError("The fixture has no historical context control receipt.", "context_control_receipt_not_recorded", 404);
   }
 
   public async validate(definition: WorkflowDefinition): Promise<ValidateResponse> {
