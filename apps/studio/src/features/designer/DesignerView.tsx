@@ -11,7 +11,6 @@ import {
   applyNodeChanges,
   type Connection,
   type Edge,
-  type Node,
   type NodeChange,
 } from "@xyflow/react";
 
@@ -31,14 +30,12 @@ import {
 import { CapabilityGateError, type StudioClient } from "@studio/client";
 import { beginBenchmarkEdit, endBenchmarkEdit, recordBenchmarkHandler, recordFirstUsefulRender } from "../benchmark/benchmark";
 import {
-  History,
   alignLayout,
   autoLayout,
   addEdge,
   addNode,
   cloneDocument,
   copyNodes,
-  createFlowProjection,
   createLayout,
   diffDocuments,
   layoutIsValid,
@@ -55,13 +52,11 @@ import {
   defaultNodeConfig,
   parseStudioBundle,
   pasteNodes,
-  qualifiedNodeId,
   serializeStudioBundle,
   updateLayout,
   updateNode,
   type NodeClipboard,
   type SemanticDocument,
-  type StudioFlowNode,
 } from "@studio/document";
 
 import { Notice } from "../../components/Notice";
@@ -74,7 +69,7 @@ import { RecoveryPanel } from "./RecoveryPanel";
 import { BundleImportPreview, BundlePreviewDetails, type BundleImportValue } from "./BundleImportPreview";
 import { useRecoveryWorkflows } from "./useRecoveryWorkflows";
 
-import { InspectorPanel, type SelectedNode } from "./InspectorPanel";
+import { InspectorPanel } from "./InspectorPanel";
 
 import { DefinitionControls } from "./DefinitionControls";
 import { EdgeInspector } from "./EdgeInspector";
@@ -83,9 +78,10 @@ import { DesignerCanvas } from "./DesignerCanvas";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
 import { GraphNavigator, LoopBodyGraphNavigation } from "./GraphNavigator";
 import { ListEditor } from "./ListEditor";
+import { toFlowEdges, type FlowNode } from "./graphProjection";
+import { findSelectedNode, locateEdge, minimapNodeColor, nextNodeId, splitQualifiedId } from "./selectionModel";
+import { useEditorHistory, type EditorSnapshot } from "./useEditorHistory";
 
-type FlowData = StudioFlowNode["data"];
-type FlowNode = Node<FlowData>;
 type EditorTab = "canvas" | "list";
 
 interface DesignerViewProps {
@@ -108,26 +104,8 @@ interface DraftState {
   server?: DraftRecord;
 }
 
-interface EditorSnapshot {
-  document: SemanticDocument;
-  layout: LayoutSidecar;
-}
-
-function copyEditorSnapshot(snapshot: EditorSnapshot): EditorSnapshot {
-  // `structuredClone` is a faithful structural copy and avoids the repeated
-  // JSON serialization plus schema re-validation that dominated edit latency on
-  // admitted-size graphs (P2-089). Snapshots entering history are already
-  // schema-validated by the editor's own admission paths.
-  return {
-    document: structuredClone(snapshot.document),
-    layout: structuredClone(snapshot.layout),
-  };
-}
-
 export function DesignerView({ client, catalog, definition, initialDocument, initialRawText, mode, onBack, onRun, onRawTextChange }: DesignerViewProps): JSX.Element {
-  const [document, setDocument] = useState<SemanticDocument>(() => initialDocument);
-  const [layout, setLayout] = useState<LayoutSidecar>(() => createLayout(initialDocument, "pending"));
-  const [nodes, setNodes] = useState<FlowNode[]>(() => toFlowNodes(initialDocument, createLayout(initialDocument, "pending")));
+  const { document, layout, nodes, setDocument, setLayout, setNodes, documentRef, layoutRef, history, ensureLayout, syncFlowNodes, resetHistory } = useEditorHistory(initialDocument);
   const [tab, setTab] = useState<EditorTab>("canvas");
   const [selectedId, setSelectedId] = useState<string | undefined>();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -160,18 +138,9 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const publicationIdsRef = useRef(new Map<string, string>());
   const saveGenerationRef = useRef(0);
   const editGeneration = useRef(createEditGeneration());
-  const history = useRef(new History<EditorSnapshot>(
-    { document: initialDocument, layout: createLayout(initialDocument, "pending") },
-    copyEditorSnapshot,
-  ));
   const bundleInput = useRef<HTMLInputElement>(null);
 
   draftRef.current = draft;
-
-  const layoutRef = useRef(layout);
-  layoutRef.current = layout;
-  const documentRef = useRef(document);
-  documentRef.current = document;
 
   const draftId = `draft.${definition.id}`;
 
@@ -179,7 +148,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
 
   useEffect(() => {
     const nextLayout = createLayout(initialDocument, "pending");
-    history.current = new History<EditorSnapshot>({ document: initialDocument, layout: nextLayout }, copyEditorSnapshot);
+    resetHistory(initialDocument, nextLayout);
     setDocument(initialDocument);
     setLayout(nextLayout);
     syncFlowNodes(initialDocument, nextLayout);
@@ -216,7 +185,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
         if (saved) {
           const parsedLayout = LayoutSidecarSchema.safeParse(saved.layout);
           const nextLayout = parsedLayout.success ? parsedLayout.data : createLayout(saved.document, "pending");
-          history.current = new History<EditorSnapshot>({ document: saved.document, layout: nextLayout }, copyEditorSnapshot);
+          resetHistory(saved.document, nextLayout);
           mergeBaseRef.current = cloneDocument(saved.document);
           mergeBaseLayoutRef.current = nextLayout;
           setFocusedGraph(saved.document.entry_graph);
@@ -317,27 +286,6 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     setGraphTrail((current) => (current[current.length - 1] === graphId ? current : [...current, graphId]));
   }, [document.graphs]);
 
-  const ensureLayout = useCallback((nextDocument: SemanticDocument, currentLayout: LayoutSidecar): LayoutSidecar => {
-    // Derive missing positions straight from the semantic graphs. Building the
-    // full flow projection (nodes *and* edges) just to find new ids cost more
-    // than the edit itself on admitted-size graphs (P2-089).
-    const next: LayoutSidecar["positions"] = {};
-    let changed = false;
-    let index = 0;
-    for (const graph of nextDocument.graphs) {
-      for (const node of graph.nodes) {
-        const qualified = qualifiedNodeId(graph.id, node.id);
-        const position = currentLayout.positions[qualified];
-        next[qualified] = position ?? { x: 92 + (index % 4) * 248, y: 96 + Math.floor(index / 4) * 168 };
-        changed ||= position === undefined;
-        index += 1;
-      }
-    }
-    changed ||= Object.keys(currentLayout.positions).length !== Object.keys(next).length;
-    if (!changed) return currentLayout;
-    return { ...currentLayout, positions: next };
-  }, []);
-
   const commitSnapshot = useCallback((nextDocument: SemanticDocument, nextLayout: LayoutSidecar): void => {
     const editStart = beginBenchmarkEdit();
     editGeneration.current.bump();
@@ -363,14 +311,6 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     recordBenchmarkHandler(editStart);
     endBenchmarkEdit(editStart);
   }, [definition.id, ensureLayout, onRawTextChange]);
-
-  const flowProjectionKeyRef = useRef<string>("");
-  const syncFlowNodes = useCallback((nextDocument: SemanticDocument, nextLayout: LayoutSidecar, selected: string[] = []): void => {
-    const key = `${selected.join(",")}|${nextDocument.graphs.map((graph) => `${graph.id}:${graph.nodes.map((node) => `${node.id}.${node.kind}`).join(",")}`).join("|")}|${Object.entries(nextLayout.positions).map(([id, position]) => `${id}@${position.x},${position.y}`).join(";")}`;
-    if (key === flowProjectionKeyRef.current) return;
-    flowProjectionKeyRef.current = key;
-    setNodes((current) => toFlowNodes(nextDocument, nextLayout, selected, current));
-  }, []);
 
   const commit = useCallback((nextDocument: SemanticDocument): void => {
     commitSnapshot(nextDocument, layout);
@@ -615,8 +555,6 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     syncFlowNodes(documentRef.current, nextLayout);
   }, [syncFlowNodes]);
 
-  const minimapNodeColor = useCallback((node: FlowNode): string => (node.data.locked ? "#f0a45b" : "#5da8ff"), []);
-
   const applyReconnect = (from: string, to: string): void => {
     if (!selectedEdge) return;
     try {
@@ -771,7 +709,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
 
   const applyBundleImport = (): void => {
     if (!bundleImport) return;
-    history.current = new History<EditorSnapshot>({ document: bundleImport.semantic, layout: bundleImport.layout }, copyEditorSnapshot);
+    resetHistory(bundleImport.semantic, bundleImport.layout);
     setDocument(bundleImport.semantic);
     setLayout(bundleImport.layout);
     syncFlowNodes(bundleImport.semantic, bundleImport.layout);
@@ -821,7 +759,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     if (!remote || !draft.server) return;
     const remoteLayoutResult = LayoutSidecarSchema.safeParse(draft.server.conflict?.serverLayout ?? draft.server.layout);
     const remoteLayout = remoteLayoutResult.success ? remoteLayoutResult.data : createLayout(remote, "pending");
-    history.current = new History<EditorSnapshot>({ document: remote, layout: remoteLayout }, copyEditorSnapshot);
+    resetHistory(remote, remoteLayout);
     mergeBaseRef.current = cloneDocument(remote);
     mergeBaseLayoutRef.current = remoteLayout;
     setDocument(remote);
@@ -1029,90 +967,4 @@ function ConflictPanel({ base, baseLayout, local, localLayout, remote, remoteLay
     </div>
     {reloadArmed ? <p className="field-error" role="alert">Reloading replaces the local candidate with the owner revision and cannot be undone.</p> : null}
   </section>;
-}
-
-
-
-
-function toFlowNodes(document: SemanticDocument, layout: LayoutSidecar, selectedIds: string[] = [], previous: FlowNode[] = []): FlowNode[] {
-  const previousById = new Map(previous.map((node) => [node.id, node]));
-  return createFlowProjection({ semantic: document, layout }).nodes.map((node) => {
-    const selected = selectedIds.includes(node.id);
-    const draggable = !node.data.locked;
-    const existing = previousById.get(node.id);
-    // Selective rendering (P2-089): keep the object identity of every node whose
-    // position and visible data are unchanged so React Flow can skip re-rendering
-    // it. A single-node edit must not repaint the whole admitted graph.
-    if (existing
-      && existing.position.x === node.position.x && existing.position.y === node.position.y
-      && existing.selected === selected && existing.draggable === draggable
-      && existing.data.label === node.data.label && existing.data.kind === node.data.kind
-      && existing.data.qualifiedId === node.data.qualifiedId && existing.data.locked === node.data.locked) {
-      return existing;
-    }
-    return {
-      id: node.id,
-      position: node.position,
-      data: node.data,
-      selected,
-      draggable,
-      selectable: true,
-      className: node.data.locked ? "protected-node" : "",
-    };
-  });
-}
-
-function toFlowEdges(document: SemanticDocument): Edge<{ qualifiedSource: string; qualifiedTarget: string }>[] {
-  // Edges depend only on the semantic graph, never on layout. Building them
-  // directly avoids recomputing a full node layout on every render of the
-  // admitted-size graph (P2-089).
-  const edges: Edge<{ qualifiedSource: string; qualifiedTarget: string }>[] = [];
-  for (const graph of document.graphs) {
-    for (const edge of graph.edges) {
-      const source = qualifiedNodeId(graph.id, edge.from);
-      const target = qualifiedNodeId(graph.id, edge.to);
-      edges.push({
-        id: `${source}->${target}:${edge.on}:${edge.priority}:${edge.guard_ref ?? ""}`,
-        source,
-        target,
-        label: edge.on,
-        type: "smoothstep",
-        data: { qualifiedSource: source, qualifiedTarget: target },
-        animated: false,
-      });
-    }
-  }
-  return edges;
-}
-
-function findSelectedNode(document: SemanticDocument, selectedId: string | undefined): SelectedNode | undefined {
-  if (!selectedId) return undefined;
-  const split = splitQualifiedId(selectedId);
-  if (!split) return undefined;
-  const graph = document.graphs.find((candidate) => candidate.id === split.graphId);
-  const node = graph?.nodes.find((candidate) => candidate.id === split.nodeId);
-  return graph && node ? { graphId: graph.id, node } : undefined;
-}
-
-function locateEdge(document: SemanticDocument, edgeId: string): { graphId: string; edgeIndex: number } | undefined {
-  for (const graph of document.graphs) {
-    for (const [edgeIndex, edge] of graph.edges.entries()) {
-      const source = qualifiedNodeId(graph.id, edge.from);
-      const target = qualifiedNodeId(graph.id, edge.to);
-      if (`${source}->${target}:${edge.on}:${edge.priority}:${edge.guard_ref ?? ""}` === edgeId) return { graphId: graph.id, edgeIndex };
-    }
-  }
-  return undefined;
-}
-
-function splitQualifiedId(value: string): { graphId: string; nodeId: string } | undefined {
-  const separator = value.indexOf(":");
-  if (separator <= 0 || separator === value.length - 1) return undefined;
-  return { graphId: value.slice(0, separator), nodeId: value.slice(separator + 1) };
-}
-
-function nextNodeId(ids: string[]): string {
-  let index = 1;
-  while (ids.includes(`studio_node_${index}`)) index += 1;
-  return `studio_node_${index}`;
 }
