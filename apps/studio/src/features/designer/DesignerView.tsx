@@ -8,10 +8,6 @@ import {
   useState,
 } from "react";
 import {
-  Background,
-  Controls,
-  MiniMap,
-  ReactFlow,
   applyNodeChanges,
   type Connection,
   type Edge,
@@ -84,6 +80,11 @@ import { InspectorPanel, type SelectedNode } from "./InspectorPanel";
 
 import { DefinitionControls } from "./DefinitionControls";
 import { EdgeInspector } from "./EdgeInspector";
+
+import { DesignerCanvas } from "./DesignerCanvas";
+import { DiagnosticsPanel } from "./DiagnosticsPanel";
+import { GraphNavigator, LoopBodyGraphNavigation } from "./GraphNavigator";
+import { ListEditor } from "./ListEditor";
 
 type FlowData = StudioFlowNode["data"];
 type FlowNode = Node<FlowData>;
@@ -964,35 +965,24 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     {bundlePreview ? <BundlePreviewDetails preview={bundlePreview} /> : null}
     <GraphNavigator document={document} activeGraphId={activeGraphId} trail={graphTrail} onFocus={focusGraph} onSelectTrail={focusTrailIndex} />
     {tab === "canvas" ? <div className="designer-body">
-      <div className="flow-shell" aria-label="Workflow graph canvas">
-        <ReactFlow<FlowNode, Edge<{ qualifiedSource: string; qualifiedTarget: string }>>
-          key={activeGraphId}
+      <DesignerCanvas
+          activeGraphId={activeGraphId}
           nodes={visibleNodes}
           edges={visibleEdges}
-          defaultViewport={graphViewports[activeGraphId] ?? { x: 0, y: 0, zoom: 1 }}
+          viewport={graphViewports[activeGraphId]}
           onMoveEnd={onMoveEnd}
           onNodesChange={onNodesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
           onEdgeClick={onEdgeClick}
           onNodeDragStop={onNodeDragStop}
-          fitView={graphViewports[activeGraphId] === undefined}
-          fitViewOptions={FIT_VIEW_OPTIONS}
-          nodesDraggable
-          nodesConnectable
-          deleteKeyCode={null}
-          proOptions={PRO_OPTIONS}
-        >
-          <Background {...BACKGROUND_PROPS} />
-          <Controls showInteractive={false} />
-          <MiniMap pannable zoomable nodeColor={minimapNodeColor} />
-        </ReactFlow>
-      </div>
+          minimapNodeColor={minimapNodeColor}
+        />
       <div className="inspector-stack">
         <InspectorPanel document={document} catalog={catalog} contextBindings={contextBindings} selected={selected} selectedConfigText={selectedConfigText} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />
         {selectedEdge ? <EdgeInspector document={document} selectedEdge={selectedEdge} onReconnect={applyReconnect} onUpdate={applyEdgeUpdate} /> : null}
       </div>
-    </div> : <ListEditor document={document} catalog={catalog} contextBindings={contextBindings} selectedId={selectedId} selectedIds={selectedIds} onSelect={selectNode} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />}
+    </div> : <ListEditor document={document} selectedIds={selectedIds} onSelect={selectNode} inspector={<InspectorPanel document={document} catalog={catalog} contextBindings={contextBindings} selected={selected} selectedConfigText={selectedConfigText} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />} />}
     {diagnostics ? <DiagnosticsPanel result={diagnostics} onFocusPath={(path) => {
       const target = document.graphs.flatMap((graph) => graph.nodes.map((node) => ({ graphId: graph.id, nodeId: node.id }))).find((candidate) => path.includes(candidate.nodeId));
       if (target) {
@@ -1044,70 +1034,7 @@ function ConflictPanel({ base, baseLayout, local, localLayout, remote, remoteLay
 }
 
 
-interface ListEditorProps {
-  document: SemanticDocument;
-  catalog: DefinitionRecord[];
-  contextBindings?: ContextBinding[];
-  selectedId: string | undefined;
-  selectedIds: string[];
-  onSelect: (id: string, additive?: boolean) => void;
-  onUpdate: (update: (node: WorkflowNode) => WorkflowNode) => void;
-  onRemove: () => void;
-  onNavigateGraph: (graphId: string) => void;
-}
 
-function GraphNavigator({ document, activeGraphId, trail, onFocus, onSelectTrail }: { document: SemanticDocument; activeGraphId: string; trail: string[]; onFocus: (graphId: string) => void; onSelectTrail: (index: number) => void }): JSX.Element {
-  return <nav className="graph-nav panel-card" aria-label="Workflow graph navigation">
-    <div className="graph-nav-row">
-      <span className="eyebrow">Breadcrumbs</span>
-      <ol className="graph-breadcrumbs" aria-label="Graph breadcrumb trail">
-        {trail.map((graphId, index) => <li key={`${graphId}-${index}`}>{index > 0 ? <span className="graph-crumb-separator" aria-hidden="true">›</span> : null}{index === trail.length - 1 ? <span className="graph-crumb-current" aria-current="page">{graphId}</span> : <button className="graph-crumb" onClick={() => onSelectTrail(index)}>{graphId}</button>}</li>)}
-      </ol>
-    </div>
-    <div className="graph-nav-row">
-      <span className="eyebrow">Graphs</span>
-      <div className="graph-switcher" role="group" aria-label="All workflow graphs">
-        {document.graphs.map((graph) => <button key={graph.id} className={`button ${graph.id === activeGraphId ? "button-secondary" : "button-quiet"}`} aria-pressed={graph.id === activeGraphId} onClick={() => onFocus(graph.id)}>{graph.id}</button>)}
-      </div>
-    </div>
-    <p className="graph-nav-note">Graphs are navigated one at a time; this list is not execution ordering or parallelism.</p>
-  </nav>;
-}
-
-
-
-
-function ListEditor({ document, catalog, contextBindings, selectedId, selectedIds, onSelect, onUpdate, onRemove, onNavigateGraph }: ListEditorProps): JSX.Element {
-  const selected = findSelectedNode(document, selectedId);
-  return <div className="list-editor">
-    <div className="list-editor-main">
-      <div className="panel-title"><div><p className="eyebrow">Equivalent editor</p><h2>Semantic node list</h2></div><span className="muted">Keyboard friendly</span></div>
-      {document.graphs.map((graph) => <div className="graph-list" key={graph.id}>
-        <div className="graph-list-title"><span>{graph.id}</span><span className="muted">entry: {graph.entry_node}</span></div>
-        {graph.nodes.map((node) => {
-          const id = `${graph.id}:${node.id}`;
-          return <button className={`node-list-row ${selectedIds.includes(id) ? "selected" : ""}`} key={id} onClick={(event) => onSelect(id, event.metaKey || event.ctrlKey)} aria-pressed={selectedIds.includes(id)}>
-            <span className="node-kind-icon" aria-hidden="true">{node.kind === "adaptive_region" ? "◇" : "•"}</span>
-            <span><strong>{node.id}</strong><small>{node.kind}</small></span>
-            {node.kind === "adaptive_region" ? <StatusBadge tone="warning">protected</StatusBadge> : null}
-          </button>;
-        })}
-      </div>)}
-    </div>
-    <InspectorPanel document={document} catalog={catalog} contextBindings={contextBindings} selected={selected} selectedConfigText={selected ? JSON.stringify(selected.node.config, null, 2) : ""} onUpdate={onUpdate} onRemove={onRemove} onNavigateGraph={onNavigateGraph} />
-  </div>;
-}
-
-function DiagnosticsPanel({ result, onFocusPath }: { result: ValidateResponse; onFocusPath: (path: string) => void }): JSX.Element {
-  return <div className={`diagnostics-panel ${result.valid ? "diagnostics-valid" : "diagnostics-invalid"}`}>
-    <div className="panel-title"><div><p className="eyebrow">Owner validation</p><h2>{result.valid ? "Definition admitted" : "Definition needs attention"}</h2></div><span className="validation-identity"><code>{result.definition_digest.slice(0, 16)}…</code>{result.compiler ? <code className="compile-identity">compiler {result.compiler}</code> : null}</span></div>
-    {result.diagnostics.length === 0 ? <p className="muted">No diagnostics returned by the active adapter.</p> : <ul className="diagnostics-list">{result.diagnostics.map((diagnostic, index) => <li key={`${diagnostic.code}-${index}`}><StatusBadge tone={diagnostic.severity === "error" ? "danger" : diagnostic.severity === "warning" ? "warning" : "muted"}>{diagnostic.severity}</StatusBadge><button className="diagnostic-target" onClick={() => onFocusPath(diagnostic.path)} aria-label={`Focus diagnostic ${diagnostic.path}`}><code>{diagnostic.path}</code></button><span>{diagnostic.message}</span></li>)}</ul>}
-  </div>;
-}
-
-const FIT_VIEW_OPTIONS = { padding: 0.2 } as const;
-const PRO_OPTIONS = { hideAttribution: true } as const;
-const BACKGROUND_PROPS = { color: "#29415b", gap: 24, size: 1 } as const;
 
 function toFlowNodes(document: SemanticDocument, layout: LayoutSidecar, selectedIds: string[] = [], previous: FlowNode[] = []): FlowNode[] {
   const previousById = new Map(previous.map((node) => [node.id, node]));
