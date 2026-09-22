@@ -7,19 +7,12 @@ import {
   ReactFlow,
   type Connection,
   type Edge,
-  type Node,
   type NodeChange,
 } from "@xyflow/react";
 
-import { type StudioFlowNode } from "@studio/document";
+import { BACKGROUND_PROPS, FIT_VIEW_OPTIONS, PRO_OPTIONS, type FlowNode } from "./graphProjection";
 
-type FlowData = StudioFlowNode["data"];
-type FlowNode = Node<FlowData>;
 export type CanvasEdge = Edge<{ qualifiedSource: string; qualifiedTarget: string }>;
-
-export const FIT_VIEW_OPTIONS = { padding: 0.2 } as const;
-export const PRO_OPTIONS = { hideAttribution: true } as const;
-export const BACKGROUND_PROPS = { color: "#29415b", gap: 24, size: 1 } as const;
 
 export interface DesignerCanvasProps {
   activeGraphId: string;
