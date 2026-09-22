@@ -33,8 +33,6 @@ import {
   type WorkflowNode,
 } from "@studio/contracts";
 import { CapabilityGateError, type StudioClient } from "@studio/client";
-import { IndexedDbRecoveryStore } from "./recoveryStore";
-import { buildRecoveryRecord, recoverableFor, type RecoveryRecord } from "@studio/document";
 import { beginBenchmarkEdit, endBenchmarkEdit, recordBenchmarkHandler, recordFirstUsefulRender } from "../benchmark/benchmark";
 import {
   History,
@@ -87,6 +85,11 @@ import { Notice } from "../../components/Notice";
 import { StatusBadge } from "../../components/StatusBadge";
 import { useContextOwnerCatalog } from "./useContextOwnerCatalog";
 import { ContextOwnerCatalogPanel } from "./ContextOwnerCatalogPanel";
+import { ArchivalImportPanel, type ArchivalImport } from "./ArchivalImportPanel";
+import { RawDefinitionPanel } from "./RawDefinitionPanel";
+import { RecoveryPanel } from "./RecoveryPanel";
+import { BundleImportPreview, BundlePreviewDetails, type BundleImportValue } from "./BundleImportPreview";
+import { useRecoveryWorkflows } from "./useRecoveryWorkflows";
 
 type FlowData = StudioFlowNode["data"];
 type FlowNode = Node<FlowData>;
@@ -110,12 +113,6 @@ interface DraftState {
   state: "saved" | "saving" | "offline" | "conflict";
   message: string;
   server?: DraftRecord;
-}
-
-interface ArchivalImport {
-  schemaVersion: string;
-  rawText: string;
-  reason: string;
 }
 
 interface EditorSnapshot {
@@ -147,7 +144,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const [rawText, setRawText] = useState(() => initialRawText ?? JSON.stringify(initialDocument, null, 2));
   const [rawError, setRawError] = useState<string | undefined>();
   const [archivalImport, setArchivalImport] = useState<ArchivalImport | undefined>();
-  const [bundleImport, setBundleImport] = useState<{ semantic: SemanticDocument; layout: LayoutSidecar; digest: string; changedPaths: string[]; capabilities: string[] } | undefined>();
+  const [bundleImport, setBundleImport] = useState<BundleImportValue | undefined>();
   const [bundlePreview, setBundlePreview] = useState<string | undefined>();
   const [diagnostics, setDiagnostics] = useState<ValidateResponse | undefined>();
   const [validationState, setValidationState] = useState<"idle" | "running" | "valid" | "invalid" | "error">("idle");
@@ -163,9 +160,6 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const [focusedGraph, setFocusedGraph] = useState<string>(() => initialDocument.entry_graph);
   const [graphTrail, setGraphTrail] = useState<string[]>(() => [initialDocument.entry_graph]);
   const [graphViewports, setGraphViewports] = useState<Record<string, { x: number; y: number; zoom: number }>>({});
-  const [recoveryEnabled, setRecoveryEnabled] = useState(false);
-  const [recoveryRecords, setRecoveryRecords] = useState<RecoveryRecord[]>([]);
-  const [recoveryNotice, setRecoveryNotice] = useState("");
   const mergeBaseRef = useRef<SemanticDocument>(cloneDocument(initialDocument));
   const mergeBaseLayoutRef = useRef<LayoutSidecar>(createLayout(initialDocument, "pending"));
   const persistedKeyRef = useRef<string | undefined>(undefined);
@@ -389,71 +383,24 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     commitSnapshot(nextDocument, layout);
   }, [commitSnapshot, layout]);
 
-  const recoveryStore = useRef(new IndexedDbRecoveryStore());
   const principal = client.principal();
-  const recoveryWorkspace = "studio";
-
-  const refreshRecovery = useCallback(async (): Promise<void> => {
-    try {
-      setRecoveryRecords(await recoveryStore.current.list());
-    } catch (error: unknown) {
-      setRecoveryRecords([]);
-      setRecoveryNotice(error instanceof Error ? error.message : "Local recovery storage is unavailable.");
-    }
-  }, []);
-
-  useEffect(() => {
-    void refreshRecovery();
-  }, [refreshRecovery, principal]);
-
-  useEffect(() => {
-    if (archivalImport || !recoveryEnabled) return;
-    const timer = window.setTimeout(() => {
-      let record: RecoveryRecord;
-      try {
-        record = buildRecoveryRecord({ principal, workspace: recoveryWorkspace, definitionId: definition.id, draftId, document, layout, rawText });
-      } catch {
-        setRecoveryNotice("Local recovery rejected the candidate; only bounded authoring data is stored.");
-        return;
-      }
-      void recoveryStore.current.put(record).then((result) => {
-        setRecoveryNotice(result.prunedForQuota ? "Local recovery storage is full; older records were dropped." : "");
-        return refreshRecovery();
-      }).catch((error: unknown) => {
-        setRecoveryNotice(error instanceof Error ? error.message : "Local recovery write failed.");
-      });
-    }, 600);
-    return () => window.clearTimeout(timer);
-  }, [recoveryEnabled, principal, definition.id, draftId, document, layout, rawText, refreshRecovery, archivalImport]);
-
-  const recoverable = useMemo(() => recoverableFor(recoveryRecords, principal, recoveryWorkspace, definition.id), [recoveryRecords, principal, definition.id]);
-  const principalRecordCount = recoveryRecords.filter((record) => record.principal === principal).length;
+  const recovery = useRecoveryWorkflows({
+    principal,
+    definitionId: definition.id,
+    draftId,
+    document,
+    layout,
+    rawText,
+    suspended: Boolean(archivalImport),
+  });
 
   const recoverLocalCandidate = (): void => {
-    if (!recoverable) return;
-    commitSnapshot(recoverable.document, recoverable.layout);
-    setRawText(recoverable.raw_text ?? JSON.stringify(recoverable.document, null, 2));
+    const candidate = recovery.recover();
+    if (!candidate) return;
+    commitSnapshot(candidate.document, candidate.layout);
+    setRawText(candidate.raw_text ?? JSON.stringify(candidate.document, null, 2));
     setValidationState("idle");
     setValidationMessage("Recovered an unsaved local candidate; review and validate before saving.");
-  };
-
-  const exportRecovery = (): void => {
-    const raw = JSON.stringify(recoveryRecords, null, 2);
-    const url = URL.createObjectURL(new Blob([raw], { type: "application/json" }));
-    const link = window.document.createElement("a");
-    link.href = url;
-    link.download = `studio-recovery-${principal.replaceAll(/[^A-Za-z0-9._-]/g, "_")}.json`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const clearRecovery = (): void => {
-    void recoveryStore.current.clear().then(() => {
-      setRecoveryNotice("Local recovery records cleared.");
-      return refreshRecovery();
-    }).catch((error: unknown) => {
-      setRecoveryNotice(error instanceof Error ? error.message : "Local recovery clear failed.");
-    });
   };
 
   const restoreHistorySnapshot = useCallback((next: EditorSnapshot): void => {
@@ -994,7 +941,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     </div>
     <p className="identity-note muted">Draft revision, definition digest, layout digest, and compiler identity are independent; none substitutes for another.</p>
     <ContextOwnerCatalogPanel state={ownerCatalog.state} refresh={ownerCatalog.refresh} />
-    <RecoveryPanel enabled={recoveryEnabled} principal={principal} count={principalRecordCount} recoverable={recoverable} notice={recoveryNotice} onToggle={() => setRecoveryEnabled((current) => !current)} onRecover={recoverLocalCandidate} onExport={exportRecovery} onClear={clearRecovery} />
+    <RecoveryPanel enabled={recovery.enabled} principal={principal} count={recovery.principalRecordCount} recoverable={recovery.recoverable} notice={recovery.notice} onToggle={recovery.toggle} onRecover={recoverLocalCandidate} onExport={recovery.exportRecords} onClear={recovery.clear} />
     {draft.state === "conflict" ? <Notice tone="danger" title="Draft conflict">The server revision changed while this editor was saving. Local edits are preserved until an explicit resolution.</Notice> : null}
     {draft.state === "conflict" && conflictRemoteDocument && conflictRemoteLayout && conflictOpen ? <ConflictPanel base={mergeBaseRef.current} baseLayout={mergeBaseLayoutRef.current} local={document} localLayout={layout} remote={conflictRemoteDocument} remoteLayout={conflictRemoteLayout} onKeepRemote={reloadRemoteConflict} onKeepLocal={saveLocalAsNew} onMerge={mergeConflict} onCancel={cancelConflictResolution} /> : null}
     {draft.state === "conflict" && !conflictOpen ? <section className="panel-card conflict-dismissed" aria-label="Pending conflict review"><p>Conflict resolution cancelled; local and remote candidates remain available for review.</p><button className="button button-secondary" onClick={() => setConflictOpen(true)}>Review divergence</button></section> : null}
@@ -1019,17 +966,8 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     </div>
     <DefinitionControls document={document} onCommit={commit} />
     {rawMode ? <RawDefinitionPanel rawText={rawText} error={rawError} onChange={(value) => { setRawText(value); onRawTextChange(definition.id, value); setRawError(undefined); }} onApply={applyRawDefinition} /> : null}
-    {bundleImport ? <section className="panel-card bundle-import-preview" aria-label="Imported bundle preview"><div className="panel-title"><div><p className="eyebrow">Digest-bound bundle preview</p><h2>{bundleImport.semantic.workflow_id}@{bundleImport.semantic.version}</h2></div><StatusBadge tone="warning">not applied</StatusBadge></div>
-      <dl className="detail-list">
-        <div><dt>Semantic digest</dt><dd><code>{bundleImport.digest}</code></dd></div>
-        <div><dt>Changed paths</dt><dd>{bundleImport.changedPaths.length}</dd></div>
-        <div><dt>Required capabilities</dt><dd>{bundleImport.capabilities.join(", ") || "none"}</dd></div>
-      </dl>
-      {bundleImport.changedPaths.length ? <ul className="plain-list bundle-diff-list">{bundleImport.changedPaths.slice(0, 12).map((path) => <li key={path}><code>{path}</code></li>)}</ul> : <p className="muted">No semantic differences from the current document.</p>}
-      <div className="control-grid"><button className="button button-primary" onClick={applyBundleImport}>Apply imported bundle</button><button className="button button-quiet" onClick={cancelBundleImport}>Cancel import</button></div>
-    </section> : null}
-    {bundlePreview ? <details className="bundle-preview"><summary>Last portable bundle preview</summary><pre>{bundlePreview}
-…</pre></details> : null}
+    {bundleImport ? <BundleImportPreview value={bundleImport} onApply={applyBundleImport} onCancel={cancelBundleImport} /> : null}
+    {bundlePreview ? <BundlePreviewDetails preview={bundlePreview} /> : null}
     <GraphNavigator document={document} activeGraphId={activeGraphId} trail={graphTrail} onFocus={focusGraph} onSelectTrail={focusTrailIndex} />
     {tab === "canvas" ? <div className="designer-body">
       <div className="flow-shell" aria-label="Workflow graph canvas">
@@ -1580,21 +1518,9 @@ function GuardBranches({ graph, onCommit }: { graph: SemanticDocument["graphs"][
   </div>;
 }
 
-function RawDefinitionPanel({ rawText, error, onChange, onApply }: { rawText: string; error: string | undefined; onChange: (value: string) => void; onApply: () => void }): JSX.Element {
-  return <section className="raw-definition-panel panel-card" aria-label="Raw definition editor"><div className="panel-title"><div><p className="eyebrow">Bounded JSON mode</p><h2>Owner definition candidate</h2></div><button className="button button-primary" onClick={onApply}>Apply candidate</button></div><p className="muted">Duplicate keys, unsafe numbers, excessive depth, and unsupported schemas are rejected or retained read-only before admission.</p><textarea value={rawText} rows={18} spellCheck={false} onChange={(event) => onChange(event.target.value)} aria-label="Raw workflow definition JSON" />{error ? <p className="field-error" role="alert">{error}</p> : null}</section>;
-}
-
 function isEditableShortcutTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return target.isContentEditable || Boolean(target.closest("input, textarea, select, button, [role=\"textbox\"], [contenteditable=\"true\"]"));
-}
-
-function ArchivalImportPanel({ archival }: { archival: ArchivalImport }): JSX.Element {
-  return <section className="raw-definition-panel panel-card archival-import" aria-label="Read-only archival import">
-    <Notice tone="warning" title="Read-only archival import">{`${archival.schemaVersion}: ${archival.reason}`}</Notice>
-    <p className="muted">The original import text is retained locally for review only. It is not applied to this draft, autosaved, validated, or published.</p>
-    <textarea value={archival.rawText} rows={12} readOnly spellCheck={false} aria-label="Archived unsupported workflow definition JSON" />
-  </section>;
 }
 
 function ConflictPanel({ base, baseLayout, local, localLayout, remote, remoteLayout, onKeepRemote, onKeepLocal, onMerge, onCancel }: { base: SemanticDocument; baseLayout: LayoutSidecar; local: SemanticDocument; localLayout: LayoutSidecar; remote: SemanticDocument; remoteLayout: LayoutSidecar; onKeepRemote: () => void; onKeepLocal: () => Promise<void>; onMerge: () => Promise<void>; onCancel: () => void }): JSX.Element {
@@ -1657,21 +1583,6 @@ interface ListEditorProps {
   onUpdate: (update: (node: WorkflowNode) => WorkflowNode) => void;
   onRemove: () => void;
   onNavigateGraph: (graphId: string) => void;
-}
-
-function RecoveryPanel({ enabled, principal, count, recoverable, notice, onToggle, onRecover, onExport, onClear }: { enabled: boolean; principal: string; count: number; recoverable: RecoveryRecord | undefined; notice: string; onToggle: () => void; onRecover: () => void; onExport: () => void; onClear: () => void }): JSX.Element {
-  return <section className="recovery-panel panel-card" aria-label="Local crash recovery">
-    <div className="panel-title"><div><p className="eyebrow">Optional local recovery</p><h2>Crash-recovery buffer</h2></div><StatusBadge tone={enabled ? "success" : "muted"}>{enabled ? "on" : "off"}</StatusBadge></div>
-    <p className="muted">Sanitized authoring data only (document, layout, raw text) with a 24-hour TTL, bound to principal <code>{principal}</code>. Tokens, live run snapshots, provider outputs and commands are never stored.</p>
-    <div className="control-grid">
-      <button className="button button-quiet" onClick={onToggle}>{enabled ? "Disable recovery" : "Enable recovery"}</button>
-      <button className="button button-secondary" onClick={onRecover} disabled={!recoverable}>Recover unsaved candidate</button>
-      <button className="button button-quiet" onClick={onExport} disabled={count === 0}>Export recovery</button>
-      <button className="button button-quiet" onClick={onClear} disabled={count === 0}>Clear local recovery</button>
-    </div>
-    <p className="muted">Stored records for this principal: {count}{recoverable ? ` · recoverable from ${recoverable.saved_at}` : ""}</p>
-    {notice ? <p className="field-unknown" role="status">{notice}</p> : null}
-  </section>;
 }
 
 function GraphNavigator({ document, activeGraphId, trail, onFocus, onSelectTrail }: { document: SemanticDocument; activeGraphId: string; trail: string[]; onFocus: (graphId: string) => void; onSelectTrail: (index: number) => void }): JSX.Element {
