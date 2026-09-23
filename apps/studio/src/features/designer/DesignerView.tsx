@@ -50,8 +50,6 @@ import {
   reconnectEdge,
   updateEdge,
   defaultNodeConfig,
-  nodeOutputs,
-  OWNER_NODE_KINDS,
   parseStudioBundle,
   pasteNodes,
   qualifiedNodeId,
@@ -79,7 +77,7 @@ import { EdgeInspector } from "./EdgeInspector";
 
 import { DesignerCanvas } from "./DesignerCanvas";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
-import { GraphNavigator, LoopBodyGraphNavigation } from "./GraphNavigator";
+import { GraphNavigator } from "./GraphNavigator";
 import { ListEditor } from "./ListEditor";
 import { BACKGROUND_PROPS, FIT_VIEW_OPTIONS, PRO_OPTIONS, toFlowEdges, type FlowNode } from "./graphProjection";
 import { findSelectedNode, locateEdge, minimapNodeColor, nextNodeId, splitQualifiedId } from "./selectionModel";
