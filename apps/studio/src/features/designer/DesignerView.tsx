@@ -16,10 +16,8 @@ import {
 
 import {
   JsonObjectSchema,
-  LayoutSidecarSchema,
   type DefinitionRecord,
   type ContextBinding,
-  type DraftRecord,
   type JsonObject,
   type JsonValue,
   type LayoutSidecar,
@@ -27,21 +25,17 @@ import {
   type WorkflowDefinition,
   type WorkflowNode,
 } from "@studio/contracts";
-import { CapabilityGateError, type StudioClient } from "@studio/client";
+import { type StudioClient } from "@studio/client";
 import { beginBenchmarkEdit, endBenchmarkEdit, recordBenchmarkHandler, recordFirstUsefulRender } from "../benchmark/benchmark";
 import {
   alignLayout,
   autoLayout,
   addEdge,
   addNode,
-  cloneDocument,
   copyNodes,
   createLayout,
   diffDocuments,
   layoutIsValid,
-  mergeDocuments,
-  mergeLayoutSidecars,
-  canonicalJson,
   createEditGeneration,
   semanticDigest,
   parseBoundedJson,
@@ -81,6 +75,9 @@ import { ListEditor } from "./ListEditor";
 import { toFlowEdges, type FlowNode } from "./graphProjection";
 import { findSelectedNode, locateEdge, minimapNodeColor, nextNodeId, splitQualifiedId } from "./selectionModel";
 import { useEditorHistory, type EditorSnapshot } from "./useEditorHistory";
+import { ConflictPanel } from "./ConflictPanel";
+import { draftIdFor } from "./draftPersistence";
+import { useDraftPersistence, type ReplaceDocumentOptions, type ValidationState } from "./useDraftPersistence";
 
 type EditorTab = "canvas" | "list";
 
@@ -94,14 +91,6 @@ interface DesignerViewProps {
   onBack: () => void;
   onRun: (document: WorkflowDefinition) => void;
   onRawTextChange: (definitionId: string, value: string) => void;
-}
-
-interface DraftState {
-  revision: number;
-  etag: string;
-  state: "saved" | "saving" | "offline" | "conflict";
-  message: string;
-  server?: DraftRecord;
 }
 
 export function DesignerView({ client, catalog, definition, initialDocument, initialRawText, mode, onBack, onRun, onRawTextChange }: DesignerViewProps): JSX.Element {
@@ -122,30 +111,76 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const [validationMessage, setValidationMessage] = useState("");
   const ownerCatalog = useContextOwnerCatalog(client, client.principal());
   const contextBindings = ownerCatalog.bindings;
-  const [draft, setDraft] = useState<DraftState>({ revision: 0, etag: "fixture-0", state: "saved", message: "Draft changes are local until autosave completes." });
-  const [draftHydrated, setDraftHydrated] = useState(false);
-  const [saveRetry, setSaveRetry] = useState(0);
-  const [publicationState, setPublicationState] = useState<"idle" | "publishing">("idle");
-  const draftRef = useRef(draft);
-  const [conflictOpen, setConflictOpen] = useState(true);
   const [focusedGraph, setFocusedGraph] = useState<string>(() => initialDocument.entry_graph);
   const [graphTrail, setGraphTrail] = useState<string[]>(() => [initialDocument.entry_graph]);
   const [graphViewports, setGraphViewports] = useState<Record<string, { x: number; y: number; zoom: number }>>({});
-  const mergeBaseRef = useRef<SemanticDocument>(cloneDocument(initialDocument));
-  const mergeBaseLayoutRef = useRef<LayoutSidecar>(createLayout(initialDocument, "pending"));
-  const persistedKeyRef = useRef<string | undefined>(undefined);
-  const mutationIdsRef = useRef(new Map<string, string>());
-  const publicationIdsRef = useRef(new Map<string, string>());
-  const saveGenerationRef = useRef(0);
   const editGeneration = useRef(createEditGeneration());
   const bundleInput = useRef<HTMLInputElement>(null);
 
-  draftRef.current = draft;
+  const draftId = draftIdFor(definition.id);
 
+  const commitSnapshot = useCallback((nextDocument: SemanticDocument, nextLayout: LayoutSidecar): void => {
+    const editStart = beginBenchmarkEdit();
+    editGeneration.current.bump();
+    const snapshotGeneration = editGeneration.current.current();
+    const boundLayout = { ...ensureLayout(nextDocument, nextLayout), semanticDigest: "pending" } as LayoutSidecar;
+    history.current.commit({ document: nextDocument, layout: boundLayout });
+    setDocument(nextDocument);
+    setLayout(boundLayout);
+    syncFlowNodes(nextDocument, boundLayout);
+    window.setTimeout(() => {
+      // A rapid undo/redo or subsequent semantic edit must win over this
+      // deferred serialization; otherwise an old conversion can overwrite the
+      // current raw-text view after the user has already restored it.
+      if (!editGeneration.current.isCurrent(snapshotGeneration)) return;
+      const nextRawText = JSON.stringify(nextDocument, null, 2);
+      setRawText(nextRawText);
+      onRawTextChange(definition.id, nextRawText);
+    }, 0);
+    setRawError(undefined);
+    setArchivalImport(undefined);
+    setDiagnostics(undefined);
+    setValidationState("idle");
+    recordBenchmarkHandler(editStart);
+    endBenchmarkEdit(editStart);
+  }, [definition.id, ensureLayout, onRawTextChange]);
 
-  const draftId = `draft.${definition.id}`;
+  const commit = useCallback((nextDocument: SemanticDocument): void => {
+    commitSnapshot(nextDocument, layout);
+  }, [commitSnapshot, layout]);
 
-  const valueKey = (nextDocument: SemanticDocument, nextLayout: LayoutSidecar): string => JSON.stringify({ document: nextDocument, layout: nextLayout });
+  const replaceDocument = useCallback((nextDocument: SemanticDocument, nextLayout: LayoutSidecar, options: ReplaceDocumentOptions): void => {
+    resetHistory(nextDocument, nextLayout);
+    setDocument(nextDocument);
+    setLayout(nextLayout);
+    syncFlowNodes(nextDocument, nextLayout);
+    if (options.focusEntryGraph) {
+      setFocusedGraph(nextDocument.entry_graph);
+      setGraphTrail([nextDocument.entry_graph]);
+    }
+    if (options.updateRawText) setRawText(JSON.stringify(nextDocument, null, 2));
+  }, [resetHistory, setDocument, setLayout, syncFlowNodes]);
+
+  const reportValidation = useCallback((state: ValidationState, message: string): void => {
+    setValidationState(state);
+    setValidationMessage(message);
+  }, []);
+
+  const {
+    draft, publicationState, conflictOpen, setConflictOpen, mergeBase, mergeBaseLayout,
+    conflictRemoteDocument, conflictRemoteLayout, retrySave, publish,
+    reloadRemoteConflict, saveLocalAsNew, mergeConflict, cancelConflictResolution,
+    rebindPersistedKey, reset: resetDraft,
+  } = useDraftPersistence({
+    client,
+    definitionId: definition.id,
+    initialDocument,
+    initialRawText,
+    document,
+    layout,
+    suspended: Boolean(archivalImport),
+    bridge: { replaceDocument, commitSnapshot, setLayout, reportValidation, setDiagnostics, editGeneration },
+  });
 
   useEffect(() => {
     const nextLayout = createLayout(initialDocument, "pending");
@@ -161,98 +196,12 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     setArchivalImport(undefined);
     setDiagnostics(undefined);
     setValidationState("idle");
-    setDraftHydrated(false);
-    persistedKeyRef.current = undefined;
-    mergeBaseRef.current = cloneDocument(initialDocument);
-    mergeBaseLayoutRef.current = nextLayout;
-    setConflictOpen(true);
+    resetDraft(initialDocument, nextLayout);
     setFocusedGraph(initialDocument.entry_graph);
     setGraphTrail([initialDocument.entry_graph]);
     setGraphViewports({});
-    setDraft({ revision: 0, etag: "fixture-0", state: "saved", message: "Draft changes are local until autosave completes." });
     recordFirstUsefulRender();
   }, [initialDocument]);
-
-  useEffect(() => {
-    let active = true;
-    const loadDraft = async (): Promise<void> => {
-      const loadGeneration = saveGenerationRef.current;
-      try {
-        const saved = await client.getDraft(draftId);
-        if (!active) return;
-        // A save that started after this load must win; a late load response
-        // cannot repopulate newer local state.
-        if (saveGenerationRef.current !== loadGeneration) return;
-        if (saved) {
-          const parsedLayout = LayoutSidecarSchema.safeParse(saved.layout);
-          const nextLayout = parsedLayout.success ? parsedLayout.data : createLayout(saved.document, "pending");
-          resetHistory(saved.document, nextLayout);
-          mergeBaseRef.current = cloneDocument(saved.document);
-          mergeBaseLayoutRef.current = nextLayout;
-          setFocusedGraph(saved.document.entry_graph);
-          setGraphTrail([saved.document.entry_graph]);
-          if (saved.conflict) setConflictOpen(true);
-          setDocument(saved.document);
-          setLayout(nextLayout);
-          syncFlowNodes(saved.document, nextLayout);
-          if (!initialRawText) setRawText(JSON.stringify(saved.document, null, 2));
-          setDraft({ revision: saved.revision, etag: saved.etag, state: saved.conflict ? "conflict" : "saved", message: saved.conflict ? "The owner returned a persisted draft conflict." : "Loaded the owner-backed draft.", server: saved.conflict ? saved : undefined });
-          persistedKeyRef.current = valueKey(saved.document, nextLayout);
-        }
-      } catch (error: unknown) {
-        if (active && !(error instanceof CapabilityGateError)) {
-          setDraft((current) => ({ ...current, state: "offline", message: error instanceof Error ? error.message : "Draft load failed." }));
-        }
-      } finally {
-        if (active) setDraftHydrated(true);
-      }
-    };
-    void loadDraft();
-    return () => { active = false; };
-  }, [client, draftId]);
-
-  useEffect(() => {
-    if (archivalImport || !draftHydrated || draftRef.current.state === "conflict") return;
-    const currentDraft = draftRef.current;
-    const currentKey = valueKey(document, layout);
-    if (persistedKeyRef.current === currentKey) return;
-    const mutationKey = JSON.stringify({ draftId, currentDraft: { revision: currentDraft.revision, etag: currentDraft.etag }, value: currentKey });
-    const clientMutationId = mutationIdsRef.current.get(mutationKey) ?? `studio.mutation.${Date.now()}.${mutationIdsRef.current.size}`;
-    mutationIdsRef.current.set(mutationKey, clientMutationId);
-    const generation = saveGenerationRef.current + 1;
-    saveGenerationRef.current = generation;
-    const timer = window.setTimeout(() => {
-      setDraft((current) => ({ ...current, state: "saving", message: "Saving draft through the owner adapter…" }));
-      void client.saveDraft({
-        draftId,
-        definitionId: definition.id,
-        revision: currentDraft.revision,
-        etag: currentDraft.etag,
-        document,
-        layout,
-        clientMutationId,
-      }).then((saved) => {
-        if (generation !== saveGenerationRef.current) return;
-        if (!saved.conflict) {
-          persistedKeyRef.current = currentKey;
-          mergeBaseRef.current = cloneDocument(document);
-          mergeBaseLayoutRef.current = layout;
-        } else {
-          persistedKeyRef.current = undefined;
-          setConflictOpen(true);
-        }
-        setDraft({ revision: saved.revision, etag: saved.etag, state: saved.conflict ? "conflict" : "saved", message: saved.conflict ? "The owner reported a revision conflict." : "Autosaved to the active adapter.", server: saved.conflict ? saved : undefined });
-      }).catch((error: unknown) => {
-        if (generation !== saveGenerationRef.current) return;
-        if (error instanceof CapabilityGateError) {
-          setDraft((current) => ({ ...current, state: "offline", message: "Draft persistence is unavailable through the active owner adapter." }));
-        } else {
-          setDraft((current) => ({ ...current, state: "offline", message: error instanceof Error ? error.message : "Draft save failed." }));
-        }
-      });
-    }, 700);
-    return () => window.clearTimeout(timer);
-  }, [client, definition.id, draftHydrated, document, layout, draftId, saveRetry, archivalImport]);
 
   const selected = useMemo(() => findSelectedNode(document, selectedId), [document, selectedId]);
   const flowEdgesCache = useRef<{ key: string; edges: Edge<{ qualifiedSource: string; qualifiedTarget: string }>[] }>({ key: "", edges: [] });
@@ -286,36 +235,6 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     setFocusedGraph(graphId);
     setGraphTrail((current) => (current[current.length - 1] === graphId ? current : [...current, graphId]));
   }, [document.graphs]);
-
-  const commitSnapshot = useCallback((nextDocument: SemanticDocument, nextLayout: LayoutSidecar): void => {
-    const editStart = beginBenchmarkEdit();
-    editGeneration.current.bump();
-    const snapshotGeneration = editGeneration.current.current();
-    const boundLayout = { ...ensureLayout(nextDocument, nextLayout), semanticDigest: "pending" } as LayoutSidecar;
-    history.current.commit({ document: nextDocument, layout: boundLayout });
-    setDocument(nextDocument);
-    setLayout(boundLayout);
-    syncFlowNodes(nextDocument, boundLayout);
-    window.setTimeout(() => {
-      // A rapid undo/redo or subsequent semantic edit must win over this
-      // deferred serialization; otherwise an old conversion can overwrite the
-      // current raw-text view after the user has already restored it.
-      if (!editGeneration.current.isCurrent(snapshotGeneration)) return;
-      const nextRawText = JSON.stringify(nextDocument, null, 2);
-      setRawText(nextRawText);
-      onRawTextChange(definition.id, nextRawText);
-    }, 0);
-    setRawError(undefined);
-    setArchivalImport(undefined);
-    setDiagnostics(undefined);
-    setValidationState("idle");
-    recordBenchmarkHandler(editStart);
-    endBenchmarkEdit(editStart);
-  }, [definition.id, ensureLayout, onRawTextChange]);
-
-  const commit = useCallback((nextDocument: SemanticDocument): void => {
-    commitSnapshot(nextDocument, layout);
-  }, [commitSnapshot, layout]);
 
   const principal = client.principal();
   const recovery = useRecoveryWorkflows({
@@ -353,31 +272,6 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
 
   const undo = (): void => {
     restoreHistorySnapshot(history.current.undo());
-  };
-
-  const retrySave = async (): Promise<void> => {
-    if (draft.state !== "offline") return;
-    setDraft((current) => ({ ...current, state: "saving", message: "Reconciling the owner revision before retrying…" }));
-    try {
-      const server = await client.getDraft(draftId);
-      if (server) {
-        const storedMatchesLocal = canonicalJson(server.document) === canonicalJson(document) && canonicalJson(server.layout) === canonicalJson(layout);
-        if (storedMatchesLocal) {
-          persistedKeyRef.current = valueKey(document, layout);
-          mergeBaseRef.current = cloneDocument(server.document);
-          setDraft({ revision: server.revision, etag: server.etag, state: "saved", message: "The owner already stored this candidate; the retry resolved to the existing revision." });
-          return;
-        }
-        if (server.revision !== draft.revision || server.etag !== draft.etag) {
-          setDraft({ revision: server.revision, etag: server.etag, state: "conflict", message: "The owner revision moved while this tab was offline; review the conflict before saving.", server });
-          return;
-        }
-      }
-    } catch {
-      // Reconciliation is best-effort; a failed lookup falls back to the retry identity.
-    }
-    setDraft((current) => ({ ...current, state: "saving", message: "Retrying the same draft save identity…" }));
-    setSaveRetry((current) => current + 1);
   };
 
   const redo = (): void => {
@@ -592,52 +486,11 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       setValidationMessage(result.valid ? `Validated at ${result.definition_digest.slice(0, 12)}…` : `${result.diagnostics.length} diagnostic${result.diagnostics.length === 1 ? "" : "s"} reported.`);
       const layoutBinding = await semanticDigest(document);
       const boundLayout = { ...layout, semanticDigest: layoutBinding } as LayoutSidecar;
-      if (persistedKeyRef.current === valueKey(document, layout)) {
-        persistedKeyRef.current = valueKey(document, boundLayout);
-      }
+      rebindPersistedKey(document, layout, boundLayout);
       setLayout(boundLayout);
     } catch (error: unknown) {
       setValidationState("error");
       setValidationMessage(error instanceof Error ? error.message : "Validation failed.");
-    }
-  };
-
-  const publish = async (): Promise<void> => {
-    if (draft.state !== "saved") {
-      setValidationState("error");
-      setValidationMessage("Wait for the draft to reach a saved revision before publishing.");
-      return;
-    }
-    setPublicationState("publishing");
-    setValidationState("running");
-    setValidationMessage("");
-    const generation = editGeneration.current.current();
-    try {
-      const validation = await client.validate(document);
-      if (!editGeneration.current.isCurrent(generation)) return;
-      setDiagnostics(validation);
-      if (!validation.valid) {
-        setValidationState("invalid");
-        setValidationMessage("Publication was blocked by owner validation diagnostics.");
-        return;
-      }
-      const publishKey = `${draft.revision}:${draft.etag}:${validation.definition_digest}`;
-      const clientMutationId = publicationIdsRef.current.get(publishKey) ?? `studio.publish.${Date.now()}.${publicationIdsRef.current.size}`;
-      publicationIdsRef.current.set(publishKey, clientMutationId);
-      const result = await client.publishDraft(draftId, draft.revision, draft.etag, validation.definition_digest, clientMutationId);
-      if (result.outcome === "conflict" && result.draft) {
-        setDraft({ revision: result.draft.revision, etag: result.draft.etag, state: "conflict", message: "The owner returned a publication conflict.", server: result.draft });
-        setValidationState("error");
-        setValidationMessage("Publication needs conflict resolution before it can create an immutable revision.");
-      } else {
-        setValidationState("valid");
-        setValidationMessage(result.outcome === "already_published" ? "This exact semantic digest is already published." : "Published an immutable owner revision.");
-      }
-    } catch (error: unknown) {
-      setValidationState("error");
-      setValidationMessage(error instanceof Error ? error.message : "Publication failed.");
-    } finally {
-      setPublicationState("idle");
     }
   };
 
@@ -755,83 +608,8 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     }
   };
 
-  const reloadRemoteConflict = (): void => {
-    const remote = draft.server?.conflict?.serverDocument;
-    if (!remote || !draft.server) return;
-    const remoteLayoutResult = LayoutSidecarSchema.safeParse(draft.server.conflict?.serverLayout ?? draft.server.layout);
-    const remoteLayout = remoteLayoutResult.success ? remoteLayoutResult.data : createLayout(remote, "pending");
-    resetHistory(remote, remoteLayout);
-    mergeBaseRef.current = cloneDocument(remote);
-    mergeBaseLayoutRef.current = remoteLayout;
-    setDocument(remote);
-    setLayout(remoteLayout);
-    syncFlowNodes(remote, remoteLayout);
-    setRawText(JSON.stringify(remote, null, 2));
-    persistedKeyRef.current = valueKey(remote, remoteLayout);
-    setConflictOpen(true);
-    setDraft({ revision: draft.server.revision, etag: draft.server.etag, state: "saved", message: "Remote revision loaded; local conflict was discarded." });
-  };
-
-  const saveLocalAsNew = async (): Promise<void> => {
-    try {
-      const saved = await client.saveDraft({ draftId: `draft.${definition.id}.copy.${Date.now()}`, definitionId: definition.id, revision: 0, etag: "fixture-0", document, layout, clientMutationId: `studio.copy.${Date.now()}` });
-      mergeBaseRef.current = cloneDocument(saved.document);
-      const parsedLayout = LayoutSidecarSchema.safeParse(saved.layout);
-      mergeBaseLayoutRef.current = parsedLayout.success ? parsedLayout.data : createLayout(saved.document, "pending");
-      setDraft({ revision: saved.revision, etag: saved.etag, state: "saved", message: "Local candidate was saved as a new draft." });
-    } catch (error: unknown) {
-      setDraft((current) => ({ ...current, state: "conflict", message: error instanceof Error ? error.message : "Could not save a new draft; the local candidate is preserved." }));
-    }
-  };
-
-  const cancelConflictResolution = (): void => {
-    setConflictOpen(false);
-  };
-
-  const mergeConflict = async (): Promise<void> => {
-    const server = draft.server;
-    const remote = server?.conflict?.serverDocument;
-    if (!remote || !server) return;
-    const remoteLayoutResult = LayoutSidecarSchema.safeParse(server.conflict?.serverLayout ?? server.layout);
-    const remoteLayout = remoteLayoutResult.success ? remoteLayoutResult.data : createLayout(remote, "pending");
-    const semantic = mergeDocuments(mergeBaseRef.current, document, remote);
-    if (semantic.conflicts.length > 0 || !semantic.document) {
-      setValidationState("error");
-      setValidationMessage(`Merge needs review at ${semantic.conflicts.map((conflict) => conflict.path).join(", ")}.`);
-      return;
-    }
-    const neutral = (side: LayoutSidecar): LayoutSidecar => ({ ...side, semanticDigest: "merge" });
-    const layoutMerge = mergeLayoutSidecars(neutral(mergeBaseLayoutRef.current), neutral(layout), neutral(remoteLayout));
-    const nextLayout = layoutMerge.layout ?? layout;
-    commitSnapshot(semantic.document, nextLayout);
-    setConflictOpen(true);
-    setDraft({ revision: server.revision, etag: server.etag, state: "saving", message: "Saving the reviewed merge against the owner revision…" });
-    setValidationState("running");
-    setValidationMessage("Merged candidate requires fresh validation.");
-    setDiagnostics(undefined);
-    const generation = editGeneration.current.current();
-    try {
-      const result = await client.validate(semantic.document);
-      if (!editGeneration.current.isCurrent(generation)) return;
-      setDiagnostics(result);
-      setValidationState(result.valid ? "valid" : "invalid");
-      setValidationMessage(result.valid
-        ? `Merged semantic and layout candidates revalidated at ${result.definition_digest.slice(0, 12)}…`
-        : `${result.diagnostics.length} diagnostic${result.diagnostics.length === 1 ? "" : "s"} reported for the merged candidate.`);
-      const mergedLayoutBinding = await semanticDigest(semantic.document);
-      setLayout((current) => ({ ...current, semanticDigest: mergedLayoutBinding }));
-    } catch (error: unknown) {
-      setValidationState("error");
-      setValidationMessage(error instanceof Error ? error.message : "Merged candidate validation failed.");
-    }
-  };
-
   const selectedConfigText = selected ? JSON.stringify(selected.node.config, null, 2) : "";
   const layoutState = layoutIsValid(document, layout) ? "bound" : "repair needed";
-  const conflictRemoteDocument = draft.server ? (draft.server.conflict?.serverDocument ?? draft.server.document) : undefined;
-  const conflictRemoteLayout = conflictRemoteDocument
-    ? (() => { const parsed = LayoutSidecarSchema.safeParse(draft.server?.conflict?.serverLayout ?? draft.server?.layout); return parsed.success ? parsed.data : createLayout(conflictRemoteDocument, "pending"); })()
-    : undefined;
 
   if (archivalImport) return <section className="view-stack designer-view" aria-label="Archived workflow">
     <ArchivalImportPanel archival={archivalImport} />
@@ -875,7 +653,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     <ContextOwnerCatalogPanel state={ownerCatalog.state} refresh={ownerCatalog.refresh} />
     <RecoveryPanel enabled={recovery.enabled} principal={principal} count={recovery.principalRecordCount} recoverable={recovery.recoverable} notice={recovery.notice} onToggle={recovery.toggle} onRecover={recoverLocalCandidate} onExport={recovery.exportRecords} onClear={recovery.clear} />
     {draft.state === "conflict" ? <Notice tone="danger" title="Draft conflict">The server revision changed while this editor was saving. Local edits are preserved until an explicit resolution.</Notice> : null}
-    {draft.state === "conflict" && conflictRemoteDocument && conflictRemoteLayout && conflictOpen ? <ConflictPanel base={mergeBaseRef.current} baseLayout={mergeBaseLayoutRef.current} local={document} localLayout={layout} remote={conflictRemoteDocument} remoteLayout={conflictRemoteLayout} onKeepRemote={reloadRemoteConflict} onKeepLocal={saveLocalAsNew} onMerge={mergeConflict} onCancel={cancelConflictResolution} /> : null}
+    {draft.state === "conflict" && conflictRemoteDocument && conflictRemoteLayout && conflictOpen ? <ConflictPanel base={mergeBase} baseLayout={mergeBaseLayout} local={document} localLayout={layout} remote={conflictRemoteDocument} remoteLayout={conflictRemoteLayout} onKeepRemote={reloadRemoteConflict} onKeepLocal={saveLocalAsNew} onMerge={mergeConflict} onCancel={cancelConflictResolution} /> : null}
     {draft.state === "conflict" && !conflictOpen ? <section className="panel-card conflict-dismissed" aria-label="Pending conflict review"><p>Conflict resolution cancelled; local and remote candidates remain available for review.</p><button className="button button-secondary" onClick={() => setConflictOpen(true)}>Review divergence</button></section> : null}
     <div className="designer-toolbar" role="toolbar" aria-label="Designer tools">
       <div className="segmented-control" role="tablist" aria-label="Editor surface">
@@ -943,28 +721,4 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
 function isEditableShortcutTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   return target.isContentEditable || Boolean(target.closest("input, textarea, select, button, [role=\"textbox\"], [contenteditable=\"true\"]"));
-}
-
-function ConflictPanel({ base, baseLayout, local, localLayout, remote, remoteLayout, onKeepRemote, onKeepLocal, onMerge, onCancel }: { base: SemanticDocument; baseLayout: LayoutSidecar; local: SemanticDocument; localLayout: LayoutSidecar; remote: SemanticDocument; remoteLayout: LayoutSidecar; onKeepRemote: () => void; onKeepLocal: () => Promise<void>; onMerge: () => Promise<void>; onCancel: () => void }): JSX.Element {
-  const [reloadArmed, setReloadArmed] = useState(false);
-  const localPaths = diffDocuments(base, local).map((change) => change.path);
-  const remotePaths = diffDocuments(base, remote).map((change) => change.path);
-  const layoutLocalPaths = diffDocuments(baseLayout, localLayout).map((change) => change.path);
-  const layoutRemotePaths = diffDocuments(baseLayout, remoteLayout).map((change) => change.path);
-  const merge = mergeDocuments(base, local, remote);
-  const layoutMerge = mergeLayoutSidecars({ ...baseLayout, semanticDigest: "merge" }, { ...localLayout, semanticDigest: "merge" }, { ...remoteLayout, semanticDigest: "merge" });
-  return <section className="conflict-panel panel-card" aria-labelledby="conflict-title">
-    <div className="panel-title"><div><p className="eyebrow">Three-way review</p><h2 id="conflict-title">Local and remote drafts diverged</h2></div><StatusBadge tone={merge.conflicts.length ? "danger" : "success"}>{merge.conflicts.length ? `${merge.conflicts.length} conflicts` : "mergeable"}</StatusBadge></div>
-    <p className="muted">The loaded base, local edits, and owner revision stay visible until an explicit resolution. Local content is never discarded without a protected confirmation.</p>
-    <div className="conflict-columns"><div><strong>Local paths</strong><code>{localPaths.slice(0, 8).join("\n") || "none"}</code></div><div><strong>Remote paths</strong><code>{remotePaths.slice(0, 8).join("\n") || "none"}</code></div></div>
-    <div className="conflict-columns"><div><strong>Local layout paths</strong><code>{layoutLocalPaths.slice(0, 8).join("\n") || "none"}</code></div><div><strong>Remote layout paths</strong><code>{layoutRemotePaths.slice(0, 8).join("\n") || "none"}</code></div></div>
-    <p className="muted">Semantic {merge.conflicts.length ? "conflicts require review" : "changes merge cleanly"}; layout {layoutMerge.conflicts.length ? "movement also conflicts and local layout is kept" : "movement merges independently"}.</p>
-    <div className="control-grid">
-      <button className="button button-secondary" onClick={() => void onMerge()} disabled={merge.conflicts.length > 0}>Apply non-overlapping merge</button>
-      <button className="button button-quiet" onClick={() => void onKeepLocal()}>Save local as new draft</button>
-      {reloadArmed ? <><button className="button button-danger-outline" onClick={onKeepRemote}>Discard local and reload remote</button><button className="button button-quiet" onClick={() => setReloadArmed(false)}>Keep local edits</button></> : <button className="button button-danger-outline" onClick={() => setReloadArmed(true)}>Reload remote…</button>}
-      <button className="button button-quiet" onClick={onCancel}>Cancel resolution</button>
-    </div>
-    {reloadArmed ? <p className="field-error" role="alert">Reloading replaces the local candidate with the owner revision and cannot be undone.</p> : null}
-  </section>;
 }
