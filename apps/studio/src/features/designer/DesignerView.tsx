@@ -107,8 +107,6 @@ interface DraftState {
   server?: DraftRecord;
 }
 
-}
-
 export function DesignerView({ client, catalog, definition, initialDocument, initialRawText, mode, onBack, onRun, onRawTextChange }: DesignerViewProps): JSX.Element {
   const { document, layout, nodes, setDocument, setLayout, setNodes, documentRef, layoutRef, history, ensureLayout, syncFlowNodes, resetHistory } = useEditorHistory(initialDocument);
   const [tab, setTab] = useState<EditorTab>("canvas");
@@ -972,6 +970,4 @@ function ConflictPanel({ base, baseLayout, local, localLayout, remote, remoteLay
     </div>
     {reloadArmed ? <p className="field-error" role="alert">Reloading replaces the local candidate with the owner revision and cannot be undone.</p> : null}
   </section>;
-}
-
 }
