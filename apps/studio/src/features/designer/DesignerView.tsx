@@ -50,11 +50,8 @@ import {
   reconnectEdge,
   updateEdge,
   defaultNodeConfig,
-  nodeOutputs,
-  OWNER_NODE_KINDS,
   parseStudioBundle,
   pasteNodes,
-  qualifiedNodeId,
   serializeStudioBundle,
   updateLayout,
   updateNode,
@@ -72,7 +69,7 @@ import { RecoveryPanel } from "./RecoveryPanel";
 import { BundleImportPreview, BundlePreviewDetails, type BundleImportValue } from "./BundleImportPreview";
 import { useRecoveryWorkflows } from "./useRecoveryWorkflows";
 
-import { InspectorPanel, type SelectedNode } from "./InspectorPanel";
+import { InspectorPanel } from "./InspectorPanel";
 
 import { DefinitionControls } from "./DefinitionControls";
 import { EdgeInspector } from "./EdgeInspector";
@@ -81,7 +78,7 @@ import { DesignerCanvas } from "./DesignerCanvas";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
 import { GraphNavigator, LoopBodyGraphNavigation } from "./GraphNavigator";
 import { ListEditor } from "./ListEditor";
-import { BACKGROUND_PROPS, FIT_VIEW_OPTIONS, PRO_OPTIONS, toFlowEdges, type FlowNode } from "./graphProjection";
+import { toFlowEdges, type FlowNode } from "./graphProjection";
 import { findSelectedNode, locateEdge, minimapNodeColor, nextNodeId, splitQualifiedId } from "./selectionModel";
 import { useEditorHistory, type EditorSnapshot } from "./useEditorHistory";
 
