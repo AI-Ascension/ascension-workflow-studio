@@ -227,6 +227,43 @@ describe("producer conformance — the mirror matches the owner's bytes", () => 
     }
   });
 
+  it("rejects a zero budget the producer would call non-positive", () => {
+    // The producer's `validate_budgets` refuses two conditions per field, `== 0`
+    // and `> CONSTANT`. The ceiling test above covers the second; this covers the
+    // first, which no other test in this file exercises. Measured rather than
+    // assumed: deleting `.positive()` from all three schema fields leaves the
+    // whole suite green without it, so a test that only exercised the ceilings
+    // would not notice the lower half of the producer's rule going missing.
+    //
+    // As with the ceiling test, the catalog is RESEALED so the edited descriptor
+    // is internally consistent and the zero budget is the only thing that can
+    // refuse it. Without the reseal the stale digest would refuse it first and
+    // the test would pass even with `.positive()` deleted.
+    const fields: Array<keyof InferenceProfileDescriptor["effective_budgets"]> = [
+      "max_input_bytes",
+      "max_output_tokens",
+      "max_provider_calls",
+    ];
+    for (const field of fields) {
+      const catalog = catalogFixture("synthetic");
+      catalog.descriptors[0].effective_budgets[field] = 0;
+      const resealed = reseal(catalog);
+      const parsed = InferenceProfileDescriptorSchema.safeParse(resealed.descriptors[0]);
+      expect(parsed.success, `${field} of 0 was admitted`).toBe(false);
+      // `.positive()` reports "Too small: expected number to be >0", so the
+      // BOUND is asserted rather than the field name.
+      expect(messages(parsed).join("|")).toContain(">0");
+      // A self-consistent digest must NOT be enough to admit a zero budget.
+      expect(messages(parsed)).not.toContain("Descriptor digest mismatch");
+    }
+    // Positive control: every shipped budget is strictly positive, so this rule
+    // is load-bearing rather than an inequality nothing in the fixture satisfies.
+    const admitted = catalogNamed("synthetic").descriptors[0];
+    for (const field of fields) {
+      expect(admitted.effective_budgets[field]).toBeGreaterThan(0);
+    }
+  });
+
   it("rejects a duplicated list entry the producer would call a duplicate", () => {
     const catalog = catalogFixture("synthetic");
     catalog.descriptors[0].node_kinds = ["decide", "decide"];
@@ -287,8 +324,12 @@ describe("resolution — exact identities, requested never merged into resolved"
 });
 
 describe("refusals — each reason is distinguished and leaks no usable identity", () => {
-  // Each row is a re-sealed descriptor whose only difference is the
-  // property under test, so a passing row cannot be passing by accident.
+  // Each row is a descriptor shipped in the pinned `negative` fixture, sealed by
+  // the producer at the revision in `inference-profile-catalog.lock.json` and
+  // covered by `tools/verify-contract-pins.mjs`. Nothing here re-derives them:
+  // the rows are read straight out of the fixture, which is why the digest
+  // cannot be what refuses them. Each profile_id differs only in the property
+  // under test, so a passing row cannot be passing by accident.
   const cases: Array<[string, string, InferenceProfileRejection]> = [
     ["revoked.synthetic.v1", "context.synthetic.v1", "revoked"],
     ["disabled.synthetic.v1", "context.synthetic.v1", "disabled"],
