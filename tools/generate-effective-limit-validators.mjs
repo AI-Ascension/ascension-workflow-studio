@@ -11,6 +11,7 @@ const ajv = new Ajv2020({ strict: false, code: { source: true, esm: true, lines:
 const schemas = {
   validateMemoryV3: 'context-memory-capabilities.schema.json',
   validateSessionV3: 'provider-session-capabilities.schema.json',
+  validateSessionV3Frozen: 'provider-session-capabilities-v3.schema.json',
   validateSessionV1: 'provider-session-capabilities-v1.schema.json',
 };
 const ids = {};
@@ -36,6 +37,10 @@ if (process.argv.includes('--check')) {
   const vectors = JSON.parse(readFileSync(new URL('../contracts/accepted/effective-limits/producer.json', import.meta.url)));
   for (const vector of vectors.memory) assert.equal(validators.validateMemoryV3(vector.descriptor), vector.producer_descriptor_valid);
   for (const vector of vectors.session) assert.equal(validators.validateSessionV3(vector.descriptor), vector.producer_descriptor_valid);
+  // The dual reader must reproduce each real pre-rename vector's producer verdict, including
+  // the deliberately-invalid ones, rather than accepting everything.
+  const frozen = JSON.parse(readFileSync(new URL('../contracts/accepted/effective-limits/producer-v3-frozen.json', import.meta.url)));
+  for (const vector of frozen.session) assert.equal(validators.validateSessionV3Frozen(vector.descriptor), vector.producer_descriptor_valid);
   console.log('Verified static effective-limit validators and original producer vectors in native ESM');
 } else {
   writeFileSync(target, source);

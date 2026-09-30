@@ -5,11 +5,12 @@ import { z } from "zod";
 import memorySchema from "../../../contracts/accepted/effective-limits/context-memory-capabilities.schema.json" with { type: "json" };
 import sessionSchema from "../../../contracts/accepted/effective-limits/provider-session-capabilities.schema.json" with { type: "json" };
 import pins from "../../../contracts/effective-limits.lock.json" with { type: "json" };
-import type { MemoryCapabilitiesV3, ProviderSessionCapabilitiesV1, ProviderSessionCapabilitiesV3 } from "./effective-limit-types";
-import { validateMemoryV3, validateSessionV3, validateSessionV1 } from "./effective-limit-validators.js";
+import type { MemoryCapabilitiesV3, ProviderSessionCapabilitiesV1, ProviderSessionCapabilitiesV3, ProviderSessionCapabilitiesV3Frozen } from "./effective-limit-types";
+import { validateMemoryV3, validateSessionV3, validateSessionV3Frozen, validateSessionV1 } from "./effective-limit-validators.js";
 
-export type { MemoryCapabilitiesV3, ProviderSessionCapabilitiesV1, ProviderSessionCapabilitiesV3 };
+export type { MemoryCapabilitiesV3, ProviderSessionCapabilitiesV1, ProviderSessionCapabilitiesV3, ProviderSessionCapabilitiesV3Frozen };
 type V3 = MemoryCapabilitiesV3 | ProviderSessionCapabilitiesV3;
+type SessionCandidate = V3 | ProviderSessionCapabilitiesV3Frozen;
 
 /** Preserve the existing legacy memory projection. It conveys no executable limits.
  * Some served v1 owners omit advisory fields, so keep their established reader. */
@@ -31,10 +32,14 @@ export const MemoryCapabilitiesV1Schema = z.object({
 
 export const MemoryCapabilitiesV3Schema = z.custom<MemoryCapabilitiesV3>((value) => validateMemoryV3(value));
 export const ProviderSessionCapabilitiesV3Schema = z.custom<ProviderSessionCapabilitiesV3>((value) => validateSessionV3(value));
+/** The pinned Console still serves the v3 descriptor. ADR 0020 decision 4 requires a dual
+ * reader during migration, so the pre-rename bytes stay readable under a private $id. */
+export const ProviderSessionCapabilitiesV3FrozenSchema = z.custom<ProviderSessionCapabilitiesV3Frozen>((value) => validateSessionV3Frozen(value));
 export const MemoryCapabilitiesSchema = z.union([MemoryCapabilitiesV1Schema, MemoryCapabilitiesV3Schema]);
 export type MemoryCapabilities = z.infer<typeof MemoryCapabilitiesSchema>;
 export const ProviderSessionCapabilitiesSchema = z.union([
   z.custom<ProviderSessionCapabilitiesV1>((value) => validateSessionV1(value)),
+  ProviderSessionCapabilitiesV3FrozenSchema,
   ProviderSessionCapabilitiesV3Schema,
 ]);
 export type ProviderSessionCapabilities = z.infer<typeof ProviderSessionCapabilitiesSchema>;
@@ -60,8 +65,13 @@ function ordered(value: unknown, shape: Shape): unknown {
 }
 
 function hash(value: string): string { return bytesToHex(sha256(new TextEncoder().encode(value))); }
-function isMemory(value: V3): value is MemoryCapabilitiesV3 {
+function isMemory(value: SessionCandidate): value is MemoryCapabilitiesV3 {
   return value.schema === "ascension.context-memory.capabilities.v3";
+}
+/** The pre-rename descriptor stays readable so an owner that has not yet adopted v4 is
+ * reported as stale rather than tampered, but it never carries an executable ceiling. */
+function isFrozenSessionV3(value: SessionCandidate): boolean {
+  return value.schema === "ascension.provider-session.capabilities.v3";
 }
 function policyDigest(surface: string): string | undefined {
   return pins.consumed_artifacts.find((entry) => entry.path.endsWith(`/${surface}-policy.schema.json`))?.sha256;
@@ -71,8 +81,17 @@ function policyDigest(surface: string): string | undefined {
  * obtains the descriptor through its scoped authenticated owner client. */
 export function effectiveLimit(capabilities: EffectiveCapabilities, field: string): EffectiveLimit {
   if (capabilities.schema.endsWith(".v1")) return { state: "unavailable", reason: "field_not_advertised" };
-  const candidate = capabilities as V3;
-  const memory = isMemory(candidate);
+  const session = capabilities as SessionCandidate;
+  const memory = isMemory(session);
+  if (!memory && isFrozenSessionV3(session)) {
+    if (!ProviderSessionCapabilitiesV3FrozenSchema.safeParse(session).success) {
+      return { state: "unavailable", reason: "descriptor_tampered" };
+    }
+    // A genuine v3 descriptor pins the pre-rename policy digest. Re-pinning it here to make
+    // it validate would overwrite a producer-owned digest, so it is reported stale instead.
+    return { state: "unavailable", reason: "descriptor_stale" };
+  }
+  const candidate = session as V3;
   const valid = (memory ? MemoryCapabilitiesV3Schema : ProviderSessionCapabilitiesV3Schema).safeParse(candidate);
   if (!valid.success) return { state: "unavailable", reason: "descriptor_tampered" };
   const binding = candidate.binding;

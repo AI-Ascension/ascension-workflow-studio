@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fixtures from "../../../contracts/accepted/effective-limits/producer.json";
+import frozenFixtures from "../../../contracts/accepted/effective-limits/producer-v3-frozen.json";
 import {
   admitEffectiveLimit, effectiveLimit, effectiveLimitDisclosure,
   MemoryCapabilitiesSchema, ProviderSessionCapabilitiesSchema,
@@ -68,13 +69,32 @@ describe("pinned original harness-library synthetic capability vectors", () => {
   });
 
   it("retains strict legacy provider encryption/method guards while v3 reads widening", () => {
-    const { binding: _binding, effective_limits: _limits, ...legacy } = fixtures.session[0].descriptor;
-    const descriptor = { ...legacy, schema: "ascension.provider-session.capabilities.v1",
+    const { binding: _binding, effective_limits: _limits, provenance, ...legacy } = fixtures.session[0].descriptor;
+    const descriptor = { ...legacy, evidence: provenance, schema: "ascension.provider-session.capabilities.v1",
       enabled_methods: ["initialize"], hardening: { ...legacy.hardening, encrypted_state: true } };
     const parsed = ProviderSessionCapabilitiesSchema.parse(descriptor);
     expect(effectiveLimit(parsed, "max_prepared_bytes").state).toBe("unavailable");
     expect(ProviderSessionCapabilitiesSchema.safeParse({ ...descriptor, hardening: { ...descriptor.hardening, encrypted_state: false } }).success).toBe(false);
     expect(ProviderSessionCapabilitiesSchema.safeParse({ ...descriptor, enabled_methods: ["thread/read"] }).success).toBe(false);
     expect(ProviderSessionCapabilitiesSchema.safeParse(fixtures.session[0].descriptor).success).toBe(true);
+  });
+
+  it("keeps the pinned owner's pre-rename v3 descriptor readable but non-executable", () => {
+    for (const vector of frozenFixtures.session) {
+      if (!vector.producer_descriptor_valid) {
+        expect(ProviderSessionCapabilitiesSchema.safeParse(vector.descriptor).success).toBe(false);
+        continue;
+      }
+      const v3 = ProviderSessionCapabilitiesSchema.parse(vector.descriptor);
+      expect(v3.schema).toBe("ascension.provider-session.capabilities.v3");
+      const preview = effectiveLimit(v3, "max_prepared_bytes");
+      expect(preview).toEqual({ state: "unavailable", reason: "descriptor_stale" });
+      expect(admitEffectiveLimit(v3, preview, 1).state).toBe("unavailable");
+      // Relabelling the same bytes as v4 must not buy an executable ceiling.
+      const raw = vector.descriptor as Record<string, unknown>;
+      expect(ProviderSessionCapabilitiesSchema.safeParse({
+        ...raw, evidence: undefined, schema: "ascension.provider-session.capabilities.v4", provenance: raw.evidence,
+      }).success).toBe(false);
+    }
   });
 });

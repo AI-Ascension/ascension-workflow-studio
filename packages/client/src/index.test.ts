@@ -35,7 +35,7 @@ describe("provider capability read boundary", () => {
       }));
     } });
     await expect(client.providerSessionCapabilities("context-run")).resolves.toMatchObject({
-      schema: "ascension.provider-session.capabilities.v3", hardening: { encrypted_state: false },
+      schema: "ascension.provider-session.capabilities.v4", hardening: { encrypted_state: false },
     });
     effects = 1;
     await expect(client.providerSessionCapabilities("context-run")).rejects.toThrow();
