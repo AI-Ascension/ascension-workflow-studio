@@ -3,45 +3,37 @@
   "revision": "3ce3916ef61bd50670c024a087fe46562a067d27",
   "producer_path": "crates/harness/src/management/contract_inference_profile.rs",
   "evidence": "synthetic_descriptor_validation_only",
-  "sealing_method": "consumer_replica_seal_crosschecked_against_producer_declaration_order",
-  "descriptor_field_order": [
-    "schema_version",
-    "profile_id",
-    "version",
-    "digest",
-    "adapter",
-    "requested_model",
-    "resolved_model",
-    "prompt_revision",
-    "settings_revision",
-    "supported_settings",
-    "operations",
-    "node_kinds",
-    "context_compatibility",
-    "continuity",
-    "effective_budgets",
-    "grants",
-    "state"
-  ],
-  "nested_field_order": {
-    "continuity": [
-      "provider_session_continuity",
-      "survives_controller_restart"
-    ],
-    "effective_budgets": [
-      "max_input_bytes",
-      "max_output_tokens",
-      "max_provider_calls"
-    ],
-    "grants": [
-      "select",
-      "edit"
-    ]
+  "sealing_method": "producer_crate_linked_seal",
+  "generator": "tools/inference-profile-conformance-seal",
+  "generator_binary": "studio-inference-profile-conformance-seal",
+  "producer_crate": {
+    "checkout": "harness",
+    "path": "harness/crates/harness",
+    "manifest_name": "sts2-harness",
+    "linked_by": "tools/inference-profile-conformance-seal/Cargo.toml"
   },
+  "producer_sources": [
+    {
+      "producer_path": "crates/harness/src/management/contract_inference_profile.rs",
+      "sha256": "fceb9f9682875b9686fc1fff7f672816546876065c8c599fd8d8324b19275aed"
+    },
+    {
+      "producer_path": "crates/harness/src/management/contract_json.rs",
+      "sha256": "0b413f3fdf3688e7fb8f0d1c92ae79a4f7e435f15a673937e7d72824de87b69b"
+    },
+    {
+      "producer_path": "crates/harness/src/workflow/ids.rs",
+      "sha256": "778e37b6573d3b3a25d5497d988be9dfab785226baba81a833f8104e70cbe9a4"
+    },
+    {
+      "producer_path": "crates/harness/src/workflow/id_types.rs",
+      "sha256": "0369b5dd68080bcf23180b8193702925dc704a20a6be48cf8f00417b964d6e52"
+    }
+  ],
   "consumed_artifacts": [
     {
       "path": "contracts/accepted/inference-profile/catalog-conformance.json",
-      "sha256": "0ab776d3a02ecc10cd1a5468a99131b4e5042a6bfa71d9bec1e5a18de6296191"
+      "sha256": "4e6ac2abc173eba869da0d460385a8d1ed7a653e56add1c98bfc5a3bc5cbd3f8"
     }
   ]
 }
