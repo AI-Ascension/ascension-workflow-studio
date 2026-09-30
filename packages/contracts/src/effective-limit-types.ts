@@ -56,13 +56,17 @@ export type MemoryCapabilitiesV3 = {
 };
 
 export type ProviderSessionCapabilitiesV3 = {
-  schema: "ascension.provider-session.capabilities.v3";
+  schema: "ascension.provider-session.capabilities.v4";
   profile_id: string;
   profile_sha256: string;
   native_version: string;
   native_binary_sha256: string;
   native_schema_sha256: string;
-  evidence: "schema_only" | "compiled_peer" | "native_binary_fake_upstream" | "live_provider";
+  /**
+   * How the build behind this descriptor was qualified. Provenance only, not an admission
+   * control: every value here is equally admissible. Renamed from `evidence` in v4.
+   */
+  provenance: "schema_only" | "compiled_peer" | "native_binary_fake_upstream" | "live_provider";
   transport: "owned_stdio";
   enabled_methods: (string)[];
   hardening: {
@@ -93,7 +97,7 @@ export type ProviderSessionCapabilitiesV3 = {
   };
   binding: {
     owner: "sts2-harness";
-    owner_revision: "harness-provider-session-v3";
+    owner_revision: "harness-provider-session-v4";
     policy_schema_sha256: string;
     model_revision: string;
     adapter_revision: string;
@@ -104,6 +108,19 @@ export type ProviderSessionCapabilitiesV3 = {
   experimental_api: boolean;
   unknown_methods: "deny";
   raw_rpc: false;
+};
+
+/** The pre-rename v3 descriptor, retained only so an owner that has not yet adopted v4 is
+ * reported as `descriptor_stale` rather than rejected as malformed. It is never executable. */
+export type ProviderSessionCapabilitiesV3Frozen = Omit<
+  ProviderSessionCapabilitiesV3,
+  "schema" | "provenance" | "binding"
+> & {
+  schema: "ascension.provider-session.capabilities.v3";
+  evidence: ProviderSessionCapabilitiesV3["provenance"];
+  binding: Omit<ProviderSessionCapabilitiesV3["binding"], "owner_revision"> & {
+    owner_revision: "harness-provider-session-v3";
+  };
 };
 
 export type ProviderSessionCapabilitiesV1 = {
@@ -128,4 +145,3 @@ export type ProviderSessionCapabilitiesV1 = {
   unknown_methods: "deny";
   raw_rpc: false;
 };
-

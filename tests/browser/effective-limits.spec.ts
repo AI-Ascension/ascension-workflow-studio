@@ -16,6 +16,9 @@ for (const variant of ["v3", "v1", "tampered", "stale", "missing", "association-
     if (variant === "v1") {
       memory.schema = "ascension.context-memory.capabilities.v1";
       session.schema = "ascension.provider-session.capabilities.v1";
+      // v1 keeps the pre-rename qualifier name; v4 renamed it to `provenance`.
+      session.evidence = session.provenance;
+      delete session.provenance;
       for (const value of [memory, session]) {
         delete value.binding;
         delete value.effective_limits;
