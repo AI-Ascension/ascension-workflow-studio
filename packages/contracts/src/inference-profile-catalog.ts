@@ -9,10 +9,15 @@ import { z } from "zod";
  * `ascension.inference-profile/v1`), pinned by
  * `contracts/accepted/inference-profile/catalog-conformance.json`.
  *
- * The fixture in that file was sealed by the producer's own `seal()` — the
- * generator textually included the producer source and called it — so parsing
- * it here proves the field order and digest arithmetic below match the owner
- * byte-for-byte instead of merely agreeing with themselves.
+ * The fixture in that file was NOT sealed by running the producer. It was
+ * sealed by the hand-written JavaScript replica in
+ * `inference-profile-catalog.test-fixtures.ts`, transcribed from the
+ * producer source named above. No producer code is compiled, included or
+ * executed on this side. What the fixture does establish is that the field
+ * order and digest arithmetic below agree with that transcription, and
+ * `tools/verify-contract-pins.mjs` cross-checks the transcription against the
+ * producer's declaration order pinned as data — so a replica that drifted
+ * would fail the gate rather than quietly agree with itself.
  *
  * Integrity is not authentication. Only an authenticated owner response
  * supplies authority; a self-consistent digest proves nothing about who served

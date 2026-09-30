@@ -3,11 +3,45 @@
   "revision": "3ce3916ef61bd50670c024a087fe46562a067d27",
   "producer_path": "crates/harness/src/management/contract_inference_profile.rs",
   "evidence": "synthetic_descriptor_validation_only",
-  "sealing_method": "producer_source_include_seal",
+  "sealing_method": "consumer_replica_seal_crosschecked_against_producer_declaration_order",
+  "descriptor_field_order": [
+    "schema_version",
+    "profile_id",
+    "version",
+    "digest",
+    "adapter",
+    "requested_model",
+    "resolved_model",
+    "prompt_revision",
+    "settings_revision",
+    "supported_settings",
+    "operations",
+    "node_kinds",
+    "context_compatibility",
+    "continuity",
+    "effective_budgets",
+    "grants",
+    "state"
+  ],
+  "nested_field_order": {
+    "continuity": [
+      "provider_session_continuity",
+      "survives_controller_restart"
+    ],
+    "effective_budgets": [
+      "max_input_bytes",
+      "max_output_tokens",
+      "max_provider_calls"
+    ],
+    "grants": [
+      "select",
+      "edit"
+    ]
+  },
   "consumed_artifacts": [
     {
       "path": "contracts/accepted/inference-profile/catalog-conformance.json",
-      "sha256": "c1607039fb221518c5af90ec277bdeeb0a31b8fd98b3b9d432036d714fca7547"
+      "sha256": "0ab776d3a02ecc10cd1a5468a99131b4e5042a6bfa71d9bec1e5a18de6296191"
     }
   ]
 }

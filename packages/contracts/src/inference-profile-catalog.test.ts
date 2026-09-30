@@ -11,11 +11,13 @@ import {
 } from "./inference-profile-catalog";
 import { catalogFixture, reseal } from "./inference-profile-catalog.test-fixtures";
 
-/** Every catalog used here was sealed by the producer's own `seal()` and
- * accepted by its own `validate()`; see
- * `contracts/accepted/inference-profile/catalog-conformance.json` and
- * `contracts/inference-profile-catalog.lock.json`. Nothing in this suite
- * re-derives a digest on the consumer side.
+/** Every catalog used here satisfies the producer's `seal()` and `validate()`
+ * invariants; see `contracts/accepted/inference-profile/catalog-conformance.json`
+ * and `contracts/inference-profile-catalog.lock.json`. No producer code is run on
+ * this side: the seal is a replica whose declared field order is pinned as data
+ * and cross-checked by `tools/verify-contract-pins.mjs`. Apart from the
+ * deliberate tampering described below, nothing in this suite re-derives a
+ * digest.
  *
  * NOTHING here contacted a provider, a model, a native host, a game or a save
  * file. The identities are the harness's clearly-labelled synthetic
@@ -43,7 +45,7 @@ describe("producer conformance — the mirror matches the owner's bytes", () => 
   // catalog digest were computed over an object instead of the producer's
   // three-element array, every catalog in this fixture would fail admission and
   // this first assertion would fail. It is the anchor the whole file rests on.
-  it("admits producer-sealed catalogs without re-encoding", () => {
+  it("admits the pinned conformance catalogs without re-encoding", () => {
     for (const name of ["synthetic", "editable", "negative"]) {
       const catalog = catalogNamed(name);
       expect(catalog.descriptors.length).toBeGreaterThan(0);
@@ -265,6 +267,20 @@ describe("refusals — each reason is distinguished and leaks no usable identity
     const result = resolveInferenceProfile(
       catalog, selectionOf(catalog, "revoked.synthetic.v1"), "adaptive_region");
     expect(result.rejection).toBe("revoked");
+  });
+
+  it("checks the pinned digest before the state, as the owner's resolve does", () => {
+    // The row above pins a CORRECT digest, so it cannot tell the digest check
+    // and the state check apart: both orderings return "revoked". This row is
+    // the one that actually pins the ordering. A revoked profile pinned with a
+    // digest the owner does not serve must report digest_mismatch, because the
+    // digest is located and compared FIRST. Were the state check to run first,
+    // this row would report "revoked" and the ordering claim would be false.
+    const catalog = catalogNamed("negative");
+    const pinned = selectionOf(catalog, "revoked.synthetic.v1");
+    const result = resolveInferenceProfile(
+      catalog, { ...pinned, digest: "b".repeat(64) }, "decide");
+    expect(result.rejection).toBe("digest_mismatch");
   });
 
   it("checks the select grant before context compatibility, as the owner does", () => {
