@@ -136,12 +136,10 @@ describe("producer conformance — the mirror matches the owner's bytes", () => 
     //
     // Consequence: for any charset-LEGAL identifier, UTF-8 bytes == UTF-16
     // code units, so the byte-aware bound is indistinguishable from a
-    // code-unit bound on legal input. It is defence in depth: it keeps the
-    // consumer bound anchored to the producer's byte semantics rather than to
-    // an accidental JS string property, and it rejects an over-long
-    // non-ASCII value on the bound even though the charset rule would already
-    // reject it. These assertions pin BOTH rules, so a future edit that
-    // weakens either one is caught.
+    // code-unit bound on legal input, so only a charset-ILLEGAL value can
+    // separate the two rules — that is the `discriminating` case below. The
+    // ASCII cases pin only that the bound is 128 and inclusive; they cannot by
+    // themselves show the bound counts bytes.
     const atLimit = catalogFixture("synthetic");
     // 128 ASCII bytes == the producer's inclusive upper bound.
     atLimit.descriptors[0].prompt_revision = "p" + "x".repeat(127);
@@ -159,6 +157,19 @@ describe("producer conformance — the mirror matches the owner's bytes", () => 
     // Reseal first, so the rejection is attributable to the bound and not to
     // a digest left stale by the edit.
     expect(messages(overResult)).toContain("identifier exceeds the 128-byte producer bound");
+
+    // DISCRIMINATING PROBE: 129 UTF-8 bytes but only 65 UTF-16 code units.
+    // Under the correct byte bound this trips the bound refine; under a buggy
+    // code-unit bound (`value.length <= 128`) the refine passes and only the
+    // charset regex objects, so the bound message is absent.
+    const discriminating = catalogFixture("synthetic");
+    discriminating.descriptors[0].prompt_revision = "é".repeat(64) + "a";
+    expect(new TextEncoder().encode(discriminating.descriptors[0].prompt_revision).length).toBe(129);
+    expect(discriminating.descriptors[0].prompt_revision.length).toBe(65);
+    const discSealed = reseal(discriminating);
+    const discResult = InferenceProfileDescriptorSchema.safeParse(discSealed.descriptors[0]);
+    expect(discResult.success).toBe(false);
+    expect(messages(discResult)).toContain("identifier exceeds the 128-byte producer bound");
 
     // A non-ASCII identifier is refused: the producer's charset is ASCII, so a
     // multi-byte character is not an escape hatch past either rule.
