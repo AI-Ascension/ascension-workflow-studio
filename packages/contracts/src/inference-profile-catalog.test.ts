@@ -164,8 +164,17 @@ describe("producer conformance — the mirror matches the owner's bytes", () => 
     // charset regex objects, so the bound message is absent.
     const discriminating = catalogFixture("synthetic");
     discriminating.descriptors[0].prompt_revision = "é".repeat(64) + "a";
-    expect(new TextEncoder().encode(discriminating.descriptors[0].prompt_revision).length).toBe(129);
-    expect(discriminating.descriptors[0].prompt_revision.length).toBe(65);
+    const probeBytes = new TextEncoder().encode(discriminating.descriptors[0].prompt_revision).length;
+    const probeCodeUnits = discriminating.descriptors[0].prompt_revision.length;
+    expect(probeBytes).toBe(129);
+    expect(probeCodeUnits).toBe(65);
+    // The two counts MUST differ, or this probe stops discriminating anything:
+    // a 129-byte value that is also 129 code units is plain ASCII, which a
+    // code-unit bound rejects just as readily. Asserting the two numbers
+    // separately is not enough, because an edit could set both to 129 and
+    // still satisfy every assertion above while silently removing the
+    // coverage this probe exists to provide.
+    expect(probeBytes).not.toBe(probeCodeUnits);
     const discSealed = reseal(discriminating);
     const discResult = InferenceProfileDescriptorSchema.safeParse(discSealed.descriptors[0]);
     expect(discResult.success).toBe(false);
