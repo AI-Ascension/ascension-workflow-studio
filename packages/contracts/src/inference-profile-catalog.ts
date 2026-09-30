@@ -2,12 +2,37 @@ import { sha256 } from "@noble/hashes/sha2.js";
 import { bytesToHex } from "@noble/hashes/utils.js";
 import { z } from "zod";
 
-/** Producer: sts2-harness `crates/harness/src/management/contract_inference_profile.rs`
- * (`be5149a3`). Mirrors `ascension.inference-profiles/v1` byte-for-byte so a
- * catalog sealed by the owner validates here without re-encoding. */
-const identifier = z.string().min(1).max(128).regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/);
+/** Consumer mirror of the owner contract served at `GET /v1/inference-profiles`.
+ *
+ * Producer: sts2-harness `crates/harness/src/management/contract_inference_profile.rs`
+ * at `3ce3916e` (schema `ascension.inference-profiles/v1` /
+ * `ascension.inference-profile/v1`), pinned by
+ * `contracts/accepted/inference-profile/catalog-conformance.json`.
+ *
+ * The fixture in that file was sealed by the producer's own `seal()` — the
+ * generator textually included the producer source and called it — so parsing
+ * it here proves the field order and digest arithmetic below match the owner
+ * byte-for-byte instead of merely agreeing with themselves.
+ *
+ * Integrity is not authentication. Only an authenticated owner response
+ * supplies authority; a self-consistent digest proves nothing about who served
+ * the catalog. */
+
+/** Producer `validate_identifier`: 1..=128 BYTES, ASCII alphanumeric first,
+ * then ASCII alphanumeric or `. _ : -`. Counted in bytes, not code units, so a
+ * multi-byte character cannot smuggle a longer value past the bound. */
+const identifier = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/).refine(
+  (value) => new TextEncoder().encode(value).length <= 128,
+  "identifier exceeds the 128-byte producer bound",
+);
+
+/** Producer `validate_digest`: exactly 64 lowercase hex bytes. */
 const digest = z.string().regex(/^[a-f0-9]{64}$/);
-const semver = z.string().regex(/^\d+\.\d+\.\d+$/);
+
+/** Producer `SemanticVersion::new`: exactly three dot-separated runs of ASCII
+ * digits, none empty and none with a leading zero (`01.0.0` and `1.02.3` are
+ * rejected). */
+const semver = z.string().regex(/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/);
 
 export const InferenceProfileStateSchema = z.enum([
   "available", "disabled", "revoked", "stale", "unsupported",
@@ -27,12 +52,16 @@ export const InferenceProfileContinuitySchema = z.object({
   survives_controller_restart: z.boolean(),
 }).strict();
 
+/** Producer `validate_budgets`: every ceiling is non-zero and bounded by the
+ * producer's own constants (128 KiB in, 2,000,000 out, 10,000 calls). */
 export const InferenceProfileBudgetsSchema = z.object({
   max_input_bytes: z.number().int().positive().max(131_072),
   max_output_tokens: z.number().int().positive().max(2_000_000),
   max_provider_calls: z.number().int().positive().max(10_000),
 }).strict();
 
+/** Producer declaration order, which is also the serde serialization order and
+ * therefore the digest input order. Array order is significant. */
 const descriptorShape = z.object({
   schema_version: z.literal("ascension.inference-profile/v1"),
   profile_id: identifier,
@@ -41,7 +70,7 @@ const descriptorShape = z.object({
   adapter: identifier,
   requested_model: identifier,
   /** `null` is the honest value while the owner has not observed an effective
- * model. It is never inferred from `requested_model`. */
+   * model. It is never inferred from `requested_model`. */
   resolved_model: identifier.nullable(),
   prompt_revision: identifier,
   settings_revision: identifier,
@@ -61,8 +90,10 @@ function hash(value: unknown): string {
   return bytesToHex(sha256(new TextEncoder().encode(JSON.stringify(value))));
 }
 
-/** Rust serde struct order, including nested structs; array order is
- * significant. `unsigned` zeroes `digest` for the seal-then-compare step. */
+/** Mirrors `InferenceProfileDescriptor::seal`: clear `digest`, then serialize
+ * the whole struct in declaration order, then lowercase-hex SHA-256. `unsigned`
+ * performs the clear-digest half on its own so a parsed descriptor can be
+ * re-hashed for comparison. */
 function orderedDescriptor(d: InferenceProfileDescriptor, unsigned = false): unknown {
   return {
     schema_version: d.schema_version, profile_id: d.profile_id, version: d.version,
@@ -85,6 +116,10 @@ function orderedDescriptor(d: InferenceProfileDescriptor, unsigned = false): unk
   };
 }
 
+/** Producer `InferenceProfileDescriptor::validate`. Bounds, identifier shape
+ * and list uniqueness are checked before the digest is recomputed, exactly as
+ * the owner does — "only hash after every nested field has been validated and
+ * bounded". */
 export const InferenceProfileDescriptorSchema = descriptorShape.superRefine((d, ctx) => {
   if (!descriptorShape.safeParse(d).success) return;
   const reject = (message: string): void => {
@@ -101,6 +136,9 @@ export const InferenceProfileDescriptorSchema = descriptorShape.superRefine((d, 
   if (hash(orderedDescriptor(d, true)) !== d.digest) reject("Descriptor digest mismatch");
 });
 
+/** Producer `InferenceProfileCatalog::validate` plus `inference_catalog_digest`,
+ * which hashes the JSON ARRAY `(owner_id, owner_version, descriptors)` — three
+ * elements, not an object. */
 export const InferenceProfileCatalogSchema = z.object({
   schema_version: z.literal("ascension.inference-profiles/v1"),
   owner_id: identifier,
@@ -118,7 +156,6 @@ export const InferenceProfileCatalogSchema = z.object({
     ctx.addIssue({ code: "custom", message: "Duplicate profile identity" });
     return;
   }
-  // Producer hashes the 3-tuple `(owner_id, owner_version, descriptors)`.
   const expected = hash([
     catalog.owner_id,
     catalog.owner_version,
@@ -130,16 +167,23 @@ export const InferenceProfileCatalogSchema = z.object({
 });
 export type InferenceProfileCatalog = z.infer<typeof InferenceProfileCatalogSchema>;
 
-/** Why a descriptor may not be bound to a node right now. Anything other than
- * `available` is discoverable metadata, never a binding — mirroring the
- * owner's own `supports()`. */
+/** Why a descriptor may not be bound to a node right now.
+ *
+ * The owner names each non-available state separately (`admit_state`), and this
+ * consumer keeps those reasons apart rather than collapsing them: a revoked
+ * profile, a stale revision and a profile this owner cannot serve are
+ * different operator problems with different fixes. */
 export type InferenceProfileRejection =
   | "unknown_profile"
+  | "digest_mismatch"
+  | "revoked"
+  | "disabled"
+  | "stale"
+  | "unsupported"
   | "unsupported_node_kind"
-  | "not_available"
   | "selection_not_granted"
   | "context_incompatible"
-  | "stale_binding";
+  | "catalog_untrusted";
 
 export interface InferenceProfileSelection {
   profile_id: string;
@@ -163,31 +207,43 @@ export interface InferenceProfileResolution {
   effective_budgets?: InferenceProfileDescriptor["effective_budgets"];
 }
 
-/** Mirrors the owner's `supports()` plus the consumer-side grant and context
- * checks the browser must apply before it can offer a binding.
+/** Mirrors the owner's `InferenceProfileCatalog::resolve`, including the order
+ * in which it refuses: the pinned revision is located and its digest compared
+ * first, then the state is admitted, then the node kind, then the `select`
+ * grant. Context compatibility is a separate owner-side admission step
+ * (`inference_profile_binding::admit_context`) and is applied here last, for
+ * the same reason: an empty list means unconstrained.
  *
- * A digest that does not match the sealed descriptor is `stale_binding`: the
- * referenced revision is no longer the one the owner would serve, and the
- * consumer must refuse rather than silently re-resolve. */
+ * The two checks the producer's own `supports()` does NOT perform — the
+ * `select` grant and context compatibility — are applied here, because a
+ * browser may only offer a binding it is actually permitted to make.
+ *
+ * The owner additionally refuses a FLOATING id that matches several available
+ * revisions (`inference_profile_ambiguous`). This resolver is exact-pin only:
+ * it never picks a revision for the caller, so ambiguity cannot arise. */
 export function resolveInferenceProfile(
   catalog: InferenceProfileCatalog | undefined,
   selection: InferenceProfileSelection,
   node_kind: string,
   context_ref?: string,
 ): InferenceProfileResolution {
+  // A catalog that fails admission carries no authority at all. Report that
+  // distinctly from "this profile is not in the catalog", which is an operator
+  // action (publish a profile) rather than a transport failure.
   const admitted = InferenceProfileCatalogSchema.safeParse(catalog);
-  if (!admitted.success) {
-    return { ok: false, rejection: "unknown_profile" };
-  }
+  if (!admitted.success) return { ok: false, rejection: "catalog_untrusted" };
   const match = admitted.data.descriptors.find(
     (d) => d.profile_id === selection.profile_id && d.version === selection.version,
   );
   if (!match) return { ok: false, rejection: "unknown_profile" };
-  if (match.digest !== selection.digest) return { ok: false, rejection: "stale_binding" };
+  if (match.digest !== selection.digest) return { ok: false, rejection: "digest_mismatch" };
+  if (match.state === "revoked") return { ok: false, rejection: "revoked" };
+  if (match.state === "disabled") return { ok: false, rejection: "disabled" };
+  if (match.state === "stale") return { ok: false, rejection: "stale" };
+  if (match.state === "unsupported") return { ok: false, rejection: "unsupported" };
   if (!match.node_kinds.includes(node_kind)) {
     return { ok: false, rejection: "unsupported_node_kind" };
   }
-  if (match.state !== "available") return { ok: false, rejection: "not_available" };
   if (!match.grants.select) return { ok: false, rejection: "selection_not_granted" };
   if (context_ref !== undefined && match.context_compatibility.length > 0
     && !match.context_compatibility.includes(context_ref)) {
@@ -207,9 +263,10 @@ export function resolveInferenceProfile(
   };
 }
 
-/** Selectable descriptors for a node kind, split by whether the browser is
- * permitted to edit the revision. Non-`available` rows are retained so the
- * designer can render why a bound profile stopped being servable. */
+/** Selectable descriptors for a node kind, split by whether this browser is
+ * permitted to bind it. Non-selectable rows are RETAINED so a designer can
+ * render why a previously bound profile stopped being servable, rather than
+ * silently dropping it and leaving a dangling reference. */
 export function inferenceProfilesForNodeKind(
   catalog: InferenceProfileCatalog | undefined,
   node_kind: string,
@@ -224,16 +281,16 @@ export function inferenceProfilesForNodeKind(
 }
 
 /** This contract publishes no credential, endpoint, executable or prompt byte.
- * Assert that here so a future field addition cannot leak one silently. */
+ * The scanner is a guard against a future field addition leaking one; it is
+ * paired with a positive control in the test suite so it cannot pass vacuously
+ * by simply returning nothing. */
 const FORBIDDEN_PROFILE_FIELDS = [
   "api_key", "apiKey", "token", "secret", "password", "credential", "credentials",
   "provider_url", "providerUrl", "endpoint", "base_url", "baseUrl", "executable",
   "command", "prompt_text", "promptText", "prompt_bytes", "allowed_operations",
 ] as const;
 
-export function findCredentialBearingProfileFields(
-  catalog: unknown,
-): string[] {
+export function findCredentialBearingProfileFields(catalog: unknown): string[] {
   const seen = new Set<string>();
   const walk = (value: unknown, path: string): void => {
     if (Array.isArray(value)) {

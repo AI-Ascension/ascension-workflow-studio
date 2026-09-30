@@ -69,6 +69,6 @@ export async function fixtureContextOwnerCatalog(): Promise<ContextOwnerCatalog>
 
 export async function fixtureInferenceProfileCatalog(): Promise<InferenceProfileCatalog> {
   return InferenceProfileCatalogSchema.parse(
-    inferenceCatalogFixture.catalogs.find((row) => row.name === "baseline")?.catalog,
+    inferenceCatalogFixture.catalogs.find((row) => row.name === "synthetic")?.catalog,
   );
 }
