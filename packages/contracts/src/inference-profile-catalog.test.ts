@@ -187,9 +187,35 @@ describe("producer conformance — the mirror matches the owner's bytes", () => 
 
 
   it("rejects budgets above the producer's published ceilings", () => {
-    const catalog = catalogFixture("synthetic");
-    catalog.descriptors[0].effective_budgets.max_provider_calls = 10_001;
-    expect(InferenceProfileDescriptorSchema.safeParse(catalog.descriptors[0]).success).toBe(false);
+    // Each ceiling is moved one step past the producer's bound and the catalog is
+    // RESEALED, so the edited descriptor is internally consistent and the ceiling
+    // is the only thing that can refuse it. Without the reseal this test passes
+    // even with every `.max()` deleted, because the stale digest refuses the
+    // descriptor first. Zod reports the ceiling as "Too big: expected number to
+    // be <=<ceiling>", so the ceiling VALUE is asserted rather than the field name.
+    const ceilings: Array<
+      [keyof InferenceProfileDescriptor["effective_budgets"], number, number]
+    > = [
+      ["max_input_bytes", 131_073, 131_072],
+      ["max_output_tokens", 2_000_001, 2_000_000],
+      ["max_provider_calls", 10_001, 10_000],
+    ];
+    for (const [field, over, ceiling] of ceilings) {
+      const catalog = catalogFixture("synthetic");
+      catalog.descriptors[0].effective_budgets[field] = over;
+      const resealed = reseal(catalog);
+      const parsed = InferenceProfileDescriptorSchema.safeParse(resealed.descriptors[0]);
+      expect(parsed.success, `${field} above its ceiling was admitted`).toBe(false);
+      expect(messages(parsed).join("|")).toContain(`<=${ceiling}`);
+      // A self-consistent digest must NOT be enough to admit it.
+      expect(messages(parsed)).not.toContain("Descriptor digest mismatch");
+    }
+    // Positive control: the shipped fixtures sit UNDER every ceiling, so each
+    // bound is load-bearing rather than an inequality nothing could satisfy.
+    const admitted = catalogNamed("synthetic").descriptors[0];
+    for (const [field, over] of ceilings) {
+      expect(admitted.effective_budgets[field]).toBeLessThan(over);
+    }
   });
 
   it("rejects a duplicated list entry the producer would call a duplicate", () => {
@@ -252,7 +278,7 @@ describe("resolution — exact identities, requested never merged into resolved"
 });
 
 describe("refusals — each reason is distinguished and leaks no usable identity", () => {
-  // Each row is a PRODUCER-SEALED descriptor whose only difference is the
+  // Each row is a re-sealed descriptor whose only difference is the
   // property under test, so a passing row cannot be passing by accident.
   const cases: Array<[string, string, InferenceProfileRejection]> = [
     ["revoked.synthetic.v1", "context.synthetic.v1", "revoked"],
