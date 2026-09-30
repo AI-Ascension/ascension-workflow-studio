@@ -1,7 +1,13 @@
 // A hand-written JavaScript replica of the producer's seal, used only to build
 // adversarial cases in the test file. These are NOT producer provenance: no
-// producer code is compiled, included or executed here. Everything produced
-// below is a deliberate tamper that the consumer is expected to refuse.
+// producer code is compiled, included or executed by these unit tests, and the
+// replica below is never compared field-order-wise against a lock entry (the
+// gate does not read `order` at all). The fixture's real provenance comes from
+// the `producer-seal` CI job, which builds and runs the PRODUCER's own seal via
+// `tools/inference-profile-conformance-seal` and requires its output to
+// byte-equal `contracts/accepted/inference-profile/catalog-conformance.json`.
+// Everything produced below is a deliberate tamper that the consumer is expected
+// to refuse.
 import { createHash } from "node:crypto";
 import fixture from "../../../contracts/accepted/inference-profile/catalog-conformance.json" with { type: "json" };
 import type { InferenceProfileCatalog, InferenceProfileDescriptor } from "./inference-profile-catalog";
@@ -10,14 +16,14 @@ export function catalogFixture(name = "synthetic"): InferenceProfileCatalog {
   return structuredClone(fixture.catalogs.find((row) => row.name === name)!.catalog) as InferenceProfileCatalog;
 }
 
-/** The producer's declaration order at the pinned revision. Exported so the
- * contract-pin gate can deep-equal it against the order recorded in
- * `contracts/inference-profile-catalog.lock.json`: that comparison is the only
- * thing making "this replica matches the owner's declared byte order" a
- * checked fact rather than a comment. Keep it byte-identical to
- * `struct InferenceProfileDescriptor` — do not reorder to match the fixture
+/** The producer's declaration order at the pinned revision, as this replica
+ * transcribes it from `struct InferenceProfileDescriptor`. Module-private: the
+ * contract-pin gate does not read it, and `ordered()` and `reseal()` below are
+ * its only consumers. It exists so the replica reproduces the owner's declared
+ * byte order — hashing depends on it, so keep it byte-identical to
+ * `struct InferenceProfileDescriptor` and do not reorder to match the fixture
  * file, whose on-disk keys are alphabetical and would produce a wrong digest. */
-export const order = {
+const order = {
   descriptor: [
     "schema_version", "profile_id", "version", "digest", "adapter", "requested_model",
     "resolved_model", "prompt_revision", "settings_revision", "supported_settings",

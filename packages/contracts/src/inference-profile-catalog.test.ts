@@ -13,11 +13,16 @@ import { catalogFixture, reseal } from "./inference-profile-catalog.test-fixture
 
 /** Every catalog used here satisfies the producer's `seal()` and `validate()`
  * invariants; see `contracts/accepted/inference-profile/catalog-conformance.json`
- * and `contracts/inference-profile-catalog.lock.json`. No producer code is run on
- * this side: the seal is a replica whose declared field order is pinned as data
- * and cross-checked by `tools/verify-contract-pins.mjs`. Apart from the
- * deliberate tampering described below, nothing in this suite re-derives a
- * digest.
+ * and `contracts/inference-profile-catalog.lock.json`. That fixture's provenance
+ * is established elsewhere, not here: the lock records
+ * `sealing_method: producer_crate_linked_seal`, and the `producer-seal` CI job
+ * builds `tools/inference-profile-conformance-seal` — which links the pinned
+ * `sts2-harness` crate as a path dependency and calls the owner's own `seal()`
+ * — and runs `tools/verify-contract-pins.mjs --require-producer-checkout`, which
+ * requires the freshly produced seal to byte-equal this checked-in fixture. These
+ * unit tests themselves run no producer code, so they do not re-verify that
+ * provenance; apart from the deliberate tampering described below, nothing here
+ * re-derives a digest.
  *
  * NOTHING here contacted a provider, a model, a native host, a game or a save
  * file. The identities are the harness's clearly-labelled synthetic
