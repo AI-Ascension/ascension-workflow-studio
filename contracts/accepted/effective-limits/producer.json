@@ -713,7 +713,7 @@
       }
     }
   ],
-  "producer_revision": "f8015e52ccb530e60d722283ef2b063da372169b",
+  "producer_revision": "27f1d4219e98999df4903615a57236e4747ae932",
   "restricted_profile": "MemoryCorpus(16,4096) plus explicitly reduced public descriptor ceilings; session public descriptor ceilings reduced. Rebound and validated by the producer. These are contract vectors, not provisioned runtime profiles.",
   "session": [
     {
