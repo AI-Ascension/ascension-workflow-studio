@@ -1,0 +1,13 @@
+{
+  "repository": "AI-Ascension/sts2-harness",
+  "revision": "3ce3916ef61bd50670c024a087fe46562a067d27",
+  "producer_path": "crates/harness/src/management/contract_inference_profile.rs",
+  "evidence": "synthetic_descriptor_validation_only",
+  "sealing_method": "producer_source_include_seal",
+  "consumed_artifacts": [
+    {
+      "path": "contracts/accepted/inference-profile/catalog-conformance.json",
+      "sha256": "c1607039fb221518c5af90ec277bdeeb0a31b8fd98b3b9d432036d714fca7547"
+    }
+  ]
+}

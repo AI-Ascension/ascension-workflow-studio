@@ -5,7 +5,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
-import { verifyContextCatalogPin, verifyEntries } from './verify-contract-pins.mjs';
+import {
+  verifyContextCatalogPin,
+  verifyEntries,
+  verifyInferenceProfileCatalogPin,
+} from './verify-contract-pins.mjs';
 
 test('catalog inventory keeps producer source, synthetic provenance and fixture identity separate', () => {
   const root = fileURLToPath(new URL('../', import.meta.url));
@@ -38,4 +42,17 @@ test('contract pins reject corruption, omissions, duplicates and escaping paths'
   assert.throws(() => verifyEntries(root, [{ path: 'link.json', sha256 }]), /escapes/);
   writeFileSync(join(root, 'schema.json'), '{"changed":true}');
   assert.throws(() => verifyEntries(root, entries), /digest mismatch/);
+});
+
+test('inference-profile catalog pin binds the fixture to the sealing producer source', () => {
+  const root = fileURLToPath(new URL('../', import.meta.url));
+  const pin = JSON.parse(readFileSync(join(root, 'contracts/inference-profile-catalog.lock.json')));
+  assert.equal(verifyInferenceProfileCatalogPin(root, pin), 1);
+  for (const update of [
+    { repository: 'consumer/invented' }, { revision: 'main' },
+    { producer_path: 'crates/harness/src/management/other.rs' },
+    { evidence: 'authenticated_owner' }, { sealing_method: 'transcribed_by_hand' },
+    { consumed_artifacts: [] }, { consumed_artifacts: [...pin.consumed_artifacts, ...pin.consumed_artifacts] },
+    { consumed_artifacts: [{ ...pin.consumed_artifacts[0], sha256: '0'.repeat(64) }] },
+  ]) assert.throws(() => verifyInferenceProfileCatalogPin(root, { ...pin, ...update }));
 });
