@@ -128,6 +128,53 @@ describe("producer conformance — the mirror matches the owner's bytes", () => 
     expect(InferenceProfileDescriptorSchema.safeParse(catalog.descriptors[0]).success).toBe(false);
   });
 
+  it("bounds the identifier by the producer's UTF-8 byte rule, and the rule is ASCII-only", () => {
+    // Producer `validate_identifier` (contract_json.rs at the pinned revision)
+    // checks `value.len() > MAX_IDENTIFIER_BYTES` — `len()` on a Rust `str` is
+    // UTF-8 BYTES — and then requires an ASCII alphanumeric first character
+    // with ASCII alphanumeric / `. _ : -` thereafter.
+    //
+    // Consequence: for any charset-LEGAL identifier, UTF-8 bytes == UTF-16
+    // code units, so the byte-aware bound is indistinguishable from a
+    // code-unit bound on legal input. It is defence in depth: it keeps the
+    // consumer bound anchored to the producer's byte semantics rather than to
+    // an accidental JS string property, and it rejects an over-long
+    // non-ASCII value on the bound even though the charset rule would already
+    // reject it. These assertions pin BOTH rules, so a future edit that
+    // weakens either one is caught.
+    const atLimit = catalogFixture("synthetic");
+    // 128 ASCII bytes == the producer's inclusive upper bound.
+    atLimit.descriptors[0].prompt_revision = "p" + "x".repeat(127);
+    expect(new TextEncoder().encode(atLimit.descriptors[0].prompt_revision).length).toBe(128);
+    const atLimitSealed = reseal(atLimit);
+    const atLimitResult = InferenceProfileDescriptorSchema.safeParse(atLimitSealed.descriptors[0]);
+    expect(atLimitResult.success).toBe(true);
+
+    const oneOverLimit = catalogFixture("synthetic");
+    oneOverLimit.descriptors[0].prompt_revision = "p" + "x".repeat(128);
+    expect(new TextEncoder().encode(oneOverLimit.descriptors[0].prompt_revision).length).toBe(129);
+    const overSealed = reseal(oneOverLimit);
+    const overResult = InferenceProfileDescriptorSchema.safeParse(overSealed.descriptors[0]);
+    expect(overResult.success).toBe(false);
+    // Reseal first, so the rejection is attributable to the bound and not to
+    // a digest left stale by the edit.
+    expect(messages(overResult)).toContain("identifier exceeds the 128-byte producer bound");
+
+    // A non-ASCII identifier is refused: the producer's charset is ASCII, so a
+    // multi-byte character is not an escape hatch past either rule.
+    const nonAscii = catalogFixture("synthetic");
+    nonAscii.descriptors[0].prompt_revision = "pé";
+    const nonAsciiSealed = reseal(nonAscii);
+    const nonAsciiResult = InferenceProfileDescriptorSchema.safeParse(nonAsciiSealed.descriptors[0]);
+    expect(nonAsciiResult.success).toBe(false);
+    // Zod surfaces the charset rule as a pattern failure, not the producer's
+    // wording; the point is that the non-ASCII value is refused and NOT by the
+    // byte bound (it is well under 128 bytes).
+    expect(messages(nonAsciiResult)).not.toContain("identifier exceeds the 128-byte producer bound");
+    expect(messages(nonAsciiResult).join(" ")).toMatch(/must match pattern/i);
+  });
+
+
   it("rejects budgets above the producer's published ceilings", () => {
     const catalog = catalogFixture("synthetic");
     catalog.descriptors[0].effective_budgets.max_provider_calls = 10_001;
