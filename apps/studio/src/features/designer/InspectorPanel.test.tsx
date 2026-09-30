@@ -91,6 +91,72 @@ describe("InspectorPanel inference profile selection", () => {
     } as WorkflowNode;
   }
 
+  /** Builds a catalog that carries BOTH a profile this node kind may bind and
+   * the profile this node is already holding but must not be able to re-select.
+   * The refusal tests elsewhere run against a catalog where every decide
+   * descriptor is refused, which leaves `options.length === 0` and therefore
+   * renders the `<select>` disabled — so no change event can reach `select()`
+   * at all and the write-path guard is never exercised. Mixing a healthy
+   * descriptor into the negative catalog is what keeps the control enabled, so
+   * the guard is the only thing standing between an arbitrary string and
+   * `decision_profile_ref` / `planner_profile_ref`. */
+  function catalogWithSelectable(kind: "decide" | "adaptive_region"): InferenceProfileCatalog {
+    const base = reseal(catalogFixture("negative"));
+    // The negative fixture only publishes descriptors for `decide`, so a
+    // planner node would refuse them as `unsupported_node_kind` instead of the
+    // reason under test. Retarget a revoked and a selection-denied copy at the
+    // kind being exercised so each case refuses for its OWN reason.
+    for (const [profile_id, state] of [
+      ["retracted.synthetic.v1", "revoked"],
+      ["ungoable.synthetic.v1", "available"],
+    ] as const) {
+      const descriptor = structuredClone(base.descriptors.find((d) => d.profile_id === "revoked.synthetic.v1")!);
+      descriptor.profile_id = profile_id;
+      descriptor.node_kinds = [kind];
+      descriptor.state = state;
+      // A selection-denied profile must still be `available`: the owner
+      // publishes it, it just refuses this browser's permission to bind it.
+      // `revoked` would short-circuit to the `revoked` reason instead.
+      descriptor.grants = profile_id === "retracted.synthetic.v1"
+        ? { select: true, edit: true }
+        : { select: false, edit: false };
+      base.descriptors.push(descriptor);
+    }
+    const synthetic = reseal(catalogFixture("synthetic")).descriptors
+      .find((d) => d.node_kinds.includes(kind))!;
+    // The healthy descriptor stays selectable on a node declaring
+    // `context.synthetic.v1`: the decision descriptor admits exactly that
+    // context, and the planner descriptor is unconstrained.
+    const healthy = structuredClone(synthetic);
+    // A twin of the same node kind that the owner publishes but only for a
+    // DIFFERENT context, so binding it on a `context.synthetic.v1` node refuses
+    // as `context_incompatible` while the control stays enabled.
+    const foreignContext = structuredClone(synthetic);
+    foreignContext.profile_id = "foreignctx.synthetic.v1";
+    foreignContext.context_compatibility = ["context.other.v1"];
+    base.descriptors = [...base.descriptors, healthy, foreignContext];
+    return reseal(base);
+  }
+
+  /** Drives the `<select>`'s onChange with a value the DOM itself would never
+   * produce. `fireEvent.change(select, { target: { value } })` cannot do this:
+   * jsdom's `HTMLSelectElement.value` setter clamps an unlisted string back to
+   * the selected option, so the handler would be handed a DIFFERENT string
+   * than the one under test and the assertion would be vacuous. Overriding the
+   * value getter for the duration of the dispatch delivers the exact string,
+   * which is what a real browser (or a tampered client) would hand the
+   * handler. */
+  function fireUnlistedChange(select: HTMLSelectElement, unlisted: string): void {
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, "value");
+    Object.defineProperty(select, "value", { configurable: true, get: () => unlisted });
+    try {
+      fireEvent.change(select);
+    } finally {
+      if (descriptor) Object.defineProperty(select, "value", descriptor);
+      else delete (select as unknown as Record<string, unknown>).value;
+    }
+  }
+
   it("writes the exact pin when a designer selects an owner-published decision profile", () => {
     const catalog = catalogFixture();
     const decision = catalog.descriptors.find((d) => d.node_kinds.includes("decide"))!;
@@ -187,6 +253,148 @@ describe("InspectorPanel inference profile selection", () => {
     const fixture = catalogFixture();
     const fixturePin = `${fixture.descriptors[0].profile_id}:${fixture.descriptors[0].version}:${fixture.descriptors[0].digest}`;
     expect(screen.queryByText(new RegExp(fixturePin))).not.toBeInTheDocument();
+  });
+
+  it("refuses to commit an unlisted pin through the enabled decision and planner selects", () => {
+    // The write path, not the render path. Each node below is holding a value
+    // the owner refuses, in a catalog that ALSO publishes a healthy profile for
+    // that node kind, so the control is enabled and a change event genuinely
+    // reaches `select()`. Every case asserts that an arbitrary string — one
+    // present neither in the catalog nor in the current binding — is refused
+    // rather than written into the document.
+    const cases: {
+      field: "decision_profile_ref" | "planner_profile_ref";
+      kind: "decide" | "adaptive_region";
+      label: string;
+      fieldLabel: string;
+      rejection: string;
+      ref: string;
+      unlisted: string;
+    }[] = [];
+
+    const decideCatalog = catalogWithSelectable("decide");
+    const decideById = (id: string) => decideCatalog.descriptors.find((d) => d.profile_id === id)!;
+    const revoked = decideById("revoked.synthetic.v1");
+    const denied = decideById("denied.synthetic.v1");
+    const stale = decideById("stale.synthetic.v1");
+    const decideForeign = decideById("foreignctx.synthetic.v1");
+    cases.push(
+      // Unknown id: the owner never published this profile at all.
+      {
+        field: "decision_profile_ref", kind: "decide", label: "decide1 Decision profile", fieldLabel: "Decision profile",
+        rejection: "unknown_profile",
+        ref: "never.published.v9:1.0.0:" + "a".repeat(64),
+        unlisted: "also.never.published.v9:1.0.0:" + "c".repeat(64),
+      },
+      // Revoked, and selection-denied: published, but the owner says no.
+      {
+        field: "decision_profile_ref", kind: "decide", label: "decide1 Decision profile", fieldLabel: "Decision profile",
+        rejection: "revoked",
+        ref: `${revoked.profile_id}:${revoked.version}:${revoked.digest}`,
+        unlisted: "attacker.supplied.v1:1.0.0:" + "d".repeat(64),
+      },
+      {
+        field: "decision_profile_ref", kind: "decide", label: "decide1 Decision profile", fieldLabel: "Decision profile",
+        rejection: "selection_not_granted",
+        ref: `${denied.profile_id}:${denied.version}:${denied.digest}`,
+        unlisted: "smuggled.v1:2.0.0:" + "e".repeat(64),
+      },
+      // Wrong digest on a profile that IS otherwise publishable.
+      {
+        field: "decision_profile_ref", kind: "decide", label: "decide1 Decision profile", fieldLabel: "Decision profile",
+        rejection: "digest_mismatch",
+        ref: `${revoked.profile_id}:${revoked.version}:${"b".repeat(64)}`,
+        unlisted: "digest.laid.v1:1.0.0:" + "f".repeat(64),
+      },
+      // Stale revision.
+      {
+        field: "decision_profile_ref", kind: "decide", label: "decide1 Decision profile", fieldLabel: "Decision profile",
+        rejection: "stale",
+        ref: `${stale.profile_id}:${stale.version}:${stale.digest}`,
+        unlisted: "future.revision.v1:9.9.9:" + "1".repeat(64),
+      },
+      // Context-incompatible: published for this node kind, but not for the
+      // context this node carries. The healthy descriptor stays selectable, so
+      // the control is enabled here too.
+      {
+        field: "decision_profile_ref", kind: "decide", label: "decide1 Decision profile", fieldLabel: "Decision profile",
+        rejection: "context_incompatible",
+        ref: `${decideForeign.profile_id}:${decideForeign.version}:${decideForeign.digest}`,
+        unlisted: "wrong.context.v1:1.0.0:" + "2".repeat(64),
+      },
+    );
+
+    const plannerCatalog = catalogWithSelectable("adaptive_region");
+    const plannerById = (id: string) => plannerCatalog.descriptors.find((d) => d.profile_id === id)!;
+    const plannerRevoked = plannerById("retracted.synthetic.v1");
+    const plannerDenied = plannerById("ungoable.synthetic.v1");
+    const plannerForeign = plannerById("foreignctx.synthetic.v1");
+    cases.push(
+      {
+        field: "planner_profile_ref", kind: "adaptive_region", label: "region1 Planner profile", fieldLabel: "Planner profile",
+        rejection: "revoked",
+        ref: `${plannerRevoked.profile_id}:${plannerRevoked.version}:${plannerRevoked.digest}`,
+        unlisted: "planner.smuggle.v1:1.0.0:" + "3".repeat(64),
+      },
+      {
+        field: "planner_profile_ref", kind: "adaptive_region", label: "region1 Planner profile", fieldLabel: "Planner profile",
+        rejection: "selection_not_granted",
+        ref: `${plannerDenied.profile_id}:${plannerDenied.version}:${plannerDenied.digest}`,
+        unlisted: "planner.denied.v1:1.0.0:" + "5".repeat(64),
+      },
+      {
+        field: "planner_profile_ref", kind: "adaptive_region", label: "region1 Planner profile", fieldLabel: "Planner profile",
+        rejection: "context_incompatible",
+        ref: `${plannerForeign.profile_id}:${plannerForeign.version}:${plannerForeign.digest}`,
+        unlisted: "planner.otherctx.v1:1.0.0:" + "4".repeat(64),
+      },
+    );
+
+    for (const testCase of cases) {
+      // Every node declares the one context its healthy descriptor admits, so
+      // the control is enabled; the context-incompatible case needs that
+      // declaration in order to refuse for context rather than for want of one.
+      const contextRef = "context.synthetic.v1";
+      const node = pinNode(testCase.kind, {
+        context_ref: contextRef,
+        [testCase.field]: testCase.ref,
+      });
+      const catalog = testCase.kind === "decide" ? decideCatalog : plannerCatalog;
+      const view = renderInspector(node, { inferenceProfiles: catalog });
+
+      // Precondition: the value under test really is rendered as refused, and
+      // the control really is enabled — otherwise this case would pass for the
+      // wrong reason (a disabled control refuses everything).
+      const select = screen.getByLabelText(testCase.label) as HTMLSelectElement;
+      expect(select).toBeEnabled();
+      const refusal = screen.getByLabelText(`${testCase.fieldLabel} refusal`);
+      expect(refusal).toHaveAttribute("data-status", "refused");
+      expect(refusal).toHaveAttribute("data-rejection", testCase.rejection);
+      expect(Array.from(select.options).map((option) => option.value)).not.toContain(testCase.unlisted);
+
+      // The write path. A value in neither the catalog nor the binding.
+      fireUnlistedChange(select, testCase.unlisted);
+      expect(view.onUpdate).not.toHaveBeenCalled();
+      view.unmount();
+    }
+
+    // Positive control on the same harness: the healthy pin IS writable, so
+    // "not called" above cannot be an artifact of a control that never commits
+    // anything.
+    const healthyDecide = decideById("decision.synthetic.v1");
+    const decidePin = `${healthyDecide.profile_id}:${healthyDecide.version}:${healthyDecide.digest}`;
+    const controlNode = pinNode("decide", {
+      context_ref: "context.synthetic.v1",
+      decision_profile_ref: `never.published.v9:1.0.0:${"a".repeat(64)}`,
+    });
+    const control = renderInspector(controlNode, { inferenceProfiles: decideCatalog });
+    const controlSelect = screen.getByLabelText("decide1 Decision profile") as HTMLSelectElement;
+    expect(Array.from(controlSelect.options).map((option) => option.value)).toContain(decidePin);
+    fireEvent.change(controlSelect, { target: { value: decidePin } });
+    expect(control.onUpdate).toHaveBeenCalledTimes(1);
+    const apply = control.onUpdate.mock.calls[0][0] as (candidate: WorkflowNode) => WorkflowNode;
+    expect(apply(controlNode).config.decision_profile_ref).toBe(decidePin);
+    control.unmount();
   });
 
   it("reads back a pin whose profile_id contains a colon, the way the owner splits it", () => {
