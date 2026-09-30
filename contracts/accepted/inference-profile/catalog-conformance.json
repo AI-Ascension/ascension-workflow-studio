@@ -1,0 +1,337 @@
+{
+  "catalogs": [
+    {
+      "catalog": {
+        "catalog_digest": "4a6b39610f65de10f5e3434ac17a507d79830d99f408888e850f8cda0816b3f1",
+        "descriptors": [
+          {
+            "adapter": "synthetic.provider.v1",
+            "context_compatibility": [
+              "context.live.v1"
+            ],
+            "continuity": {
+              "provider_session_continuity": false,
+              "survives_controller_restart": false
+            },
+            "digest": "2436b2ccb2744b8d0a7b8d782866775a0f32fa52a50b342c7e6be607c69040fa",
+            "effective_budgets": {
+              "max_input_bytes": 131072,
+              "max_output_tokens": 4096,
+              "max_provider_calls": 64
+            },
+            "grants": {
+              "edit": false,
+              "select": true
+            },
+            "node_kinds": [
+              "decide"
+            ],
+            "operations": [
+              "decide"
+            ],
+            "profile_id": "decision.synthetic.v1",
+            "prompt_revision": "synthetic.prompt.v1",
+            "requested_model": "synthetic.model.v1",
+            "resolved_model": "synthetic.model.v1.observed",
+            "schema_version": "ascension.inference-profile/v1",
+            "settings_revision": "synthetic.settings.v1",
+            "state": "available",
+            "supported_settings": [
+              "max_provider_calls",
+              "max_output_tokens"
+            ],
+            "version": "1.0.0"
+          },
+          {
+            "adapter": "synthetic.provider.v1",
+            "context_compatibility": [],
+            "continuity": {
+              "provider_session_continuity": false,
+              "survives_controller_restart": false
+            },
+            "digest": "e78d9632e458bcb00dfaa5c540dbc8e1e84a0a53f36f6392d16f8d8c1a297520",
+            "effective_budgets": {
+              "max_input_bytes": 131072,
+              "max_output_tokens": 4096,
+              "max_provider_calls": 64
+            },
+            "grants": {
+              "edit": false,
+              "select": true
+            },
+            "node_kinds": [
+              "adaptive_region"
+            ],
+            "operations": [
+              "adaptive_region"
+            ],
+            "profile_id": "planner.synthetic.v1",
+            "prompt_revision": "synthetic.prompt.v1",
+            "requested_model": "synthetic.model.v1",
+            "resolved_model": "synthetic.model.v1.observed",
+            "schema_version": "ascension.inference-profile/v1",
+            "settings_revision": "synthetic.settings.v1",
+            "state": "available",
+            "supported_settings": [
+              "max_provider_calls",
+              "max_output_tokens"
+            ],
+            "version": "1.0.0"
+          }
+        ],
+        "owner_id": "synthetic.inference.owner",
+        "owner_version": "1.0.0",
+        "schema_version": "ascension.inference-profiles/v1"
+      },
+      "name": "baseline"
+    },
+    {
+      "catalog": {
+        "catalog_digest": "e8fc97935132d596f033eaf76b4926cd3efa26c5f2da4b6f7d1bee69cd7c7a67",
+        "descriptors": [
+          {
+            "adapter": "synthetic.provider.v1",
+            "context_compatibility": [
+              "context.live.v1"
+            ],
+            "continuity": {
+              "provider_session_continuity": false,
+              "survives_controller_restart": false
+            },
+            "digest": "f9e0ece9bce4b1772801fb708cfed589049ebcdd3638364ff14652865f3935ba",
+            "effective_budgets": {
+              "max_input_bytes": 131072,
+              "max_output_tokens": 4096,
+              "max_provider_calls": 64
+            },
+            "grants": {
+              "edit": true,
+              "select": true
+            },
+            "node_kinds": [
+              "decide"
+            ],
+            "operations": [
+              "decide"
+            ],
+            "profile_id": "decision.synthetic.v1",
+            "prompt_revision": "synthetic.prompt.v1",
+            "requested_model": "synthetic.model.v1",
+            "resolved_model": "synthetic.model.v1.observed",
+            "schema_version": "ascension.inference-profile/v1",
+            "settings_revision": "synthetic.settings.v1",
+            "state": "available",
+            "supported_settings": [
+              "max_provider_calls",
+              "max_output_tokens"
+            ],
+            "version": "1.0.0"
+          },
+          {
+            "adapter": "synthetic.provider.v1",
+            "context_compatibility": [],
+            "continuity": {
+              "provider_session_continuity": false,
+              "survives_controller_restart": false
+            },
+            "digest": "93addd6d583f3e1286b02d448877df9e8e202dd846f1b287fd8958aacf7d3cd1",
+            "effective_budgets": {
+              "max_input_bytes": 131072,
+              "max_output_tokens": 4096,
+              "max_provider_calls": 64
+            },
+            "grants": {
+              "edit": false,
+              "select": true
+            },
+            "node_kinds": [
+              "adaptive_region"
+            ],
+            "operations": [
+              "adaptive_region"
+            ],
+            "profile_id": "planner.synthetic.v1",
+            "prompt_revision": "synthetic.prompt.v1",
+            "requested_model": "synthetic.model.v1",
+            "resolved_model": null,
+            "schema_version": "ascension.inference-profile/v1",
+            "settings_revision": "synthetic.settings.v1",
+            "state": "available",
+            "supported_settings": [
+              "max_provider_calls",
+              "max_output_tokens"
+            ],
+            "version": "1.0.0"
+          }
+        ],
+        "owner_id": "synthetic.inference.owner",
+        "owner_version": "1.0.0",
+        "schema_version": "ascension.inference-profiles/v1"
+      },
+      "name": "editable"
+    },
+    {
+      "catalog": {
+        "catalog_digest": "830c1e67cefa9e922b09baad23f48bab094b3556fa0605b757b38af9f08ca47b",
+        "descriptors": [
+          {
+            "adapter": "synthetic.provider.v1",
+            "context_compatibility": [
+              "context.live.v1"
+            ],
+            "continuity": {
+              "provider_session_continuity": false,
+              "survives_controller_restart": false
+            },
+            "digest": "e39d746ad9422bb2933102c53a261a7bcd067c85a3f4a74b3152efee08b37538",
+            "effective_budgets": {
+              "max_input_bytes": 131072,
+              "max_output_tokens": 4096,
+              "max_provider_calls": 64
+            },
+            "grants": {
+              "edit": false,
+              "select": true
+            },
+            "node_kinds": [
+              "decide"
+            ],
+            "operations": [
+              "decide"
+            ],
+            "profile_id": "revoked.synthetic.v1",
+            "prompt_revision": "synthetic.prompt.v1",
+            "requested_model": "synthetic.model.v1",
+            "resolved_model": null,
+            "schema_version": "ascension.inference-profile/v1",
+            "settings_revision": "synthetic.settings.v1",
+            "state": "revoked",
+            "supported_settings": [
+              "max_provider_calls",
+              "max_output_tokens"
+            ],
+            "version": "1.0.0"
+          },
+          {
+            "adapter": "synthetic.provider.v1",
+            "context_compatibility": [
+              "context.live.v1"
+            ],
+            "continuity": {
+              "provider_session_continuity": false,
+              "survives_controller_restart": false
+            },
+            "digest": "c59484bd7ee6cc8593c81b91c723d00377f218197602885fd14d53c40d2b3d2f",
+            "effective_budgets": {
+              "max_input_bytes": 131072,
+              "max_output_tokens": 4096,
+              "max_provider_calls": 64
+            },
+            "grants": {
+              "edit": false,
+              "select": false
+            },
+            "node_kinds": [
+              "decide"
+            ],
+            "operations": [
+              "decide"
+            ],
+            "profile_id": "denied.synthetic.v1",
+            "prompt_revision": "synthetic.prompt.v1",
+            "requested_model": "synthetic.model.v1",
+            "resolved_model": null,
+            "schema_version": "ascension.inference-profile/v1",
+            "settings_revision": "synthetic.settings.v1",
+            "state": "available",
+            "supported_settings": [
+              "max_provider_calls",
+              "max_output_tokens"
+            ],
+            "version": "1.0.0"
+          },
+          {
+            "adapter": "synthetic.provider.v1",
+            "context_compatibility": [
+              "context.other.v1"
+            ],
+            "continuity": {
+              "provider_session_continuity": false,
+              "survives_controller_restart": false
+            },
+            "digest": "8703032214c49b862ef24221791793f1159eee06e33ae569040cd82163e82dd0",
+            "effective_budgets": {
+              "max_input_bytes": 131072,
+              "max_output_tokens": 4096,
+              "max_provider_calls": 64
+            },
+            "grants": {
+              "edit": false,
+              "select": true
+            },
+            "node_kinds": [
+              "decide"
+            ],
+            "operations": [
+              "decide"
+            ],
+            "profile_id": "otherctx.synthetic.v1",
+            "prompt_revision": "synthetic.prompt.v1",
+            "requested_model": "synthetic.model.v1",
+            "resolved_model": null,
+            "schema_version": "ascension.inference-profile/v1",
+            "settings_revision": "synthetic.settings.v1",
+            "state": "available",
+            "supported_settings": [
+              "max_provider_calls",
+              "max_output_tokens"
+            ],
+            "version": "1.0.0"
+          },
+          {
+            "adapter": "synthetic.provider.v1",
+            "context_compatibility": [
+              "context.live.v1"
+            ],
+            "continuity": {
+              "provider_session_continuity": false,
+              "survives_controller_restart": false
+            },
+            "digest": "96a300a0c3014deaf987d21b3d632c52db00778e3cf3a2a69f1eca4346ca6019",
+            "effective_budgets": {
+              "max_input_bytes": 131072,
+              "max_output_tokens": 4096,
+              "max_provider_calls": 64
+            },
+            "grants": {
+              "edit": false,
+              "select": true
+            },
+            "node_kinds": [
+              "decide"
+            ],
+            "operations": [
+              "decide"
+            ],
+            "profile_id": "stale.synthetic.v1",
+            "prompt_revision": "synthetic.prompt.v1",
+            "requested_model": "synthetic.model.v1",
+            "resolved_model": null,
+            "schema_version": "ascension.inference-profile/v1",
+            "settings_revision": "synthetic.settings.v1",
+            "state": "stale",
+            "supported_settings": [
+              "max_provider_calls",
+              "max_output_tokens"
+            ],
+            "version": "1.0.0"
+          }
+        ],
+        "owner_id": "synthetic.inference.owner",
+        "owner_version": "1.0.0",
+        "schema_version": "ascension.inference-profiles/v1"
+      },
+      "name": "negative"
+    }
+  ]
+}

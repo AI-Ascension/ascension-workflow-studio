@@ -13,6 +13,7 @@ import {
   ExportResponseSchema,
   HealthResponseSchema,
   InspectResponseSchema,
+  InferenceProfileCatalogSchema,
   ProviderSessionListSchema,
   ProviderSessionPolicyCommandResponseSchema,
   ProviderSessionPolicyViewResponseSchema,
@@ -42,6 +43,7 @@ import {
   type EventPage,
   type ExportResponse,
   type InspectResponse,
+  type InferenceProfileCatalog,
   type ProviderSessionList,
   type ProviderSessionPolicyCommandResponse,
   type ProviderSessionPolicyViewResponse,
@@ -181,6 +183,16 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
   public async listContextBindings(): Promise<ContextOwnerCatalog> {
     const response = await this.request("/context-bindings", { method: "GET" }, true);
     return decodeWith(ContextOwnerCatalogSchema, response, "context binding catalog");
+  }
+
+  /** Owner-resolved decision/planner profile catalog. Reading it is
+   * `workflow:read` and reaches no provider: only bounded, sealed metadata
+   * comes back, and an owner without a catalog reports unavailable rather than
+   * substituting one. Integrity here is not authentication — only this
+   * authenticated response carries authority. */
+  public async listInferenceProfiles(): Promise<InferenceProfileCatalog> {
+    const response = await this.request("/inference-profiles", { method: "GET" }, true);
+    return decodeWith(InferenceProfileCatalogSchema, response, "inference profile catalog");
   }
 
   public async contextOwnerAssociation(runId: string): Promise<ContextOwnerAssociation> {

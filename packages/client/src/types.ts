@@ -13,6 +13,7 @@ import type {
   EventPage,
   ExportResponse,
   InspectResponse,
+  InferenceProfileCatalog,
   JsonObject,
   ProviderSessionList,
   ProviderSessionPolicyCommandResponse,
@@ -68,6 +69,7 @@ export interface StudioClient {
   health(): Promise<{ status: string }>;
   capabilities(): Promise<CapabilityResponse>;
   listContextBindings(): Promise<ContextOwnerCatalog>;
+  listInferenceProfiles(): Promise<InferenceProfileCatalog>;
   contextOwnerAssociation(runId: string): Promise<ContextOwnerAssociation>;
   contextOwnerEffectiveLimits(runId: string): Promise<ContextOwnerEffectiveLimits>;
   lookupContextControlReceipt(runId: string, command: ContextControlCommand): Promise<ContextControlReceipt>;
