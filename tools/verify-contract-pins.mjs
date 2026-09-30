@@ -1,24 +1,9 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFileSync, realpathSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { existsSync, readFileSync, realpathSync } from 'node:fs';
+import { isAbsolute, normalize, relative, resolve, sep } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-
-const require = createRequire(import.meta.url);
-
-/** Loads the seal replica's declared field order from TypeScript source.
- * `require` is used rather than `await import` so this gate stays synchronous
- * and its callers (the CLI entry point and the node:test suite) need no change.
- * Node strips the type annotations natively; if that ever stops working the
- * gate fails loudly here instead of silently skipping the cross-check. */
-function replicaOrder(root) {
-  const modulePath = resolve(root, 'packages/contracts/src/inference-profile-catalog.test-fixtures.ts');
-  const order = require(modulePath).order;
-  assert(order && typeof order === 'object',
-    'Seal replica does not export its declared field order');
-  return order;
-}
 
 export function verifyEntries(root, entries) {
   assert(Array.isArray(entries) && entries.length > 0, 'Contract pin inventory must not be empty');
@@ -54,52 +39,86 @@ export function verifyContextCatalogPin(root, pin) {
   return count;
 }
 
-/** The inference-profile fixture was NOT sealed by running the producer. The
- * consumer holds a JavaScript replica of the seal
- * (`InferenceProfileDescriptor::seal` / `inference_catalog_digest`) that was
- * written by hand; no producer code is compiled, included or executed here.
+/**
+ * The inference-profile catalog fixture is sealed by the PRODUCER's own code.
  *
- * The pin therefore records the producer source revision the replica was
- * transcribed FROM, and — as data, not as prose — the declaration order of
- * `struct InferenceProfileDescriptor` at that revision. Because the fixture is
- * stored with alphabetically sorted keys, a replica that hashed the file's own
- * key order would compute a different digest and be refused. The gate
- * deep-equals the replica's order against these pinned arrays, which is what
- * makes "replica matches the owner's declared byte order" a checked fact
- * rather than an assertion in a comment. */
-export function verifyInferenceProfileCatalogPin(root, pin) {
+ * `tools/inference-profile-conformance-seal` links the producer crate itself
+ * (`sts2-harness`, at the sibling `harness/` checkout) as a path dependency and
+ * calls the owner's `seal()` and `inference_catalog_digest()` — the same
+ * technique `tools/provider-policy-production-fixture` already uses. No copy of
+ * the producer's code is stored in this repository, so there is no transcription
+ * to drift. This gate does three things a string comparison cannot:
+ *
+ *   1. the producer checkout in this working tree still hashes to the digests
+ *      pinned in the lock, so the linked source is the pinned revision and not
+ *      some later edit;
+ *   2. the generator binary exists (it is built by the live-owner CI job);
+ *   3. when the binary is runnable, its output must byte-match the checked-in
+ *      fixture. That is what makes `sealing_method: producer_crate_linked_seal`
+ *      a fact about the bytes instead of a label.
+ *
+ * Checks 1 and 3 need the sibling producer checkout, which only the
+ * `producer-seal` job materialises. Callers pass `requireProducerCheckout` to
+ * make their absence a failure instead of a warning; every other caller still
+ * verifies the lock's own invariants and the fixture digest.
+ */
+export function verifyInferenceProfileCatalogPin(root, pin, { requireProducerCheckout = false } = {}) {
   assert.equal(pin.repository, 'AI-Ascension/sts2-harness', 'Unknown catalog producer');
   assert(/^[a-f0-9]{40}$/.test(pin.revision), 'Invalid catalog producer revision');
   assert.equal(pin.producer_path, 'crates/harness/src/management/contract_inference_profile.rs');
   assert.equal(pin.evidence, 'synthetic_descriptor_validation_only');
-  assert.equal(pin.sealing_method, 'consumer_replica_seal_crosschecked_against_producer_declaration_order');
-  const declared = { descriptor: pin.descriptor_field_order, ...pin.nested_field_order };
-  for (const [group, keys] of Object.entries(declared)) {
-    assert(Array.isArray(keys) && keys.length > 0, `Missing pinned field order: ${group}`);
-    assert(new Set(keys).size === keys.length, `Duplicate field in pinned order: ${group}`);
-    for (const key of keys) {
-      assert(typeof key === 'string' && /^[a-z][a-z0-9_]*$/.test(key),
-        `Invalid pinned field name in ${group}: ${String(key)}`);
+  assert.equal(pin.sealing_method, 'producer_crate_linked_seal');
+
+  // 1. The linked producer checkout is the pinned revision, byte for byte.
+  const producerCrate = pin.producer_crate;
+  assert(producerCrate
+    && typeof producerCrate.checkout === 'string' && producerCrate.checkout.length > 0
+    && typeof producerCrate.path === 'string' && producerCrate.path.length > 0,
+  'The lock names no producer crate checkout');
+  // The crate is linked from inside its checkout, so the checkout is the root
+  // that the repo-relative `producer_path` entries below resolve against.
+  assert(producerCrate.path === `${producerCrate.checkout}/crates/harness`
+    || producerCrate.path.startsWith(`${producerCrate.checkout}/`),
+  `The linked producer crate (${producerCrate.path}) is not inside its checkout (${producerCrate.checkout})`);
+  const sources = pin.producer_sources;
+  assert(Array.isArray(sources) && sources.length >= 1, 'No producer sources pinned');
+  for (const entry of sources) {
+    assert(typeof entry.producer_path === 'string' && entry.producer_path.length > 0,
+      'A pinned producer source names no producer path');
+    assert(/^[a-f0-9]{64}$/.test(entry.sha256), `Invalid producer SHA-256: ${entry.producer_path}`);
+    // Containment is a property of the PINNED PATH, so it is checked here
+    // rather than only on the branch that has a producer checkout to hash.
+    // Otherwise a lock naming `../../../etc/passwd` would be accepted in any
+    // checkout without the sibling producer present, and the escape would only
+    // be caught on the machine that happens to have it. Reject the traversal
+    // and absolute paths up front, whatever the working tree contains.
+    assert(!isAbsolute(entry.producer_path)
+      && normalize(entry.producer_path) === entry.producer_path
+      && !entry.producer_path.split(/[\\/]/).includes('..'),
+    `Pinned producer path escapes the producer checkout: ${entry.producer_path}`);
+  }
+  if (existsSync(resolve(root, producerCrate.checkout))) {
+    const checkout = realpathSync(resolve(root, producerCrate.checkout));
+    for (const entry of sources) {
+      // The pinned path is resolved inside the checkout and re-checked, so a
+      // traversal attempt or a symlink cannot hash a file outside it.
+      const file = realpathSync(resolve(checkout, entry.producer_path));
+      const local = relative(checkout, file);
+      assert(local && local !== '..' && !local.startsWith(`..${sep}`) && !isAbsolute(local),
+        `Producer path escapes the pinned checkout: ${entry.producer_path}`);
+      const actual = createHash('sha256').update(readFileSync(file)).digest('hex');
+      assert.equal(actual, entry.sha256,
+        `Producer source drifted from ${pin.repository}@${pin.revision}: ` +
+        `${entry.producer_path} is not the sealed revision, so the linked seal would ` +
+        'not reproduce this fixture');
     }
+  } else {
+    const message = `[contract-pins] no ${producerCrate.checkout} checkout present; ` +
+      'linked-producer source digests were not checked this run';
+    if (requireProducerCheckout) throw new Error(message);
+    console.warn(message);
   }
-  assert.equal(declared.descriptor.length, 17, 'Descriptor order must cover all 17 declared fields');
-  // Cross-check the pinned order against the replica that actually computes the
-   // digests. This is the load-bearing assertion: without it the lock file and
-   // the replica could drift apart and the gate would still be green, because
-   // a lock file that merely restates itself proves nothing. The replica is
-   // imported from TypeScript source, so this compares the code that runs
-   // against the externally-sourced declaration order it claims to transcribe.
-  const replica = replicaOrder(root);
-  for (const [group, keys] of Object.entries(declared)) {
-    assert.deepEqual(replica[group], keys,
-      `Replica field order for ${group} does not match the pinned producer declaration order`);
-  }
-  // Both directions are required. A lock file that simply omitted a nested
-  // group would otherwise make the loop above iterate over fewer groups and
-  // pass, turning the gate green by checking less — so the pinned groups must
-  // be exactly the set the replica declares, no fewer and no more.
-  assert.deepEqual(Object.keys(declared).sort(), Object.keys(replica).sort(),
-    'Pinned field-order groups do not match the groups the seal replica declares');
+
   assert.equal(pin.consumed_artifacts?.length, 1, 'Exactly one catalog fixture is required');
   assert.equal(pin.consumed_artifacts[0].path, 'contracts/accepted/inference-profile/catalog-conformance.json');
   const count = verifyEntries(root, pin.consumed_artifacts);
@@ -113,23 +132,40 @@ export function verifyInferenceProfileCatalogPin(root, pin) {
     assert(typeof row.name === 'string' && row.name.length > 0, 'Unnamed catalog fixture row');
     assert.equal(row.catalog.schema_version, 'ascension.inference-profiles/v1');
     assert(row.catalog.descriptors.length > 0, `Catalog ${row.name} carries no descriptors`);
-    // Every field the pinned order names must actually be present on every
-    // descriptor, and the fixture must not carry fields the order omits: an
-    // order that silently skipped a field would still deep-equal the replica.
-    for (const descriptor of row.catalog.descriptors) {
-      assert.deepEqual(Object.keys(descriptor).sort(), [...declared.descriptor].sort(),
-        `Descriptor field set in catalog ${row.name} differs from the pinned producer order`);
-      for (const [group, keys] of Object.entries(pin.nested_field_order)) {
-        assert.deepEqual(Object.keys(descriptor[group]).sort(), [...keys].sort(),
-          `Nested ${group} field set in catalog ${row.name} differs from the pinned producer order`);
-      }
-    }
+  }
+
+  // 3. Re-seal with the producer and require the bytes to be reproduced. Skipped
+  // (not silently passed) when the binary has not been built in this checkout.
+  const binary = resolve(root, 'harness/target/release', pin.generator_binary);
+  if (existsSync(binary)) {
+    const regenerated = execFileSync(binary, {
+      cwd: root,
+      env: { ...process.env, STS2_HARNESS_PRODUCER_REVISION: pin.revision },
+      encoding: 'utf8',
+      maxBuffer: 8 * 1024 * 1024,
+    });
+    const expected = JSON.stringify(JSON.parse(regenerated));
+    const actual = JSON.stringify(fixture);
+    assert.equal(actual, expected,
+      'Checked-in conformance fixture does NOT match a fresh producer seal; the digests are not producer output');
+  } else {
+    const message = `[contract-pins] producer seal binary absent at ${binary}; byte-equality re-seal skipped this run`;
+    if (requireProducerCheckout) throw new Error(message);
+    console.warn(message);
   }
   return count;
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = fileURLToPath(new URL('../', import.meta.url));
+  /**
+   * `--require-producer-checkout` is the gate the `producer-seal` CI job runs.
+   * It turns the two warnings in verifyInferenceProfileCatalogPin into failures,
+   * so a job that forgets to check out the pinned producer, or fails to build
+   * the seal binary, cannot pass by silently skipping the only checks that make
+   * the seal claim meaningful.
+   */
+  const strict = process.argv.includes('--require-producer-checkout');
   const phase1 = JSON.parse(readFileSync(resolve(root, 'contracts/accepted/phase1-integration.lock.json')));
   const recordedRoot = resolve(root, 'contracts/recorded-run-candidate');
   const recorded = JSON.parse(readFileSync(resolve(recordedRoot, 'studio-pin.json')));
@@ -139,7 +175,9 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const contextCatalog = JSON.parse(readFileSync(resolve(root, 'contracts/context-control-catalog.lock.json')));
   const contextCatalogCount = verifyContextCatalogPin(root, contextCatalog);
   const inferenceCatalog = JSON.parse(readFileSync(resolve(root, 'contracts/inference-profile-catalog.lock.json')));
-  const inferenceCatalogCount = verifyInferenceProfileCatalogPin(root, inferenceCatalog);
+  const inferenceCatalogCount = verifyInferenceProfileCatalogPin(root, inferenceCatalog, {
+    requireProducerCheckout: strict,
+  });
   assert(recorded.checksums && typeof recorded.checksums === 'object', 'Missing recorded-run pins');
   const recordedCount = verifyEntries(recordedRoot,
     Object.entries(recorded.checksums).map(([path, sha256]) => ({ path, sha256 })));

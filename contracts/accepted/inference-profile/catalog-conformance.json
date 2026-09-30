@@ -415,7 +415,7 @@
   ],
   "evidence": "synthetic_descriptor_validation_only",
   "fixture_schema": "ascension.inference-profile.catalog-conformance.fixture.v1",
-  "method": "consumer_replica_seal_crosschecked_against_producer_declaration_order",
+  "method": "producer_crate_linked_seal",
   "producer": "AI-Ascension/sts2-harness",
   "producer_revision": "3ce3916ef61bd50670c024a087fe46562a067d27"
 }

@@ -95,6 +95,48 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  producer-seal:
+    name: Inference-profile producer seal
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24.16.0
+      - name: Read the producer revision this fixture was sealed against
+        id: producer
+        run: |
+          echo "revision=$(jq -r .revision contracts/inference-profile-catalog.lock.json)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: AI-Ascension/sts2-harness
+          ref: ${{ steps.producer.outputs.revision }}
+          path: harness
+          persist-credentials: false
+      - name: Confirm the pinned revision still ships the producer contract
+        working-directory: harness
+        run: |
+          test -f crates/harness/src/management/contract_inference_profile.rs
+      - name: Install the pinned owner's Rust toolchain
+        working-directory: harness
+        run: rustup show active-toolchain
+      - name: Build the seal against the pinned owner
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/harness/target
+          STS2_HARNESS_PRODUCER_REVISION: ${{ steps.producer.outputs.revision }}
+        run: |
+          cargo build --locked --release \
+            --manifest-path tools/inference-profile-conformance-seal/Cargo.toml
+          test -x harness/target/release/studio-inference-profile-conformance-seal
+      - name: Re-seal and require byte equality with the checked-in fixture
+        # The strict flag fails if the producer checkout is missing or the seal
+        # binary was not built, so this job cannot pass by skipping the only
+        # checks that make the provenance claim meaningful.
+        run: node tools/verify-contract-pins.mjs --require-producer-checkout
+
   live-owner-browser:
     name: Authenticated live-owner browser
     runs-on: ubuntu-latest

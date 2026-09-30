@@ -14,3 +14,8 @@ __pycache__/
 !.env.example
 *.local
 .DS_Store
+
+# Sibling producer/consumer checkouts created by .github/workflows/validate.yml
+harness/
+gateway/
+mcp/
