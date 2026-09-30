@@ -227,6 +227,41 @@ describe("producer conformance — the mirror matches the owner's bytes", () => 
     }
   });
 
+  it("rejects a zero budget, the producer's other half of the bound", () => {
+    // `validate_budgets` at the pinned producer revision refuses TWO conditions
+    // per field: `== 0` and `> CONSTANT`. The ceiling half is covered above; this
+    // covers the `== 0` half, which `.positive()` implements and which nothing
+    // else exercised. Measured: deleting `.positive()` from all three fields
+    // leaves this suite green, so the lower bound was previously unprotected.
+    //
+    // RESEALED for the same reason as the ceiling test: without it the stale
+    // digest refuses the descriptor first and the test would pass for the wrong
+    // reason. Zod reports the lower bound as "Too small: expected number to be
+    // >0", so that message is asserted rather than the field name.
+    const fields: Array<keyof InferenceProfileDescriptor["effective_budgets"]> = [
+      "max_input_bytes",
+      "max_output_tokens",
+      "max_provider_calls",
+    ];
+    for (const field of fields) {
+      const catalog = catalogFixture("synthetic");
+      catalog.descriptors[0].effective_budgets[field] = 0;
+      const resealed = reseal(catalog);
+      const parsed = InferenceProfileDescriptorSchema.safeParse(resealed.descriptors[0]);
+      expect(parsed.success, `${field} of 0 was admitted`).toBe(false);
+      expect(messages(parsed).join("|")).toContain("expected number to be >0");
+      // A self-consistent digest must NOT be enough to admit it.
+      expect(messages(parsed)).not.toContain("Descriptor digest mismatch");
+    }
+    // Positive control: the shipped fixtures carry a strictly positive budget in
+    // every field, so the lower bound is load-bearing rather than an inequality
+    // nothing could satisfy.
+    const admitted = catalogNamed("synthetic").descriptors[0];
+    for (const field of fields) {
+      expect(admitted.effective_budgets[field]).toBeGreaterThan(0);
+    }
+  });
+
   it("rejects a duplicated list entry the producer would call a duplicate", () => {
     const catalog = catalogFixture("synthetic");
     catalog.descriptors[0].node_kinds = ["decide", "decide"];
@@ -287,8 +322,12 @@ describe("resolution — exact identities, requested never merged into resolved"
 });
 
 describe("refusals — each reason is distinguished and leaks no usable identity", () => {
-  // Each row is a re-sealed descriptor whose only difference is the
-  // property under test, so a passing row cannot be passing by accident.
+  // Each row is a sealed descriptor SHIPPED in the pinned `negative` fixture,
+  // read straight out of it. Nothing here is re-derived by this test: the
+  // digests were produced by the owner at the pinned producer revision and are
+  // covered by `tools/verify-contract-pins.mjs`, which now re-seals them by
+  // executing the producer. So a row is only distinct if the shipped fixture
+  // says it is, and that is the point being asserted.
   const cases: Array<[string, string, InferenceProfileRejection]> = [
     ["revoked.synthetic.v1", "context.synthetic.v1", "revoked"],
     ["disabled.synthetic.v1", "context.synthetic.v1", "disabled"],
