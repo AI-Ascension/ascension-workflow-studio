@@ -4,9 +4,13 @@ import {
   JsonObjectSchema,
   type ContextBinding,
   type DefinitionRecord,
+  type InferenceProfileCatalog,
+  type InferenceProfileRejection,
   type JsonObject,
   type JsonValue,
   type WorkflowNode,
+  inferenceProfilesForNodeKind,
+  resolveInferenceProfile,
 } from "@studio/contracts";
 import {
   OWNER_NODE_KINDS,
@@ -38,6 +42,9 @@ interface InspectorPanelProps {
   document: SemanticDocument;
   catalog: DefinitionRecord[];
   contextBindings?: ContextBinding[];
+  /** The owner catalog. Absent or non-available means NOTHING is selectable;
+   * no fixture is substituted here. */
+  inferenceProfiles?: InferenceProfileCatalog;
   selected: SelectedNode | undefined;
   selectedConfigText: string;
   onUpdate: (update: (node: WorkflowNode) => WorkflowNode) => void;
@@ -45,7 +52,7 @@ interface InspectorPanelProps {
   onNavigateGraph: (graphId: string) => void;
 }
 
-export function InspectorPanel({ document, catalog, contextBindings, selected, selectedConfigText, onUpdate, onRemove, onNavigateGraph }: InspectorPanelProps): JSX.Element {
+export function InspectorPanel({ document, catalog, contextBindings, inferenceProfiles, selected, selectedConfigText, onUpdate, onRemove, onNavigateGraph }: InspectorPanelProps): JSX.Element {
   const [configText, setConfigText] = useState(selectedConfigText);
   const [configError, setConfigError] = useState<string | undefined>();
   const [pendingKind, setPendingKind] = useState<string | undefined>();
@@ -100,7 +107,7 @@ export function InspectorPanel({ document, catalog, contextBindings, selected, s
     {selected.node.kind === "loop" ? <LoopBodyGraphNavigation document={document} node={selected.node} onNavigateGraph={onNavigateGraph} /> : null}
     {selected.node.kind === "subworkflow" ? <SubworkflowReference node={selected.node} catalog={catalog} disabled={locked} onUpdate={onUpdate} /> : null}
     {locked ? <p className="muted" role="note">Authored region bounds are editable. The generated plan, allowed operations and runtime execution stay read-only and are never applied to an active run.</p> : null}
-    <TypedConfigFields document={document} graphId={selected.graphId} node={selected.node} disabled={false} contextBindings={contextBindings} onUpdate={onUpdate} />
+    <TypedConfigFields document={document} graphId={selected.graphId} node={selected.node} disabled={false} contextBindings={contextBindings} inferenceProfiles={inferenceProfiles} onUpdate={onUpdate} />
     <label className="field-label">Configuration <span className="muted">JSON object</span>
       <textarea value={configText} disabled={locked || Boolean(pendingNode)} rows={12} onChange={(event) => { setConfigText(event.target.value); setConfigError(undefined); }} onBlur={() => {
         try {
@@ -128,19 +135,26 @@ interface TypedConfigFieldsProps {
   node: WorkflowNode;
   disabled: boolean;
   contextBindings?: ContextBinding[];
+  inferenceProfiles?: InferenceProfileCatalog;
   onUpdate: (update: (node: WorkflowNode) => WorkflowNode) => void;
 }
 
-function TypedConfigFields({ document, graphId, node, disabled, contextBindings, onUpdate }: TypedConfigFieldsProps): JSX.Element {
+function TypedConfigFields({ document, graphId, node, disabled, contextBindings, inferenceProfiles, onUpdate }: TypedConfigFieldsProps): JSX.Element {
   const fields = typedFieldsByKind[node.kind] ?? [];
   const contextOptions = contextBindings?.filter((binding) => binding.node_kinds.includes(node.kind as "analyze" | "decide")).map((binding) => binding.context_ref) ?? [];
+  // The node's own `context_ref`, when it declares one, is what the owner
+  // admits context compatibility against. Passing it makes a
+  // context-incompatible profile refuse here instead of at run admission.
+  const contextRef = typeof node.config.context_ref === "string" ? node.config.context_ref : undefined;
   const operationOptions = [...new Set(document.graphs.flatMap((graph) => graph.nodes.flatMap((candidate) => {
     const allowed = candidate.kind === "adaptive_region" ? candidate.config.allowed_operations : undefined;
     return Array.isArray(allowed) ? allowed.filter((value): value is string => typeof value === "string") : [];
   })) )];
   return <div className="typed-config-fields" aria-label="Typed node fields">
     <p className="eyebrow">Typed fields</p>
-    {fields.map((field) => <TypedConfigField key={field.key} node={node} field={field} disabled={disabled} onUpdate={onUpdate} />)}
+    {fields.map((field) => field.profileField
+      ? <InferenceProfileSelectField key={field.key} node={node} fieldKey={field.key} label={field.label} catalog={inferenceProfiles} contextRef={contextRef} disabled={disabled} onUpdate={onUpdate} />
+      : <TypedConfigField key={field.key} node={node} field={field} disabled={disabled} onUpdate={onUpdate} />)}
     {node.kind === "analyze" ? <ReferenceSelectField node={node} fieldKey="context_ref" label="Analysis context" options={contextOptions} disabled={disabled} onUpdate={onUpdate} /> : null}
     {node.kind === "decide" ? <ReferenceSelectField node={node} fieldKey="context_ref" label="Decision context" options={contextOptions} disabled={disabled} onUpdate={onUpdate} /> : null}
     {node.kind === "adaptive_region" ? <AllowedOperationsField node={node} options={operationOptions} disabled={disabled} onUpdate={onUpdate} /> : null}
@@ -157,6 +171,9 @@ interface TypedConfigFieldDefinition {
   type: "text" | "number";
   min?: number;
   max?: number;
+  /** Renders a capability-aware owner-catalog select and an exact
+   * `id:version:digest` pin instead of free text. */
+  profileField?: boolean;
 }
 
 function TypedConfigField({ node, field, disabled, onUpdate }: { node: WorkflowNode; field: TypedConfigFieldDefinition; disabled: boolean; onUpdate: TypedConfigFieldsProps["onUpdate"] }): JSX.Element {
@@ -195,13 +212,13 @@ function TypedConfigSelectField({ node, fieldKey, label, options, disabled, onUp
 const typedFieldsByKind: Record<string, TypedConfigFieldDefinition[]> = {
   observe: [{ key: "projection_ref", label: "Projection reference", type: "text" }],
   await_stability: [{ key: "deadline_ms", label: "Stability deadline (ms)", type: "number", min: 1, max: 3600000 }],
-  decide: [{ key: "decision_profile_ref", label: "Decision profile", type: "text" }],
+  decide: [{ key: "decision_profile_ref", label: "Decision profile", type: "text", profileField: true }],
   analyze: [{ key: "operation_ref", label: "Analysis operation", type: "text" }],
   execute_action: [],
   route: [{ key: "selector_ref", label: "Selector reference", type: "text" }],
   loop: [{ key: "body_graph", label: "Body graph", type: "text" }, { key: "max_iterations", label: "Maximum iterations", type: "number", min: 1 }, { key: "exit_guard_ref", label: "Exit guard", type: "text" }],
   subworkflow: [],
-  adaptive_region: [{ key: "region_id", label: "Protected region", type: "text" }, { key: "planner_profile_ref", label: "Planner profile", type: "text" }, { key: "max_plan_nodes", label: "Maximum plan nodes", type: "number", min: 1, max: 32 }, { key: "max_plan_edges", label: "Maximum plan edges", type: "number", min: 0, max: 128 }, { key: "max_replans", label: "Maximum replans", type: "number", min: 0, max: 8 }],
+  adaptive_region: [{ key: "region_id", label: "Protected region", type: "text" }, { key: "planner_profile_ref", label: "Planner profile", type: "text", profileField: true }, { key: "max_plan_nodes", label: "Maximum plan nodes", type: "number", min: 1, max: 32 }, { key: "max_plan_edges", label: "Maximum plan edges", type: "number", min: 0, max: 128 }, { key: "max_replans", label: "Maximum replans", type: "number", min: 0, max: 8 }],
   checkpoint: [{ key: "label", label: "Checkpoint label", type: "text" }],
   emit_artifact: [{ key: "artifact_kind_ref", label: "Artifact kind", type: "text" }],
   pause: [{ key: "reason_code", label: "Pause reason", type: "text" }],
@@ -220,6 +237,124 @@ function ReferenceSelectField({ node, fieldKey, label, options, disabled, onUpda
     </select>
     {!options.length ? <span className="field-unknown">The owner did not disclose compatible context references; use JSON mode for a deliberate candidate.</span> : null}
   </label>;
+}
+/** Producer `InferenceProfileRef` exact-pin format: the ref is
+ * `profile_id:major.minor.patch:<sha256>` and the producer splits it with
+ * `rsplitn(3, ':')`, so the pin is written here in exactly that shape. The
+ * resolver is exact-pin only, which is what keeps a floating id — which the
+ * producer refuses when several available revisions match — from ever being
+ * written by this surface. */
+function inferenceProfilePin(profileId: string, version: string, digest: string): string {
+  return `${profileId}:${version}:${digest}`;
+}
+
+/** Operator-facing wording for each refusal the owner can publish. The reason
+ * code is kept verbatim next to the sentence so a designer can report exactly
+ * what the owner said rather than a paraphrase that merges two different
+ * problems. */
+const inferenceProfileRejectionText: Record<InferenceProfileRejection, string> = {
+  unknown_profile: "the owner has not published this profile",
+  digest_mismatch: "the pinned digest does not match the published descriptor",
+  revoked: "the owner revoked this profile",
+  disabled: "the owner disabled this profile",
+  stale: "this revision is stale",
+  unsupported: "the owner does not support this profile here",
+  unsupported_node_kind: "the owner does not serve this profile for this node kind",
+  selection_not_granted: "the owner did not grant this browser permission to bind it",
+  context_incompatible: "the owner does not admit this profile for this node's context",
+  catalog_untrusted: "the owner catalog is not trusted; no profile can be selected",
+};
+
+function InferenceProfileSelectField({ node, fieldKey, label, catalog, contextRef, disabled, onUpdate }: {
+  node: WorkflowNode; fieldKey: string; label: string;
+  catalog: InferenceProfileCatalog | undefined; contextRef: string | undefined;
+  disabled: boolean; onUpdate: TypedConfigFieldsProps["onUpdate"];
+}): JSX.Element {
+  // Capability-aware options: only descriptors the owner marks available AND
+  // selectable for THIS node kind. A profile the browser may not bind is never
+  // offered.
+  const { selectable, uneditable } = inferenceProfilesForNodeKind(catalog, node.kind);
+  const options = selectable
+    .filter((descriptor) => contextRef === undefined || descriptor.context_compatibility.length === 0
+      || descriptor.context_compatibility.includes(contextRef))
+    .map((descriptor) => ({ value: inferenceProfilePin(descriptor.profile_id, descriptor.version, descriptor.digest), descriptor }));
+  const currentRaw = node.config[fieldKey];
+  const current = typeof currentRaw === "string" ? currentRaw : undefined;
+  // A CURRENT binding is resolved through the owner's own resolver, so a
+  // profile that has since been revoked, disabled, gone stale, had its digest
+  // change, lost its selection grant, or become context-incompatible surfaces
+  // as an explicit refusal. It is never silently dropped and never silently
+  // replaced with a different profile.
+  const selection = current === undefined ? undefined : parseInferenceProfileSelection(current);
+  const resolution = selection === undefined ? undefined
+    : resolveInferenceProfile(catalog, selection, node.kind, contextRef);
+  const refused = resolution !== undefined && !resolution.ok;
+  const rejection = resolution !== undefined && !resolution.ok ? resolution.rejection : undefined;
+  const values = [...new Set([...(current ? [current] : []), ...options.map((option) => option.value)])];
+  const select = (next: string): void => {
+    // Only a value the owner published for this node kind may be written, and
+    // only as its exact pin. Anything else — including the currently-refused
+    // value — is refused here rather than committed to the document.
+    const chosen = options.find((option) => option.value === next);
+    if (!chosen) return;
+    onUpdate((candidate) => ({ ...candidate, config: { ...candidate.config, [fieldKey]: next } }));
+  };
+  return <div className="binding-field" aria-label={`${node.id} ${label} field`}>
+    <p className="field-label">{label}<span className="muted">owner inference profile · exact pin</span></p>
+    <select aria-label={`${node.id} ${label}`} value={current ?? ""} disabled={disabled || options.length === 0} onChange={(event) => select(event.target.value)}>
+      {!current ? <option value="">Select an owner-published profile</option> : null}
+      {values.map((value) => {
+        const option = options.find((candidate) => candidate.value === value);
+        return <option key={value} value={value} disabled={!option}>{value}{option ? "" : refused ? " (refused)" : " (current, not selectable)"}</option>;
+      })}
+    </select>
+    {!catalog ? <span className="field-unknown">The owner profile catalog is unavailable, so no profile can be selected. Use JSON mode for a deliberate candidate.</span> : null}
+    {catalog && options.length === 0 ? <span className="field-unknown">The owner published no selectable {label.toLowerCase()} for this node kind. Use JSON mode for a deliberate candidate.</span> : null}
+    {refused && rejection ? <div className="reference-resolution" aria-label={`${label} refusal`} data-status="refused" data-rejection={rejection}>
+      <StatusBadge tone="danger">refused</StatusBadge>
+      <span>{rejection}: {inferenceProfileRejectionText[rejection]}</span>
+    </div> : null}
+    {resolution?.ok ? <div className="reference-resolution" aria-label={`${label} resolution`} data-status="resolved">
+      <StatusBadge tone="success">resolved</StatusBadge>
+      <dl>
+        {/* Requested and resolved are reported separately and are never
+            merged: `resolved_model` is null until the owner has actually
+            observed an effective model, and must not be inferred. */}
+        <dt>Adapter</dt><dd>{resolution.adapter}</dd>
+        <dt>Requested model</dt><dd>{resolution.requested_model}</dd>
+        <dt>Resolved model</dt><dd>{resolution.resolved_model ?? "not yet observed by the owner"}</dd>
+        <dt>Prompt revision</dt><dd>{resolution.prompt_revision}</dd>
+        <dt>Settings revision</dt><dd>{resolution.settings_revision}</dd>
+        <dt>Continuity</dt><dd>provider session {resolution.continuity?.provider_session_continuity ? "continuous" : "not continuous"} · survives controller restart {resolution.continuity?.survives_controller_restart ? "yes" : "no"}</dd>
+        <dt>Effective budget · input bytes</dt><dd>{resolution.effective_budgets?.max_input_bytes}</dd>
+        <dt>Effective budget · output tokens</dt><dd>{resolution.effective_budgets?.max_output_tokens}</dd>
+        <dt>Effective budget · provider calls</dt><dd>{resolution.effective_budgets?.max_provider_calls}</dd>
+      </dl>
+      <p className="muted">Owner-published operations for this profile are fixed and cannot be widened from this view: {(resolution.operations ?? []).join(", ") || "none"}.</p>
+    </div> : null}
+    {uneditable.length ? <p className="muted" role="note">{uneditable.length} profile{uneditable.length === 1 ? "" : "s"} the owner published for this node kind {uneditable.length === 1 ? "is" : "are"} not selectable ({uneditable.map((descriptor) => `${descriptor.profile_id}:${descriptor.state}${descriptor.grants.select ? "" : "/selection denied"}`).join(", ")}). A previously bound profile that becomes unselectable is reported as a refusal above.</p> : null}
+  </div>;
+}
+
+/** Parses the exact-pin reference format back into a selection so the owner's
+ * resolver can judge it. Returns undefined for a floating id or any malformed
+ * value, which the field then treats as "no selectable binding" rather than
+ * guessing a revision for the designer. */
+function parseInferenceProfileSelection(reference: string): { profile_id: string; version: string; digest: string } | undefined {
+  // Split from the RIGHT, exactly as the producer's `rsplitn(3, ':')` does.
+  // A `profile_id` may itself contain `:` — `RegistryId` accepts `.`, `_`, `:`,
+  // `-` after an alphanumeric first byte — so a left-to-right `split(":")`
+  // that insists on exactly three parts rejects a pin the producer accepts,
+  // and the field then silently reports "no selectable binding" for a profile
+  // the owner really published. The head keeps every remaining colon.
+  const parts = reference.split(":");
+  if (parts.length < 3) return undefined;
+  const digest = parts[parts.length - 1];
+  const version = parts[parts.length - 2];
+  const profileId = parts.slice(0, parts.length - 2).join(":");
+  if (!profileId || !/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(version)) return undefined;
+  if (!/^[a-f0-9]{64}$/.test(digest)) return undefined;
+  return { profile_id: profileId, version, digest };
 }
 function AllowedOperationsField({ node, options, disabled, onUpdate }: { node: WorkflowNode; options: string[]; disabled: boolean; onUpdate: TypedConfigFieldsProps["onUpdate"] }): JSX.Element {
   const raw = node.config.allowed_operations;
