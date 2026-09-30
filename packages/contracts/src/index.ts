@@ -428,6 +428,7 @@ export function contextBindingsFromCapabilities(value: JsonValue): ContextBindin
 }
 
 export * from "./context-owner-catalog";
+export * from "./inference-profile-catalog";
 
 export const ValidateResponseSchema = z.object({
   schema_version: z.string(),

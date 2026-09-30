@@ -1,11 +1,14 @@
 import {
   ContextOwnerCatalogSchema,
+  InferenceProfileCatalogSchema,
   TargetCatalogResponseSchema,
   type ContextOwnerCatalog,
+  type InferenceProfileCatalog,
   type TargetCatalogResponse,
 } from "@studio/contracts";
 
 import contextCatalogFixture from "../../../contracts/accepted/context-control/catalog-conformance.json" with { type: "json" };
+import inferenceCatalogFixture from "../../../contracts/accepted/inference-profile/catalog-conformance.json" with { type: "json" };
 
 const FIXTURE_TARGET_CAPABILITIES = [
   "studio.fixture.v1",
@@ -62,4 +65,10 @@ export function fixtureTargetCatalog(): TargetCatalogResponse {
 
 export async function fixtureContextOwnerCatalog(): Promise<ContextOwnerCatalog> {
   return ContextOwnerCatalogSchema.parse(contextCatalogFixture.catalogs.find((row) => row.name === "default")?.catalog);
+}
+
+export async function fixtureInferenceProfileCatalog(): Promise<InferenceProfileCatalog> {
+  return InferenceProfileCatalogSchema.parse(
+    inferenceCatalogFixture.catalogs.find((row) => row.name === "baseline")?.catalog,
+  );
 }

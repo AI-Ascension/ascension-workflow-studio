@@ -34,7 +34,7 @@ export type {
 } from "./types";
 export { normalizeRelativeBase } from "./transport";
 export { validateTargetAdmissionBinding, validateTargetConfiguration } from "./targets";
-export { fixtureTargetCatalog, fixtureContextOwnerCatalog } from "./fixture-catalogs";
+export { fixtureTargetCatalog, fixtureContextOwnerCatalog, fixtureInferenceProfileCatalog } from "./fixture-catalogs";
 export { createProjection, applyEventPage, parseSseDataChunk, buildSafeCommand } from "./projection";
 export { ContextServiceClient } from "./context-service";
 export { OwnerApiClient } from "./owner-api";

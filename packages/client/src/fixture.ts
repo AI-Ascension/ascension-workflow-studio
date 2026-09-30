@@ -19,6 +19,7 @@ import {
   type ContextOwnerCatalog,
   type ContextOwnerEffectiveLimits,
   type DefinitionRecord,
+  type InferenceProfileCatalog,
   type DraftRecord,
   type EventPage,
   type ExportResponse,
@@ -48,7 +49,7 @@ import {
   validateNodeBindings,
 } from "@studio/document";
 import { CapabilityGateError, ClientError } from "./errors";
-import { fixtureContextOwnerCatalog, fixtureTargetCatalog } from "./fixture-catalogs";
+import { fixtureContextOwnerCatalog, fixtureInferenceProfileCatalog, fixtureTargetCatalog } from "./fixture-catalogs";
 import { buildSafeCommand } from "./projection";
 import {
   TARGET_CONFIGURATION_FIELDS,
@@ -194,6 +195,10 @@ export class FixtureClient implements StudioClient {
 
   public async listContextBindings(): Promise<ContextOwnerCatalog> {
     return fixtureContextOwnerCatalog();
+  }
+
+  public async listInferenceProfiles(): Promise<InferenceProfileCatalog> {
+    return fixtureInferenceProfileCatalog();
   }
 
   public async contextOwnerAssociation(_runId: string): Promise<ContextOwnerAssociation> {
