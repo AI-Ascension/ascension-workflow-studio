@@ -4,12 +4,13 @@ import { z } from "zod";
 
 import memorySchema from "../../../contracts/accepted/effective-limits/context-memory-capabilities.schema.json" with { type: "json" };
 import sessionSchema from "../../../contracts/accepted/effective-limits/provider-session-capabilities.schema.json" with { type: "json" };
+import sessionV3Schema from "../../../contracts/accepted/effective-limits/provider-session-capabilities-v3.schema.json" with { type: "json" };
 import pins from "../../../contracts/effective-limits.lock.json" with { type: "json" };
-import type { MemoryCapabilitiesV3, ProviderSessionCapabilitiesV1, ProviderSessionCapabilitiesV3 } from "./effective-limit-types";
-import { validateMemoryV3, validateSessionV3, validateSessionV1 } from "./effective-limit-validators.js";
+import type { MemoryCapabilitiesV3, ProviderSessionCapabilitiesV1, ProviderSessionCapabilitiesV3, ProviderSessionCapabilitiesV4 } from "./effective-limit-types";
+import { validateMemoryV3, validateSessionV4, validateSessionV3, validateSessionV1 } from "./effective-limit-validators.js";
 
-export type { MemoryCapabilitiesV3, ProviderSessionCapabilitiesV1, ProviderSessionCapabilitiesV3 };
-type V3 = MemoryCapabilitiesV3 | ProviderSessionCapabilitiesV3;
+export type { MemoryCapabilitiesV3, ProviderSessionCapabilitiesV1, ProviderSessionCapabilitiesV3, ProviderSessionCapabilitiesV4 };
+type V3 = MemoryCapabilitiesV3 | ProviderSessionCapabilitiesV3 | ProviderSessionCapabilitiesV4;
 
 /** Preserve the existing legacy memory projection. It conveys no executable limits.
  * Some served v1 owners omit advisory fields, so keep their established reader. */
@@ -30,12 +31,14 @@ export const MemoryCapabilitiesV1Schema = z.object({
 }).passthrough();
 
 export const MemoryCapabilitiesV3Schema = z.custom<MemoryCapabilitiesV3>((value) => validateMemoryV3(value));
+export const ProviderSessionCapabilitiesV4Schema = z.custom<ProviderSessionCapabilitiesV4>((value) => validateSessionV4(value));
 export const ProviderSessionCapabilitiesV3Schema = z.custom<ProviderSessionCapabilitiesV3>((value) => validateSessionV3(value));
 export const MemoryCapabilitiesSchema = z.union([MemoryCapabilitiesV1Schema, MemoryCapabilitiesV3Schema]);
 export type MemoryCapabilities = z.infer<typeof MemoryCapabilitiesSchema>;
 export const ProviderSessionCapabilitiesSchema = z.union([
   z.custom<ProviderSessionCapabilitiesV1>((value) => validateSessionV1(value)),
   ProviderSessionCapabilitiesV3Schema,
+  ProviderSessionCapabilitiesV4Schema,
 ]);
 export type ProviderSessionCapabilities = z.infer<typeof ProviderSessionCapabilitiesSchema>;
 export type EffectiveCapabilities = MemoryCapabilities | ProviderSessionCapabilities;
@@ -63,8 +66,14 @@ function hash(value: string): string { return bytesToHex(sha256(new TextEncoder(
 function isMemory(value: V3): value is MemoryCapabilitiesV3 {
   return value.schema === "ascension.context-memory.capabilities.v3";
 }
-function policyDigest(surface: string): string | undefined {
-  return pins.consumed_artifacts.find((entry) => entry.path.endsWith(`/${surface}-policy.schema.json`))?.sha256;
+function policyDigest(surface: string, schema?: string): string | undefined {
+  // A pre-cut-over descriptor pins the policy bytes that were current when it was
+  // issued. Resolving every provider-session descriptor against the newest policy
+  // digest would report an honest, still-valid v3 peer as descriptor_stale, which
+  // is a fail-closed read on a peer that has not cut over yet. Select the policy
+  // artifact that belongs to the descriptor's own schema generation instead.
+  const generation = schema === "ascension.provider-session.capabilities.v3" ? "-v3" : "";
+  return pins.consumed_artifacts.find((entry) => entry.path.endsWith(`/${surface}-policy${generation}.schema.json`))?.sha256;
 }
 
 /** Structural parsing alone never authenticates executable capacity. The caller
@@ -73,14 +82,22 @@ export function effectiveLimit(capabilities: EffectiveCapabilities, field: strin
   if (capabilities.schema.endsWith(".v1")) return { state: "unavailable", reason: "field_not_advertised" };
   const candidate = capabilities as V3;
   const memory = isMemory(candidate);
-  const valid = (memory ? MemoryCapabilitiesV3Schema : ProviderSessionCapabilitiesV3Schema).safeParse(candidate);
+  const sessionSchemaFor = candidate.schema === "ascension.provider-session.capabilities.v3"
+    ? ProviderSessionCapabilitiesV3Schema : ProviderSessionCapabilitiesV4Schema;
+  const valid = (memory ? MemoryCapabilitiesV3Schema : sessionSchemaFor).safeParse(candidate);
   if (!valid.success) return { state: "unavailable", reason: "descriptor_tampered" };
   const binding = candidate.binding;
-  if (binding.policy_schema_sha256 !== policyDigest(memory ? "context-memory" : "provider-session")) {
+  if (binding.policy_schema_sha256 !== policyDigest(memory ? "context-memory" : "provider-session", candidate.schema)) {
     return { state: "unavailable", reason: "descriptor_stale" };
   }
+  // The digest is the producer's serde struct order, so it must be canonicalised
+  // against the very schema generation the descriptor was issued under. Reordering
+  // the v3 `evidence` slot into the v4 layout would rename a field in the hashed
+  // bytes and report an untouched pre-cut-over descriptor as tampered.
+  const digestShape = memory ? memorySchema
+    : candidate.schema === "ascension.provider-session.capabilities.v3" ? sessionV3Schema : sessionSchema;
   const unsigned = { ...candidate, binding: { ...binding, descriptor_sha256: "" } };
-  if (hash(JSON.stringify(ordered(unsigned, memory ? memorySchema : sessionSchema))) !== binding.descriptor_sha256) {
+  if (hash(JSON.stringify(ordered(unsigned, digestShape))) !== binding.descriptor_sha256) {
     return { state: "unavailable", reason: "descriptor_tampered" };
   }
   if (isMemory(candidate)) {

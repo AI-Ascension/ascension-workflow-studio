@@ -55,6 +55,60 @@ export type MemoryCapabilitiesV3 = {
   supported_operations: ("search" | "extract" | "generate" | "review" | "select" | "policy" | "adopt" | "revoke" | "evaluate")[];
 };
 
+export type ProviderSessionCapabilitiesV4 = {
+  schema: "ascension.provider-session.capabilities.v4";
+  profile_id: string;
+  profile_sha256: string;
+  native_version: string;
+  native_binary_sha256: string;
+  native_schema_sha256: string;
+  provenance: "schema_only" | "compiled_peer" | "native_binary_fake_upstream" | "live_provider";
+  transport: "owned_stdio";
+  enabled_methods: (string)[];
+  hardening: {
+    tools_enabled: false;
+    ambient_history: false;
+    encrypted_state: boolean;
+    configuration_verified: boolean;
+    transform_handling: "verified_suppressed" | "detect_and_fence" | "opaque_approved";
+  };
+  effective_limits: {
+    policy_schema: "ascension.provider-session.policy.v1";
+    max_session_items: number;
+    max_dependencies: number;
+    max_events: number;
+    max_operations: number;
+    max_prepared: number;
+    max_candidates: number;
+    max_maintenance_jobs: number;
+    max_completed_turns: number;
+    max_history_ttl_seconds: number;
+    max_frame_bytes: number;
+    max_history_bytes: number;
+    max_prepared_bytes: number;
+    max_suffix_bytes: number;
+    max_output_schema_bytes: number;
+    max_method_bytes: number;
+    max_json_depth: number;
+  };
+  binding: {
+    owner: "sts2-harness";
+    owner_revision: "harness-provider-session-v4";
+    policy_schema_sha256: string;
+    model_revision: string;
+    adapter_revision: string;
+    adapter_revision_sha256: string;
+    descriptor_sha256: string;
+  };
+  strict_executable: boolean;
+  experimental_api: boolean;
+  unknown_methods: "deny";
+  raw_rpc: false;
+};
+
+/** Superseded provider-session descriptor. Retained so a peer that has not cut over to
+ * v4 is read rather than rejected; `v4` renames `evidence` to `provenance` (sts2-harness#755).
+ * The qualification field is provenance, not an admission control, at either version. */
 export type ProviderSessionCapabilitiesV3 = {
   schema: "ascension.provider-session.capabilities.v3";
   profile_id: string;

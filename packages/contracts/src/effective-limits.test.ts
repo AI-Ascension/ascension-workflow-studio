@@ -77,4 +77,19 @@ describe("pinned original harness-library synthetic capability vectors", () => {
     expect(ProviderSessionCapabilitiesSchema.safeParse({ ...descriptor, enabled_methods: ["thread/read"] }).success).toBe(false);
     expect(ProviderSessionCapabilitiesSchema.safeParse(fixtures.session[0].descriptor).success).toBe(true);
   });
+
+  it("reads v4 and still reads a v3 peer across the evidence/provenance rename", () => {
+    const v3 = fixtures.session[0].descriptor as Record<string, unknown> & { binding: Record<string, unknown> };
+    // The pinned v3 descriptor is accepted on its own terms.
+    expect(ProviderSessionCapabilitiesSchema.safeParse(v3).success).toBe(true);
+    // Lifted to the v4 shape: `evidence` becomes `provenance` and the binding names v4.
+    const { evidence, ...rest } = v3;
+    const v4 = { ...rest, schema: "ascension.provider-session.capabilities.v4",
+      provenance: evidence, binding: { ...v3.binding, owner_revision: "harness-provider-session-v4" } };
+    expect(ProviderSessionCapabilitiesSchema.safeParse(v4).success).toBe(true);
+    // Neither version is accepted under the other's field name: `additionalProperties: false`
+    // makes this a wire-visible break, so a rename that were silently tolerated would be a bug.
+    expect(ProviderSessionCapabilitiesSchema.safeParse({ ...v4, evidence }).success).toBe(false);
+    expect(ProviderSessionCapabilitiesSchema.safeParse(v3).success).toBe(true);
+  });
 });
