@@ -38,6 +38,33 @@ export function verifyContextCatalogPin(root, pin) {
   return count;
 }
 
+/** The inference-profile catalog is sealed by the producer's own
+ * `InferenceProfileDescriptor::seal` / `inference_catalog_digest`. Its pin
+ * therefore records the producer source revision that was textually included
+ * to run that seal, rather than a path to a checked-in producer fixture. */
+export function verifyInferenceProfileCatalogPin(root, pin) {
+  assert.equal(pin.repository, 'AI-Ascension/sts2-harness', 'Unknown catalog producer');
+  assert(/^[a-f0-9]{40}$/.test(pin.revision), 'Invalid catalog producer revision');
+  assert.equal(pin.producer_path, 'crates/harness/src/management/contract_inference_profile.rs');
+  assert.equal(pin.evidence, 'synthetic_descriptor_validation_only');
+  assert.equal(pin.sealing_method, 'producer_source_include_seal');
+  assert.equal(pin.consumed_artifacts?.length, 1, 'Exactly one catalog fixture is required');
+  assert.equal(pin.consumed_artifacts[0].path, 'contracts/accepted/inference-profile/catalog-conformance.json');
+  const count = verifyEntries(root, pin.consumed_artifacts);
+  const fixture = JSON.parse(readFileSync(resolve(root, pin.consumed_artifacts[0].path)));
+  assert.equal(fixture.fixture_schema, 'ascension.inference-profile.catalog-conformance.fixture.v1');
+  assert.equal(fixture.producer, pin.repository);
+  assert.equal(fixture.producer_revision, pin.revision);
+  assert.equal(fixture.method, pin.sealing_method);
+  assert.equal(fixture.evidence, pin.evidence);
+  for (const row of fixture.catalogs) {
+    assert(typeof row.name === 'string' && row.name.length > 0, 'Unnamed catalog fixture row');
+    assert.equal(row.catalog.schema_version, 'ascension.inference-profiles/v1');
+    assert(row.catalog.descriptors.length > 0, `Catalog ${row.name} carries no descriptors`);
+  }
+  return count;
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = fileURLToPath(new URL('../', import.meta.url));
   const phase1 = JSON.parse(readFileSync(resolve(root, 'contracts/accepted/phase1-integration.lock.json')));
@@ -48,8 +75,10 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const effectiveCount = verifyEntries(root, effective.consumed_artifacts);
   const contextCatalog = JSON.parse(readFileSync(resolve(root, 'contracts/context-control-catalog.lock.json')));
   const contextCatalogCount = verifyContextCatalogPin(root, contextCatalog);
+  const inferenceCatalog = JSON.parse(readFileSync(resolve(root, 'contracts/inference-profile-catalog.lock.json')));
+  const inferenceCatalogCount = verifyInferenceProfileCatalogPin(root, inferenceCatalog);
   assert(recorded.checksums && typeof recorded.checksums === 'object', 'Missing recorded-run pins');
   const recordedCount = verifyEntries(recordedRoot,
     Object.entries(recorded.checksums).map(([path, sha256]) => ({ path, sha256 })));
-  console.log(`Verified ${phase1Count} Phase 1, ${effectiveCount} effective-limit, ${contextCatalogCount} context catalog and ${recordedCount} recorded-run contract pins`);
+  console.log(`Verified ${phase1Count} Phase 1, ${effectiveCount} effective-limit, ${contextCatalogCount} context catalog, ${inferenceCatalogCount} inference-profile catalog and ${recordedCount} recorded-run contract pins`);
 }
