@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
-import { isAbsolute, relative, resolve, sep } from 'node:path';
+import { isAbsolute, normalize, relative, resolve, sep } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -86,6 +86,16 @@ export function verifyInferenceProfileCatalogPin(root, pin, { requireProducerChe
     assert(typeof entry.producer_path === 'string' && entry.producer_path.length > 0,
       'A pinned producer source names no producer path');
     assert(/^[a-f0-9]{64}$/.test(entry.sha256), `Invalid producer SHA-256: ${entry.producer_path}`);
+    // Containment is a property of the PINNED PATH, so it is checked here
+    // rather than only on the branch that has a producer checkout to hash.
+    // Otherwise a lock naming `../../../etc/passwd` would be accepted in any
+    // checkout without the sibling producer present, and the escape would only
+    // be caught on the machine that happens to have it. Reject the traversal
+    // and absolute paths up front, whatever the working tree contains.
+    assert(!isAbsolute(entry.producer_path)
+      && normalize(entry.producer_path) === entry.producer_path
+      && !entry.producer_path.split(/[\\/]/).includes('..'),
+    `Pinned producer path escapes the producer checkout: ${entry.producer_path}`);
   }
   if (existsSync(resolve(root, producerCrate.checkout))) {
     const checkout = realpathSync(resolve(root, producerCrate.checkout));
