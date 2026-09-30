@@ -57,6 +57,8 @@ import { Notice } from "../../components/Notice";
 import { StatusBadge } from "../../components/StatusBadge";
 import { useContextOwnerCatalog } from "./useContextOwnerCatalog";
 import { ContextOwnerCatalogPanel } from "./ContextOwnerCatalogPanel";
+import { useInferenceProfileCatalog } from "./useInferenceProfileCatalog";
+import { InferenceProfileCatalogPanel } from "./InferenceProfileCatalogPanel";
 import { ArchivalImportPanel, type ArchivalImport } from "./ArchivalImportPanel";
 import { RawDefinitionPanel } from "./RawDefinitionPanel";
 import { RecoveryPanel } from "./RecoveryPanel";
@@ -110,7 +112,14 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
   const [validationState, setValidationState] = useState<"idle" | "running" | "valid" | "invalid" | "error">("idle");
   const [validationMessage, setValidationMessage] = useState("");
   const ownerCatalog = useContextOwnerCatalog(client, client.principal());
+  const inferenceProfileCatalog = useInferenceProfileCatalog(client, client.principal());
   const contextBindings = ownerCatalog.bindings;
+  // Only a validated owner catalog is handed to the inspector. A pending or
+  // failed request yields `undefined`, which the field treats as "nothing is
+  // selectable" — no fixture catalog is substituted at runtime.
+  const inferenceProfiles = inferenceProfileCatalog.state.status === "available"
+    ? inferenceProfileCatalog.state.catalog
+    : undefined;
   const [focusedGraph, setFocusedGraph] = useState<string>(() => initialDocument.entry_graph);
   const [graphTrail, setGraphTrail] = useState<string[]>(() => [initialDocument.entry_graph]);
   const [graphViewports, setGraphViewports] = useState<Record<string, { x: number; y: number; zoom: number }>>({});
@@ -651,6 +660,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     </div>
     <p className="identity-note muted">Draft revision, definition digest, layout digest, and compiler identity are independent; none substitutes for another.</p>
     <ContextOwnerCatalogPanel state={ownerCatalog.state} refresh={ownerCatalog.refresh} />
+    <InferenceProfileCatalogPanel state={inferenceProfileCatalog.state} refresh={inferenceProfileCatalog.refresh} />
     <RecoveryPanel enabled={recovery.enabled} principal={principal} count={recovery.principalRecordCount} recoverable={recovery.recoverable} notice={recovery.notice} onToggle={recovery.toggle} onRecover={recoverLocalCandidate} onExport={recovery.exportRecords} onClear={recovery.clear} />
     {draft.state === "conflict" ? <Notice tone="danger" title="Draft conflict">The server revision changed while this editor was saving. Local edits are preserved until an explicit resolution.</Notice> : null}
     {draft.state === "conflict" && conflictRemoteDocument && conflictRemoteLayout && conflictOpen ? <ConflictPanel base={mergeBase} baseLayout={mergeBaseLayout} local={document} localLayout={layout} remote={conflictRemoteDocument} remoteLayout={conflictRemoteLayout} onKeepRemote={reloadRemoteConflict} onKeepLocal={saveLocalAsNew} onMerge={mergeConflict} onCancel={cancelConflictResolution} /> : null}
@@ -694,10 +704,10 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
           minimapNodeColor={minimapNodeColor}
         />
       <div className="inspector-stack">
-        <InspectorPanel document={document} catalog={catalog} contextBindings={contextBindings} selected={selected} selectedConfigText={selectedConfigText} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />
+        <InspectorPanel document={document} catalog={catalog} contextBindings={contextBindings} inferenceProfiles={inferenceProfiles} selected={selected} selectedConfigText={selectedConfigText} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />
         {selectedEdge ? <EdgeInspector document={document} selectedEdge={selectedEdge} onReconnect={applyReconnect} onUpdate={applyEdgeUpdate} /> : null}
       </div>
-    </div> : <ListEditor document={document} selectedIds={selectedIds} onSelect={selectNode} inspector={<InspectorPanel document={document} catalog={catalog} contextBindings={contextBindings} selected={selected} selectedConfigText={selectedConfigText} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />} />}
+    </div> : <ListEditor document={document} selectedIds={selectedIds} onSelect={selectNode} inspector={<InspectorPanel document={document} catalog={catalog} contextBindings={contextBindings} inferenceProfiles={inferenceProfiles} selected={selected} selectedConfigText={selectedConfigText} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />} />}
     {diagnostics ? <DiagnosticsPanel result={diagnostics} onFocusPath={(path) => {
       const target = document.graphs.flatMap((graph) => graph.nodes.map((node) => ({ graphId: graph.id, nodeId: node.id }))).find((candidate) => path.includes(candidate.nodeId));
       if (target) {
