@@ -176,9 +176,37 @@ describe("producer conformance — the mirror matches the owner's bytes", () => 
 
 
   it("rejects budgets above the producer's published ceilings", () => {
-    const catalog = catalogFixture("synthetic");
-    catalog.descriptors[0].effective_budgets.max_provider_calls = 10_001;
-    expect(InferenceProfileDescriptorSchema.safeParse(catalog.descriptors[0]).success).toBe(false);
+    // Each ceiling is moved one step past the producer's bound and the catalog
+    // is RESEALED, so the edited field's digest still matches and the bound is
+    // the only thing that can refuse the descriptor. Asserting only
+    // `success === false` here passed even with the ceilings deleted, because
+    // an unsealed edit is refused by the digest check regardless — which is
+    // what the mutation battery observed. Asserting zod's own ceiling message
+    // is what makes each row specific to its own bound.
+    // (Zod reports "Too big: expected number to be <=<ceiling>", so the ceiling
+    // VALUE is asserted rather than the field name.)
+    const ceilings: Array<
+      [keyof InferenceProfileDescriptor["effective_budgets"], number, number]
+    > = [
+      ["max_input_bytes", 131_073, 131_072],
+      ["max_output_tokens", 2_000_001, 2_000_000],
+      ["max_provider_calls", 10_001, 10_000],
+    ];
+    for (const [field, over, ceiling] of ceilings) {
+      const catalog = catalogFixture("synthetic");
+      catalog.descriptors[0].effective_budgets[field] = over;
+      const descriptor = reseal(catalog).descriptors[0];
+      const parsed = InferenceProfileDescriptorSchema.safeParse(descriptor);
+      expect(parsed.success, `${field} above its ceiling was admitted`).toBe(false);
+      expect(messages(parsed).join("|")).toContain(`<=${ceiling}`);
+      expect(messages(parsed).join("|")).not.toContain("Descriptor digest mismatch");
+    }
+    // Positive control: the fixtures sit UNDER every ceiling, so each bound is
+    // load-bearing rather than an inequality nothing can satisfy.
+    const admitted = catalogNamed("synthetic").descriptors[0];
+    for (const [field, over] of ceilings) {
+      expect(admitted.effective_budgets[field]).toBeLessThan(over);
+    }
   });
 
   it("rejects a duplicated list entry the producer would call a duplicate", () => {
@@ -314,6 +342,24 @@ describe("refusals — each reason is distinguished and leaks no usable identity
     const result = resolveInferenceProfile(
       catalog, selectionOf(catalog, "revoked.synthetic.v1"), "adaptive_region");
     expect(result.rejection).toBe("revoked");
+  });
+
+  it("checks the pinned digest before the state, as the owner's resolve does", () => {
+    // The row above pins a CORRECT digest, so it cannot separate the digest
+    // check from the state check: both orderings answer "revoked". This row is
+    // the one that pins the ordering. revoked.synthetic.v1 pinned with a digest
+    // the owner does not serve must report digest_mismatch, because the owner's
+    // resolve locates the revision and compares its digest FIRST. Were the
+    // state check to run first, this row would answer "revoked" and the
+    // ordering claim would be false — which is what the mutation battery
+    // observed when the two checks were swapped.
+    const catalog = catalogNamed("negative");
+    const pinned = selectionOf(catalog, "revoked.synthetic.v1");
+    const result = resolveInferenceProfile(
+      catalog, { ...pinned, digest: "b".repeat(64) }, "decide");
+    expect(result.ok).toBe(false);
+    expect(result.rejection).toBe("digest_mismatch");
+    expect(result.selection).toBeUndefined();
   });
 
   it("checks the select grant before context compatibility, as the owner does", () => {
