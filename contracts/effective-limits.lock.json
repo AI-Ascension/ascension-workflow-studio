@@ -1,6 +1,6 @@
 {
   "producer_repository": "AI-Ascension/sts2-harness",
-  "producer_revision": "f8015e52ccb530e60d722283ef2b063da372169b",
+  "producer_revision": "27f1d4219e98999df4903615a57236e4747ae932",
   "compatibility_decision": "AI-Ascension/ascension-context-console docs/decisions/0020-harness-effective-limits-consumer-compatibility.md at ccd9661cc4ddc062d76abee8e7cc61bf1fa95ba4",
   "evidence": "synthetic contract only; no runtime activation",
   "consumed_artifacts": [
@@ -34,7 +34,7 @@
     },
     {
       "path": "contracts/accepted/effective-limits/producer.json",
-      "sha256": "ffed02d25dae8404145234bea2f8dd6f0a671f415a4ae68c7c388d8ac709e363"
+      "sha256": "3c2d78f163683cb1cc2b079cd003332889facec2fad708560a93b9679a8af0cf"
     }
   ],
   "legacy_provider_source": {
@@ -46,6 +46,7 @@
     "repository": "AI-Ascension/ascension-context-console",
     "revision": "678ae6b19c6dff9875c3e0fbe6d203fcfc615366",
     "path": "fixtures/effective-limits/producer.json",
-    "generator": "tools/effective-limit-fixtures"
+    "generator": "tools/effective-limit-fixtures",
+    "note": "Regenerated for the v4 provider-session contract from the console generator (tools/effective-limit-fixtures) linked against sts2-harness 27f1d421, the head of PR #780. The harness gate bytes-compares this file against that generator's output, so the two must be regenerated together; editing these bytes by hand would make the check pass without describing the real producer output."
   }
 }
