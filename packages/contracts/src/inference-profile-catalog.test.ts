@@ -136,12 +136,10 @@ describe("producer conformance — the mirror matches the owner's bytes", () => 
     //
     // Consequence: for any charset-LEGAL identifier, UTF-8 bytes == UTF-16
     // code units, so the byte-aware bound is indistinguishable from a
-    // code-unit bound on legal input. It is defence in depth: it keeps the
-    // consumer bound anchored to the producer's byte semantics rather than to
-    // an accidental JS string property, and it rejects an over-long
-    // non-ASCII value on the bound even though the charset rule would already
-    // reject it. These assertions pin BOTH rules, so a future edit that
-    // weakens either one is caught.
+    // code-unit bound on legal input, so only a charset-ILLEGAL value can
+    // separate the two rules — that is the `discriminating` case below. The
+    // ASCII cases pin only that the bound is 128 and inclusive; they cannot by
+    // themselves show the bound counts bytes.
     const atLimit = catalogFixture("synthetic");
     // 128 ASCII bytes == the producer's inclusive upper bound.
     atLimit.descriptors[0].prompt_revision = "p" + "x".repeat(127);
@@ -160,6 +158,28 @@ describe("producer conformance — the mirror matches the owner's bytes", () => 
     // a digest left stale by the edit.
     expect(messages(overResult)).toContain("identifier exceeds the 128-byte producer bound");
 
+    // DISCRIMINATING PROBE: 129 UTF-8 bytes but only 65 UTF-16 code units.
+    // Under the correct byte bound this trips the bound refine; under a buggy
+    // code-unit bound (`value.length <= 128`) the refine passes and only the
+    // charset regex objects, so the bound message is absent.
+    const discriminating = catalogFixture("synthetic");
+    discriminating.descriptors[0].prompt_revision = "é".repeat(64) + "a";
+    const probeBytes = new TextEncoder().encode(discriminating.descriptors[0].prompt_revision).length;
+    const probeCodeUnits = discriminating.descriptors[0].prompt_revision.length;
+    expect(probeBytes).toBe(129);
+    expect(probeCodeUnits).toBe(65);
+    // The two counts MUST differ, or this probe stops discriminating anything:
+    // a 129-byte value that is also 129 code units is plain ASCII, which a
+    // code-unit bound rejects just as readily. Asserting the two numbers
+    // separately is not enough, because an edit could set both to 129 and
+    // still satisfy every assertion above while silently removing the
+    // coverage this probe exists to provide.
+    expect(probeBytes).not.toBe(probeCodeUnits);
+    const discSealed = reseal(discriminating);
+    const discResult = InferenceProfileDescriptorSchema.safeParse(discSealed.descriptors[0]);
+    expect(discResult.success).toBe(false);
+    expect(messages(discResult)).toContain("identifier exceeds the 128-byte producer bound");
+
     // A non-ASCII identifier is refused: the producer's charset is ASCII, so a
     // multi-byte character is not an escape hatch past either rule.
     const nonAscii = catalogFixture("synthetic");
@@ -176,9 +196,35 @@ describe("producer conformance — the mirror matches the owner's bytes", () => 
 
 
   it("rejects budgets above the producer's published ceilings", () => {
-    const catalog = catalogFixture("synthetic");
-    catalog.descriptors[0].effective_budgets.max_provider_calls = 10_001;
-    expect(InferenceProfileDescriptorSchema.safeParse(catalog.descriptors[0]).success).toBe(false);
+    // Each ceiling is moved one step past the producer's bound and the catalog is
+    // RESEALED, so the edited descriptor is internally consistent and the ceiling
+    // is the only thing that can refuse it. Without the reseal this test passes
+    // even with every `.max()` deleted, because the stale digest refuses the
+    // descriptor first. Zod reports the ceiling as "Too big: expected number to
+    // be <=<ceiling>", so the ceiling VALUE is asserted rather than the field name.
+    const ceilings: Array<
+      [keyof InferenceProfileDescriptor["effective_budgets"], number, number]
+    > = [
+      ["max_input_bytes", 131_073, 131_072],
+      ["max_output_tokens", 2_000_001, 2_000_000],
+      ["max_provider_calls", 10_001, 10_000],
+    ];
+    for (const [field, over, ceiling] of ceilings) {
+      const catalog = catalogFixture("synthetic");
+      catalog.descriptors[0].effective_budgets[field] = over;
+      const resealed = reseal(catalog);
+      const parsed = InferenceProfileDescriptorSchema.safeParse(resealed.descriptors[0]);
+      expect(parsed.success, `${field} above its ceiling was admitted`).toBe(false);
+      expect(messages(parsed).join("|")).toContain(`<=${ceiling}`);
+      // A self-consistent digest must NOT be enough to admit it.
+      expect(messages(parsed)).not.toContain("Descriptor digest mismatch");
+    }
+    // Positive control: the shipped fixtures sit UNDER every ceiling, so each
+    // bound is load-bearing rather than an inequality nothing could satisfy.
+    const admitted = catalogNamed("synthetic").descriptors[0];
+    for (const [field, over] of ceilings) {
+      expect(admitted.effective_budgets[field]).toBeLessThan(over);
+    }
   });
 
   it("rejects a duplicated list entry the producer would call a duplicate", () => {
@@ -241,7 +287,7 @@ describe("resolution — exact identities, requested never merged into resolved"
 });
 
 describe("refusals — each reason is distinguished and leaks no usable identity", () => {
-  // Each row is a PRODUCER-SEALED descriptor whose only difference is the
+  // Each row is a re-sealed descriptor whose only difference is the
   // property under test, so a passing row cannot be passing by accident.
   const cases: Array<[string, string, InferenceProfileRejection]> = [
     ["revoked.synthetic.v1", "context.synthetic.v1", "revoked"],
