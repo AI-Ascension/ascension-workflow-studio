@@ -9,14 +9,19 @@ import { z } from "zod";
  * `ascension.inference-profile/v1`), pinned by
  * `contracts/accepted/inference-profile/catalog-conformance.json`.
  *
- * The fixture in that file is NOT the output of running producer code: no
- * producer source is compiled, included or executed on this side. It was sealed
- * by a hand-written replica of the owner's `seal()`, and what makes that a
- * checkable claim rather than an assertion is that the replica's declared field
- * order is pinned as DATA and deep-equaled against the seal replica that
- * actually computes the digests below. See
- * `contracts/inference-profile-catalog.lock.json` and
- * `tools/verify-contract-pins.mjs`.
+ * The fixture in that file is NOT the output of producer code running in this
+ * package: no producer source is compiled, included or executed on this side.
+ * Its provenance is established by the producer-linked seal instead of by a
+ * replica. `contracts/inference-profile-catalog.lock.json` records
+ * `sealing_method: producer_crate_linked_seal` plus the generator
+ * (`tools/inference-profile-conformance-seal`), which links the pinned
+ * `sts2-harness` crate as a path dependency and calls the owner's own `seal()`.
+ * `tools/verify-contract-pins.mjs` then checks that the linked producer checkout
+ * still hashes to the pinned source digests, that the generator binary exists,
+ * and that its freshly produced output byte-equals the checked-in fixture. The
+ * `producer-seal` CI job runs that gate with `--require-producer-checkout`, so
+ * a missing checkout or an unbuilt binary fails the job instead of skipping
+ * those checks.
  *
  * Integrity is not authentication. Only an authenticated owner response
  * supplies authority; a self-consistent digest proves nothing about who served

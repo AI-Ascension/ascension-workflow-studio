@@ -98,7 +98,14 @@ jobs:
   producer-seal:
     name: Inference-profile producer seal
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # The core step cold-builds the seal crate, which path-depends on the whole
+    # `sts2-harness` producer. The warm case (run 36765563977, head 204b193) took
+    # 3m32s; a pessimistic cold build on a loaded host measured 52m07s. The
+    # budget must clear the worst measured case with margin, so it is set well
+    # above 52 minutes rather than tuned to the typical run. The linked crate's
+    # compiled artefacts are cached below, which is what pulls the real p50 down
+    # toward the 3m32s figure; the timeout is the backstop for a cold cache.
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -123,6 +130,18 @@ jobs:
       - name: Install the pinned owner's Rust toolchain
         working-directory: harness
         run: rustup show active-toolchain
+      # Cache keyed on the seal crate's lockfile AND on the pinned producer
+      # revision, because the crate path-depends on the sibling `harness/`
+      # checkout: a new producer revision changes that crate's sources and must
+      # invalidate the cache, while an unchanged revision and lockfile can
+      # reuse the compiled dependency graph. This makes the cache a speed
+      # optimisation only: `--locked` still fails on a lockfile that does not
+      # match, and `--require-producer-checkout` still fails if the checkout is
+      # absent, so no cached artefact can stand in for a check.
+      - uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
+        with:
+          path: harness/target
+          key: producer-seal-${{ steps.producer.outputs.revision }}-${{ hashFiles('tools/inference-profile-conformance-seal/Cargo.lock') }}
       - name: Build the seal against the pinned owner
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/harness/target
