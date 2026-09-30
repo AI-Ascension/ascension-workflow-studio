@@ -11,11 +11,13 @@ import {
 } from "./inference-profile-catalog";
 import { catalogFixture, reseal } from "./inference-profile-catalog.test-fixtures";
 
-/** Every catalog used here was sealed by the producer's own `seal()` and
- * accepted by its own `validate()`; see
- * `contracts/accepted/inference-profile/catalog-conformance.json` and
- * `contracts/inference-profile-catalog.lock.json`. Nothing in this suite
- * re-derives a digest on the consumer side.
+/** Every catalog used here satisfies the producer's `seal()` and `validate()`
+ * invariants; see `contracts/accepted/inference-profile/catalog-conformance.json`
+ * and `contracts/inference-profile-catalog.lock.json`. No producer code is run on
+ * this side: the seal is a replica whose declared field order is pinned as data
+ * and cross-checked by `tools/verify-contract-pins.mjs`. Apart from the
+ * deliberate tampering described below, nothing in this suite re-derives a
+ * digest.
  *
  * NOTHING here contacted a provider, a model, a native host, a game or a save
  * file. The identities are the harness's clearly-labelled synthetic
@@ -43,7 +45,7 @@ describe("producer conformance — the mirror matches the owner's bytes", () => 
   // catalog digest were computed over an object instead of the producer's
   // three-element array, every catalog in this fixture would fail admission and
   // this first assertion would fail. It is the anchor the whole file rests on.
-  it("admits producer-sealed catalogs without re-encoding", () => {
+  it("admits the pinned conformance catalogs without re-encoding", () => {
     for (const name of ["synthetic", "editable", "negative"]) {
       const catalog = catalogNamed(name);
       expect(catalog.descriptors.length).toBeGreaterThan(0);
