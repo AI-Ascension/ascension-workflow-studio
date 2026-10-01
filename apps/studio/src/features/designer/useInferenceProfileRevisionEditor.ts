@@ -119,14 +119,27 @@ export function useInferenceProfileRevisionEditor(
   // profile. A submission updates only its own key; every other revision keeps
   // whatever it had, including `idle`.
   const [states, setStates] = useState<Record<string, InferenceProfileRevisionState>>({});
-  const generation = useRef(0);
+  // One counter PER PROFILE REVISION, not one for the whole hook.
+  //
+  // A single shared counter let any sibling's `reset()` or `submit` discard
+  // this revision's in-flight response: the staleness check fired, the real
+  // adoption outcome was thrown away, and the button stayed on "Adopting…"
+  // and `disabled` with no self-recovery — because the button's state is
+  // derived from precisely the outcome that was dropped. The counter is keyed
+  // by the SAME identity the state is keyed by, so a response can only ever be
+  // discarded by a reset or submit for the very revision that owns it, and
+  // two revisions of one `profile_id` cannot cancel one another either.
+  const generation = useRef<Record<string, number>>({});
 
   const submit = useCallback(async (
     descriptor: InferenceProfileDescriptor,
     draft: InferenceProfileRevisionDraft,
   ): Promise<void> => {
-    const current = ++generation.current;
     const key = outcomeKey(descriptor.profile_id, descriptor.version);
+    // Supersede only this revision's own previous in-flight response. A
+    // sibling's submit leaves this one alone.
+    const current = (generation.current[key] ?? 0) + 1;
+    generation.current[key] = current;
     // Scoped to this revision's key only: a sibling's outcome is left
     // untouched, so an in-flight edit elsewhere cannot blank it.
     const setProfileState = (next: InferenceProfileRevisionState) =>
@@ -184,7 +197,7 @@ export function useInferenceProfileRevisionEditor(
 
     try {
       const adoption = await client.adoptInferenceProfileRevision(descriptor.profile_id, request);
-      if (generation.current !== current) return;
+      if ((generation.current[key] ?? 0) !== current) return;
       if (adoption.conflicted) {
         // A concurrent edit won. The winner is reported and left alone; this
         // editor does not retry, does not re-aim at the winner, and does not
@@ -198,7 +211,7 @@ export function useInferenceProfileRevisionEditor(
       // not patched into local state: the owner decides what it now serves.
       if (adoption.adopted || adoption.outcome === "replayed") onCatalogChanged();
     } catch (error: unknown) {
-      if (generation.current !== current) return;
+      if ((generation.current[key] ?? 0) !== current) return;
       setProfileState({
         status: "refused",
         refusal: error instanceof CapabilityGateError ? "owner_refused"
@@ -209,8 +222,11 @@ export function useInferenceProfileRevisionEditor(
   }, [client, onCatalogChanged]);
 
   const reset = useCallback((profileId: string, version: string): void => {
-    generation.current += 1;
-    setStates((previous) => ({ ...previous, [outcomeKey(profileId, version)]: { status: "idle" } }));
+    // Discard THIS revision's in-flight response only. Keeping this guard
+    // working is the point; it just must not reach across to a sibling.
+    const key = outcomeKey(profileId, version);
+    generation.current[key] = (generation.current[key] ?? 0) + 1;
+    setStates((previous) => ({ ...previous, [key]: { status: "idle" } }));
   }, []);
 
   const stateFor = useCallback((profileId: string, version: string): InferenceProfileRevisionState =>
@@ -221,8 +237,9 @@ export function useInferenceProfileRevisionEditor(
 
 /** The key an outcome is stored under.
  *
- * `\0` cannot appear in either field: both are `identifier`s, whose character
- * class excludes control bytes, so this cannot be forged into a collision. */
+ * `\0` cannot appear in either field: `profile_id` is an `identifier` and
+ * `version` is a `semver`, and both character classes exclude control bytes,
+ * so this cannot be forged into a collision. */
 export function outcomeKey(profileId: string, version: string): string {
   return `${profileId}\0${version}`;
 }

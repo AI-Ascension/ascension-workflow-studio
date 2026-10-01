@@ -507,3 +507,193 @@ describe("outcome state is per profile, not shared across the catalog", () => {
     expect(cards[1].querySelectorAll('[data-testid="inference-profile-revision-adopted"]')).toHaveLength(0);
   });
 });
+
+/** The staleness guard must be PER PROFILE REVISION.
+ *
+ * Every test above drives `adopt` to settle synchronously, so none of them can
+ * observe what happens while a response is still genuinely in flight. That is
+ * exactly how the shared-counter defect survived them: a submit for profile A
+ * whose response was still pending was discarded when profile B's `reset()`
+ * bumped the one global counter, the early return fired, A's real adoption
+ * outcome was thrown away, and A's button was left stuck on "Adopting…" and
+ * `disabled` with no self-recovery — because the button state is derived from
+ * the very outcome that got dropped.
+ *
+ * These cases hold the promise open with a deferred the test controls, so the
+ * interleaving is real rather than simulated. The last one uses a SIBLING
+ * VERSION of the same `profile_id`, because a catalog may legally carry two
+ * revisions of one profile: a guard keyed on `profile_id` alone would pass
+ * every distinct-id case and still lose that one. */
+describe("the in-flight guard is per profile revision, not one shared counter", () => {
+  /** Two editable descriptors to drive. `sameProfileId` makes the second a
+   * different VERSION of the first, which the catalog's own uniqueness rule
+   * permits; otherwise it is a distinct profile. */
+  const twoEditable = (sameProfileId = false): {
+    catalog: InferenceProfileCatalog;
+    first: InferenceProfileDescriptor;
+    second: InferenceProfileDescriptor;
+  } => {
+    const two = catalog();
+    const first = two.descriptors.find((descriptor) => descriptor.grants.edit)!;
+    const second = structuredClone(first) as InferenceProfileDescriptor;
+    second.version = "9.9.9";
+    second.digest = "b".repeat(64);
+    if (!sameProfileId) second.profile_id = "second.profile:beta";
+    two.descriptors = [structuredClone(first), second];
+    reseal(two);
+    return { catalog: two, first, second };
+  };
+
+  // Two revisions of one profile_id render identical accessible names, so
+  // every lookup is by CARD INDEX rather than by profile id. The editor's own
+  // testid is the anchor: it sits inside exactly one profile card, and its
+  // name is unique only when the ids differ, so the index disambiguates both
+  // shapes. Nothing here matches by region name, which would also match the
+  // enclosing "Inference profile catalog" panel and shift every index.
+  const editorIn = (index: number): HTMLElement =>
+    screen.getAllByTestId(/^inference-profile-revision-editor-./)[index];
+  const card = (index: number): HTMLElement =>
+    editorIn(index).closest("section[aria-label]") as HTMLElement;
+  const adoptIn = (index: number): HTMLElement =>
+    editorIn(index).querySelector("button.button-primary") as HTMLElement;
+  const cancelIn = (index: number): HTMLElement =>
+    editorIn(index).querySelector("button.button-quiet") as HTMLElement;
+  const openIn = (index: number): void => {
+    fireEvent.click(editorIn(index).querySelector("button.button-secondary") as HTMLElement);
+  };
+  const setVersion = (index: number, value: string): void => {
+    fireEvent.change(
+      editorIn(index).querySelector('input[aria-label^="New version"]') as HTMLElement,
+      { target: { value } });
+  };
+  const outcomesIn = (index: number, testId: string): number =>
+    card(index).querySelectorAll(`[data-testid="${testId}"]`).length;
+  const stuckOn = (index: number): boolean =>
+    adoptIn(index).hasAttribute("disabled") || adoptIn(index).textContent === "Adopting…";
+
+  type Deferred = { resolve: () => void };
+  /** A client whose `adopt` stays pending until the test resolves it.
+   *
+   * The answer is built from the ACTUAL submitted request — the profile id the
+   * call was made for, the new version, and the editable members — so the
+   * accepted revision carries true provenance. Reusing the single fixture
+   * descriptor wholesale would leave a stale digest behind a new profile id,
+   * which is a lie about what the owner accepted, and dropping `adopted` would
+   * store the outcome as a replay rather than an adoption. */
+  const deferredClient = (): { client: FixtureClient; settled: Deferred[] } => {
+    const settled: Deferred[] = [];
+    const instance = new FixtureClient([]);
+    instance.adoptInferenceProfileRevision = (
+      profileId: string,
+      request: InferenceProfileRevisionRequest,
+    ) => new Promise<InferenceProfileRevisionAdoption>((resolve) => {
+      settled.push({
+        resolve: () => {
+          const accepted = structuredClone(editable()) as InferenceProfileDescriptor;
+          accepted.profile_id = profileId;
+          accepted.version = request.version;
+          accepted.prompt_revision = request.prompt_revision;
+          accepted.settings_revision = request.settings_revision;
+          accepted.supported_settings = [...request.supported_settings];
+          accepted.effective_budgets = { ...request.effective_budgets };
+          resolve({
+            outcome: "adopted",
+            // The reference is the acceptance identity: the accepted
+            // revision's own id, version and digest.
+            reference: `${accepted.profile_id}:${accepted.version}:${accepted.digest}`,
+            profile_id: accepted.profile_id,
+            revision: accepted,
+            adopted: true,
+            conflicted: false,
+          });
+        },
+      });
+    });
+    return { client: instance, settled };
+  };
+
+  it("records A's real outcome even though a SIBLING's reset ran while A was in flight", async () => {
+    const { catalog: two, first } = twoEditable();
+    const { client: owner, settled } = deferredClient();
+    renderPanel({ status: "available", catalog: two }, vi.fn(), owner);
+
+    openIn(0);
+    setVersion(0, "1.1.0");
+    fireEvent.click(adoptIn(0));
+    expect(stuckOn(0)).toBe(true);
+
+    // The sibling's cancel bumps the guard. Under one shared counter this
+    // silently discarded A's pending response.
+    openIn(1);
+    fireEvent.click(cancelIn(1));
+
+    await act(async () => { settled[0].resolve(); });
+    await waitFor(() => expect(outcomesIn(0, "inference-profile-revision-adopted")).toBe(1));
+    expect(outcomesIn(1, "inference-profile-revision-adopted")).toBe(0);
+    expect(stuckOn(0)).toBe(false);
+  });
+
+  it("still discards A's own in-flight response when A itself resets", async () => {
+    const { catalog: two, first } = twoEditable();
+    const { client: owner, settled } = deferredClient();
+    renderPanel({ status: "available", catalog: two }, vi.fn(), owner);
+
+    openIn(0);
+    setVersion(0, "1.1.0");
+    fireEvent.click(adoptIn(0));
+    expect(stuckOn(0)).toBe(true);
+
+    // Same revision: the guard must still do its job.
+    fireEvent.click(cancelIn(0));
+
+    await act(async () => { settled[0].resolve(); });
+    expect(outcomesIn(0, "inference-profile-revision-adopted")).toBe(0);
+  });
+
+  it("still lets a SECOND submit for the same profile supersede the first", async () => {
+    const { catalog: two, first } = twoEditable();
+    const { client: owner, settled } = deferredClient();
+    renderPanel({ status: "available", catalog: two }, vi.fn(), owner);
+
+    openIn(0);
+    setVersion(0, "1.1.0");
+    fireEvent.click(adoptIn(0));
+    fireEvent.click(cancelIn(0));
+    openIn(0);
+    setVersion(0, "1.2.0");
+    fireEvent.click(adoptIn(0));
+    expect(settled.length).toBe(2);
+
+    // Settle the SECOND first, then the superseded first: the stale one must
+    // not overwrite it.
+    await act(async () => { settled[1].resolve(); });
+    await act(async () => { settled[0].resolve(); });
+    await waitFor(() => expect(outcomesIn(0, "inference-profile-revision-adopted")).toBe(1));
+    expect(stuckOn(0)).toBe(false);
+  });
+
+  /** The sharpest form of the defect: a sibling that shares the `profile_id`
+   * but differs only by VERSION — legal in one catalog, because the
+   * uniqueness rule is on `(profile_id, version)`. A guard keyed on
+   * `profile_id` alone passes every distinct-id case above and still discards
+   * A's pending response here. */
+  it("records A's real outcome even though a SIBLING VERSION of the same profile_id reset", async () => {
+    const { catalog: two, first } = twoEditable(true);
+    const { client: owner, settled } = deferredClient();
+    renderPanel({ status: "available", catalog: two }, vi.fn(), owner);
+    expect(screen.getAllByRole("region", { name: `Inference profile ${first.profile_id}` })).toHaveLength(2);
+
+    openIn(0);
+    setVersion(0, "1.1.0");
+    fireEvent.click(adoptIn(0));
+    expect(stuckOn(0)).toBe(true);
+
+    openIn(1);
+    fireEvent.click(cancelIn(1));
+
+    await act(async () => { settled[0].resolve(); });
+    await waitFor(() => expect(outcomesIn(0, "inference-profile-revision-adopted")).toBe(1));
+    expect(outcomesIn(1, "inference-profile-revision-adopted")).toBe(0);
+    expect(stuckOn(0)).toBe(false);
+  });
+});
