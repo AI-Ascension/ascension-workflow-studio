@@ -32,7 +32,7 @@ export type {
   RunProjection,
   ProjectionResult,
 } from "./types";
-export { normalizeRelativeBase } from "./transport";
+export { normalizeRelativeBase, encodeProfileIdSegment } from "./transport";
 export { validateTargetAdmissionBinding, validateTargetConfiguration } from "./targets";
 export { fixtureTargetCatalog, fixtureContextOwnerCatalog, fixtureInferenceProfileCatalog } from "./fixture-catalogs";
 export { createProjection, applyEventPage, parseSseDataChunk, buildSafeCommand } from "./projection";

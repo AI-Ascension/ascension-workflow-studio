@@ -20,6 +20,8 @@ import {
   type ContextOwnerEffectiveLimits,
   type DefinitionRecord,
   type InferenceProfileCatalog,
+  type InferenceProfileRevisionAdoption,
+  type InferenceProfileRevisionRequest,
   type DraftRecord,
   type EventPage,
   type ExportResponse,
@@ -199,6 +201,24 @@ export class FixtureClient implements StudioClient {
 
   public async listInferenceProfiles(): Promise<InferenceProfileCatalog> {
     return fixtureInferenceProfileCatalog();
+  }
+
+  /** The fixture serves a catalog; it does not OWN one, so it cannot adopt a
+   * revision. This is a deliberate refusal, not a gap: a fixture that
+   * fabricated an `adopted` outcome would manufacture exactly the "the edit
+   * went through" evidence the UI is built to distrust. Synthetic adoption is
+   * exercised in tests through a stubbed client instead.
+   *
+   * The code the fixture would need is a 403 `missing_scope` from the owner:
+   * adoption is `workflow:content:write`, and a fixture holds no scopes. */
+  public async adoptInferenceProfileRevision(
+    profileId: string,
+    _request: InferenceProfileRevisionRequest,
+  ): Promise<InferenceProfileRevisionAdoption> {
+    throw new CapabilityGateError(
+      `The fixture cannot adopt a revision of ${profileId}: it owns no revision journal.`,
+      "inference_profile_revision_unavailable",
+    );
   }
 
   public async contextOwnerAssociation(_runId: string): Promise<ContextOwnerAssociation> {

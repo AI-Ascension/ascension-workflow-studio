@@ -14,6 +14,8 @@ import type {
   ExportResponse,
   InspectResponse,
   InferenceProfileCatalog,
+  InferenceProfileRevisionAdoption,
+  InferenceProfileRevisionRequest,
   JsonObject,
   ProviderSessionList,
   ProviderSessionPolicyCommandResponse,
@@ -70,6 +72,14 @@ export interface StudioClient {
   capabilities(): Promise<CapabilityResponse>;
   listContextBindings(): Promise<ContextOwnerCatalog>;
   listInferenceProfiles(): Promise<InferenceProfileCatalog>;
+  /** Adopts one owner-editable revision. Requires the owner's
+   * `workflow:content:write` scope AND `descriptor.grants.edit`; a lost
+   * compare-and-swap is returned as `conflicted`, never thrown and never
+   * retried automatically. */
+  adoptInferenceProfileRevision(
+    profileId: string,
+    request: InferenceProfileRevisionRequest,
+  ): Promise<InferenceProfileRevisionAdoption>;
   contextOwnerAssociation(runId: string): Promise<ContextOwnerAssociation>;
   contextOwnerEffectiveLimits(runId: string): Promise<ContextOwnerEffectiveLimits>;
   lookupContextControlReceipt(runId: string, command: ContextControlCommand): Promise<ContextControlReceipt>;
