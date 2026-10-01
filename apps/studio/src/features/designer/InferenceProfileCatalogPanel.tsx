@@ -82,10 +82,11 @@ function InferenceProfileRevisionEditor({ descriptor, editor }: {
     (event: { target: { value: string } }) =>
       setDraft((current) => ({ ...current, [key]: event.target.value }));
 
-  // Outcome state is per profile, so this editor reads and clears only its
-  // own. A sibling profile's adoption or conflict is never rendered here and
-  // is never cleared by opening or cancelling this one.
-  const outcome = editor.stateFor(descriptor.profile_id);
+  // Outcome state is per profile REVISION, so this editor reads and clears
+  // only its own. A sibling's adoption or conflict is never rendered here and
+  // is never cleared by opening or cancelling this one. The version is part
+  // of the key because a catalog may hold two revisions of one profile_id.
+  const outcome = editor.stateFor(descriptor.profile_id, descriptor.version);
 
   return <div data-testid={`inference-profile-revision-editor-${descriptor.profile_id}`}>
     {open ? <div>
@@ -100,9 +101,9 @@ function InferenceProfileRevisionEditor({ descriptor, editor }: {
       <button className="button button-primary" onClick={() => void editor.submit(descriptor, draft)} disabled={outcome.status === "submitting"}>
         {outcome.status === "submitting" ? "Adopting…" : "Adopt revision"}
       </button>
-      <button className="button button-quiet" onClick={() => { setOpen(false); editor.reset(descriptor.profile_id); }}>Cancel</button>
+      <button className="button button-quiet" onClick={() => { setOpen(false); editor.reset(descriptor.profile_id, descriptor.version); }}>Cancel</button>
       <RevisionOutcome state={outcome} profileId={descriptor.profile_id} />
-    </div> : <button className="button button-secondary" onClick={() => { setDraft(revisionDraftFor(descriptor)); setOpen(true); editor.reset(descriptor.profile_id); }}>
+    </div> : <button className="button button-secondary" onClick={() => { setDraft(revisionDraftFor(descriptor)); setOpen(true); editor.reset(descriptor.profile_id, descriptor.version); }}>
       {label}
     </button>}
     {!open && <RevisionOutcome state={outcome} profileId={descriptor.profile_id} />}
