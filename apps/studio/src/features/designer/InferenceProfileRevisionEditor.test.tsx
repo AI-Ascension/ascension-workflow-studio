@@ -7,7 +7,7 @@ import type {
   InferenceProfileRevisionAdoption,
   InferenceProfileRevisionRequest,
 } from "@studio/contracts";
-import { catalogFixture } from "../../../../../packages/contracts/src/inference-profile-catalog.test-fixtures";
+import { catalogFixture, reseal } from "../../../../../packages/contracts/src/inference-profile-catalog.test-fixtures";
 import { InferenceProfileCatalogPanel } from "./InferenceProfileCatalogPanel";
 import type { InferenceProfileCatalogState } from "./useInferenceProfileCatalog";
 
@@ -331,5 +331,133 @@ describe("the credential-leak guard and the catalog render agree", () => {
     // screen, and in particular not the planted secret itself.
     expect(screen.queryByTestId("owner-inference-profile-catalog")).not.toBeInTheDocument();
     expect(document.body.textContent ?? "").not.toContain("sk-not-real");
+  });
+});
+
+/** Outcome state is keyed by profile, so one profile's outcome is never
+ * rendered inside another's card.
+ *
+ * The fixture catalog carries exactly ONE editable profile, which is why this
+ * could not be caught before: with a single editor there is no second card to
+ * misattribute to. These cases build a two-editable-profile catalog (resealed
+ * with the repo's own helper, so it still passes real admission) and assert
+ * the banner appears only under the profile that was actually edited. */
+describe("outcome state is per profile, not shared across the catalog", () => {
+  const twoEditable = (): { catalog: InferenceProfileCatalog; first: InferenceProfileDescriptor; second: InferenceProfileDescriptor } => {
+    const two = catalog();
+    const first = two.descriptors.find((descriptor) => descriptor.grants.edit)!;
+    const second = structuredClone(first) as InferenceProfileDescriptor;
+    second.profile_id = "second.profile:beta";
+    second.version = "2.0.0";
+    two.descriptors = [structuredClone(first), second];
+    reseal(two);
+    return { catalog: two, first, second };
+  };
+
+  const region = (profileId: string): HTMLElement =>
+    screen.getByRole("region", { name: `Inference profile ${profileId}` });
+  const outcomesIn = (profileId: string, testId: string): number =>
+    region(profileId).querySelectorAll(`[data-testid="${testId}"]`).length;
+  // Both editors can be open at once, so the submit/cancel controls are
+  // scoped to their own editor rather than queried globally.
+  const editorFor = (profileId: string): HTMLElement =>
+    screen.getByTestId(`inference-profile-revision-editor-${profileId}`);
+  const adoptIn = (profileId: string): HTMLElement =>
+    editorFor(profileId).querySelector("button.button-primary") as HTMLElement;
+  const cancelIn = (profileId: string): HTMLElement =>
+    editorFor(profileId).querySelector("button.button-quiet") as HTMLElement;
+
+  const adoptionFor = (descriptor: InferenceProfileDescriptor, outcome: "adopted" | "replayed" | "conflict") =>
+    ({
+      outcome,
+      profile_id: descriptor.profile_id,
+      reference: `${descriptor.profile_id}:9.9.9:${descriptor.digest}`,
+      revision: descriptor,
+      adopted: outcome === "adopted",
+      conflicted: outcome === "conflict",
+    }) as InferenceProfileRevisionAdoption;
+
+  for (const outcome of ["adopted", "replayed", "conflict"] as const) {
+    it(`renders an ${outcome} only under the profile that was edited`, async () => {
+      const { catalog: two, first, second } = twoEditable();
+      const adopt = vi.fn().mockResolvedValue(adoptionFor(first, outcome));
+      const override = client();
+      override.adoptInferenceProfileRevision = adopt;
+      renderPanel({ status: "available", catalog: two }, vi.fn(), override);
+
+      fireEvent.click(screen.getByRole("button", { name: `Adopt a revision of ${first.profile_id}` }));
+      fireEvent.change(screen.getByRole("textbox", { name: `New version for ${first.profile_id}` }),
+        { target: { value: "1.1.0" } });
+      await act(async () => {
+        fireEvent.click(adoptIn(first.profile_id));
+      });
+
+      expect(adopt).toHaveBeenCalledTimes(1);
+      const testId = outcome === "conflict"
+        ? "inference-profile-revision-conflict"
+        : outcome === "adopted"
+          ? "inference-profile-revision-adopted"
+          : "inference-profile-revision-replayed";
+      // Exactly one banner in the whole panel, and it is the edited profile's.
+      expect(screen.queryAllByTestId(testId)).toHaveLength(1);
+      expect(outcomesIn(first.profile_id, testId)).toBe(1);
+      // The sibling profile's card asserts nothing about an edit it never made.
+      expect(outcomesIn(second.profile_id, testId)).toBe(0);
+      // And the wrong reference is nowhere on screen outside the edited card.
+      expect(region(second.profile_id).textContent ?? "").not.toContain(adoptionFor(first, outcome).reference);
+    });
+  }
+
+  it("keeps each profile's outcome independent across two separate edits", async () => {
+    const { catalog: two, first, second } = twoEditable();
+    const adopt = vi.fn()
+      .mockResolvedValueOnce(adoptionFor(first, "adopted"))
+      .mockResolvedValueOnce(adoptionFor(second, "conflict"));
+    const override = client();
+    override.adoptInferenceProfileRevision = adopt;
+    renderPanel({ status: "available", catalog: two }, vi.fn(), override);
+
+    fireEvent.click(screen.getByRole("button", { name: `Adopt a revision of ${first.profile_id}` }));
+    fireEvent.change(screen.getByRole("textbox", { name: `New version for ${first.profile_id}` }),
+      { target: { value: "1.1.0" } });
+    await act(async () => {
+      fireEvent.click(adoptIn(first.profile_id));
+    });
+    fireEvent.click(screen.getByRole("button", { name: `Adopt a revision of ${second.profile_id}` }));
+    fireEvent.change(screen.getByRole("textbox", { name: `New version for ${second.profile_id}` }),
+      { target: { value: "2.1.0" } });
+    await act(async () => {
+      fireEvent.click(adoptIn(second.profile_id));
+    });
+
+    expect(adopt).toHaveBeenCalledTimes(2);
+    expect(adopt.mock.calls.map(([id]) => id)).toEqual([first.profile_id, second.profile_id]);
+    // Each profile keeps its own distinct outcome; neither overwrites the other.
+    expect(outcomesIn(first.profile_id, "inference-profile-revision-adopted")).toBe(1);
+    expect(outcomesIn(second.profile_id, "inference-profile-revision-adopted")).toBe(0);
+    expect(outcomesIn(second.profile_id, "inference-profile-revision-conflict")).toBe(1);
+    expect(outcomesIn(first.profile_id, "inference-profile-revision-conflict")).toBe(0);
+  });
+
+  it("does not let one profile's cancel clear a sibling's outcome", async () => {
+    const { catalog: two, first, second } = twoEditable();
+    const adopt = vi.fn().mockResolvedValue(adoptionFor(first, "adopted"));
+    const override = client();
+    override.adoptInferenceProfileRevision = adopt;
+    renderPanel({ status: "available", catalog: two }, vi.fn(), override);
+
+    fireEvent.click(screen.getByRole("button", { name: `Adopt a revision of ${first.profile_id}` }));
+    fireEvent.change(screen.getByRole("textbox", { name: `New version for ${first.profile_id}` }),
+      { target: { value: "1.1.0" } });
+    await act(async () => {
+      fireEvent.click(adoptIn(first.profile_id));
+    });
+    expect(outcomesIn(first.profile_id, "inference-profile-revision-adopted")).toBe(1);
+
+    // Opening and cancelling the SIBLING editor must not disturb the outcome
+    // recorded against the profile that was actually edited.
+    fireEvent.click(screen.getByRole("button", { name: `Adopt a revision of ${second.profile_id}` }));
+    fireEvent.click(cancelIn(second.profile_id));
+    expect(outcomesIn(first.profile_id, "inference-profile-revision-adopted")).toBe(1);
   });
 });
