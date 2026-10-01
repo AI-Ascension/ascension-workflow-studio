@@ -660,7 +660,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     </div>
     <p className="identity-note muted">Draft revision, definition digest, layout digest, and compiler identity are independent; none substitutes for another.</p>
     <ContextOwnerCatalogPanel state={ownerCatalog.state} refresh={ownerCatalog.refresh} />
-    <InferenceProfileCatalogPanel state={inferenceProfileCatalog.state} refresh={inferenceProfileCatalog.refresh} />
+    <InferenceProfileCatalogPanel state={inferenceProfileCatalog.state} refresh={inferenceProfileCatalog.refresh} client={client} />
     <RecoveryPanel enabled={recovery.enabled} principal={principal} count={recovery.principalRecordCount} recoverable={recovery.recoverable} notice={recovery.notice} onToggle={recovery.toggle} onRecover={recoverLocalCandidate} onExport={recovery.exportRecords} onClear={recovery.clear} />
     {draft.state === "conflict" ? <Notice tone="danger" title="Draft conflict">The server revision changed while this editor was saving. Local edits are preserved until an explicit resolution.</Notice> : null}
     {draft.state === "conflict" && conflictRemoteDocument && conflictRemoteLayout && conflictOpen ? <ConflictPanel base={mergeBase} baseLayout={mergeBaseLayout} local={document} localLayout={layout} remote={conflictRemoteDocument} remoteLayout={conflictRemoteLayout} onKeepRemote={reloadRemoteConflict} onKeepLocal={saveLocalAsNew} onMerge={mergeConflict} onCancel={cancelConflictResolution} /> : null}

@@ -14,6 +14,8 @@ import {
   HealthResponseSchema,
   InspectResponseSchema,
   InferenceProfileCatalogSchema,
+  InferenceProfileRevisionRequestSchema,
+  InferenceProfileRevisionResponseSchema,
   ProviderSessionListSchema,
   ProviderSessionPolicyCommandResponseSchema,
   ProviderSessionPolicyViewResponseSchema,
@@ -44,6 +46,8 @@ import {
   type ExportResponse,
   type InspectResponse,
   type InferenceProfileCatalog,
+  type InferenceProfileRevisionAdoption,
+  type InferenceProfileRevisionRequest,
   type ProviderSessionList,
   type ProviderSessionPolicyCommandResponse,
   type ProviderSessionPolicyViewResponse,
@@ -59,6 +63,7 @@ import {
   type WorkflowDefinition,
   type CommandKind,
   type CommandResponse,
+  adoptInferenceProfileRevision,
 } from "@studio/contracts";
 import { definitionIdentityDigest, validateNodeBindings } from "@studio/document";
 import { readContextCatalogBody } from "./context-owner-catalog";
@@ -66,7 +71,13 @@ import { CapabilityGateError, ClientError } from "./errors";
 import { assertPolicyCommandOperation, assertPolicyUpload, policyRevisionQuery } from "./provider-policy";
 import { ownerDefinitionToRecord, ownerDraftToRecord } from "./records";
 import { TARGET_CONFIGURATION_FIELDS, assertEqualBindingField, validateTargetAdmissionBinding } from "./targets";
-import { cloneJson, cryptoRandomId, encodeIdentifier, normalizeRelativeBase } from "./transport";
+import {
+  cloneJson,
+  cryptoRandomId,
+  encodeIdentifier,
+  encodeProfileIdSegment,
+  normalizeRelativeBase,
+} from "./transport";
 import type {
   DraftWrite,
   OwnerApiClientOptions,
@@ -193,6 +204,63 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
   public async listInferenceProfiles(): Promise<InferenceProfileCatalog> {
     const response = await this.request("/inference-profiles", { method: "GET" }, true);
     return decodeWith(InferenceProfileCatalogSchema, response, "inference profile catalog");
+  }
+
+  /** Adopts one owner-editable inference-profile revision.
+   *
+   * This is the WRITE half of the grant split that `listInferenceProfiles`
+   * only reads: the owner authorizes this route on `workflow:content:write`
+   * and separately checks `descriptor.grants.edit`, neither of which is
+   * implied by being able to read the catalog. Calling it for a profile the
+   * owner does not publish as editable is therefore refused producer-side
+   * (`inference_profile_edit_denied`, HTTP 403) — this method does not
+   * pre-empt that refusal with a local guess about what the owner intends.
+   *
+   * The request is validated locally FIRST, and locally it is CLOSED. A
+   * payload carrying an authority or credential field outside the editable
+   * allow-list — `adapter`, `requested_model`, `grants`, `node_kinds`,
+   * `operations`, an `endpoint`, an `api_key` — fails here and is never sent.
+   * That is stricter than the transport would be on its own, and it is the
+   * point: a well-formed-looking edit must not be able to smuggle a second
+   * intent through a field the owner ignores.
+   *
+   * A LOST compare-and-swap is returned, not thrown. The owner answers a lost
+   * swap with `outcome: "conflict"` and the revision that WON; that is a normal,
+   * fully-described outcome of a well-formed request, not an exception. It is
+   * surfaced as `conflicted: true` so a caller must handle it explicitly, and
+   * there is deliberately no retry here — auto-retrying a lost swap is how a
+   * concurrent edit gets silently overwritten by whichever caller retries
+   * last. Recovering from a conflict means an explicit human re-author against
+   * the named winning revision.
+   *
+   * Note also what an adoption does NOT do: the owner records the revision in
+   * an append-only journal and does NOT splice it into the served catalog. The
+   * catalog is re-read to learn what the owner now publishes. */
+  public async adoptInferenceProfileRevision(
+    profileId: string,
+    request: InferenceProfileRevisionRequest,
+  ): Promise<InferenceProfileRevisionAdoption> {
+    const parsed = InferenceProfileRevisionRequestSchema.parse(request);
+    const segment = encodeProfileIdSegment(profileId);
+    const response = await this.request(`/inference-profiles/${segment}/revisions`, {
+      method: "POST",
+      body: JSON.stringify(parsed),
+    });
+    const decoded = decodeWith(
+      InferenceProfileRevisionResponseSchema,
+      response,
+      "inference profile revision adoption",
+    );
+    if (decoded.profile_id !== profileId) {
+      // The owner keys the journal by the profile in the path. A response for
+      // a different profile is not a response to this request.
+      throw new ClientError(
+        "Owner returned an adoption for a different inference profile",
+        "inference_profile_revision_profile_mismatch",
+        409,
+      );
+    }
+    return adoptInferenceProfileRevision(decoded);
   }
 
   public async contextOwnerAssociation(runId: string): Promise<ContextOwnerAssociation> {
