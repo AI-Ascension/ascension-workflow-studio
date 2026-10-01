@@ -9,6 +9,7 @@ import type { StudioClient } from "@studio/client";
 import {
   revisionDraftFor,
   useInferenceProfileRevisionEditor,
+  type InferenceProfileRevisionState,
   type InferenceProfileRevisionDraft,
 } from "./useInferenceProfileRevisionEditor";
 
@@ -81,6 +82,11 @@ function InferenceProfileRevisionEditor({ descriptor, editor }: {
     (event: { target: { value: string } }) =>
       setDraft((current) => ({ ...current, [key]: event.target.value }));
 
+  // Outcome state is per profile, so this editor reads and clears only its
+  // own. A sibling profile's adoption or conflict is never rendered here and
+  // is never cleared by opening or cancelling this one.
+  const outcome = editor.stateFor(descriptor.profile_id);
+
   return <div data-testid={`inference-profile-revision-editor-${descriptor.profile_id}`}>
     {open ? <div>
       <p className="muted">Editing against served revision digest <code>{descriptor.digest.slice(0, 16)}…</code>. The owner accepts this only if that revision is still the accepted head.</p>
@@ -91,15 +97,15 @@ function InferenceProfileRevisionEditor({ descriptor, editor }: {
       <label>Max input bytes<input aria-label={`Max input bytes for ${descriptor.profile_id}`} value={draft.max_input_bytes} onChange={update("max_input_bytes")} /></label>
       <label>Max output tokens<input aria-label={`Max output tokens for ${descriptor.profile_id}`} value={draft.max_output_tokens} onChange={update("max_output_tokens")} /></label>
       <label>Max provider calls<input aria-label={`Max provider calls for ${descriptor.profile_id}`} value={draft.max_provider_calls} onChange={update("max_provider_calls")} /></label>
-      <button className="button button-primary" onClick={() => void editor.submit(descriptor, draft)} disabled={editor.state.status === "submitting"}>
-        {editor.state.status === "submitting" ? "Adopting…" : "Adopt revision"}
+      <button className="button button-primary" onClick={() => void editor.submit(descriptor, draft)} disabled={outcome.status === "submitting"}>
+        {outcome.status === "submitting" ? "Adopting…" : "Adopt revision"}
       </button>
-      <button className="button button-quiet" onClick={() => { setOpen(false); editor.reset(); }}>Cancel</button>
-      <RevisionOutcome state={editor.state} profileId={descriptor.profile_id} />
-    </div> : <button className="button button-secondary" onClick={() => { setDraft(revisionDraftFor(descriptor)); setOpen(true); editor.reset(); }}>
+      <button className="button button-quiet" onClick={() => { setOpen(false); editor.reset(descriptor.profile_id); }}>Cancel</button>
+      <RevisionOutcome state={outcome} profileId={descriptor.profile_id} />
+    </div> : <button className="button button-secondary" onClick={() => { setDraft(revisionDraftFor(descriptor)); setOpen(true); editor.reset(descriptor.profile_id); }}>
       {label}
     </button>}
-    {!open && <RevisionOutcome state={editor.state} profileId={descriptor.profile_id} />}
+    {!open && <RevisionOutcome state={outcome} profileId={descriptor.profile_id} />}
   </div>;
 }
 
@@ -111,7 +117,7 @@ function InferenceProfileRevisionEditor({ descriptor, editor }: {
  * that won and requires an explicit human re-author — no overwrite, no
  * automatic retry. */
 function RevisionOutcome({ state, profileId }: {
-  state: ReturnType<typeof useInferenceProfileRevisionEditor>["state"];
+  state: InferenceProfileRevisionState;
   profileId: string;
 }): JSX.Element | null {
   if (state.status === "adopted") {

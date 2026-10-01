@@ -66,12 +66,20 @@ export function revisionDraftFor(descriptor: InferenceProfileDescriptor): Infere
 }
 
 export interface InferenceProfileRevisionEditor {
-  state: InferenceProfileRevisionState;
+  /** The outcome for one profile, or `idle` when that profile has none.
+   *
+   * Outcome state is keyed by `profile_id` because the panel renders one
+   * editor per descriptor from a single hook. A single shared `state` would
+   * make every profile's card render the same banner, so profile B could
+   * display profile A's adopted reference or name the wrong winner on a
+   * conflict. The key is the profile the edit was submitted for, read from
+   * the descriptor at submit time — never from form input. */
+  stateFor(profileId: string): InferenceProfileRevisionState;
   submit(
     descriptor: InferenceProfileDescriptor,
     draft: InferenceProfileRevisionDraft,
   ): Promise<void>;
-  reset(): void;
+  reset(profileId: string): void;
 }
 
 /** The authorized revision editor for `POST
@@ -96,7 +104,10 @@ export function useInferenceProfileRevisionEditor(
   client: StudioClient,
   onCatalogChanged: () => void,
 ): InferenceProfileRevisionEditor {
-  const [state, setState] = useState<InferenceProfileRevisionState>({ status: "idle" });
+  // Keyed by profile_id so one profile's outcome cannot be attributed to
+  // another. A submission updates only its own key; every other profile keeps
+  // whatever it had, including `idle`.
+  const [states, setStates] = useState<Record<string, InferenceProfileRevisionState>>({});
   const generation = useRef(0);
 
   const submit = useCallback(async (
@@ -104,14 +115,19 @@ export function useInferenceProfileRevisionEditor(
     draft: InferenceProfileRevisionDraft,
   ): Promise<void> => {
     const current = ++generation.current;
-    setState({ status: "submitting" });
+    const profileId = descriptor.profile_id;
+    // Scoped to this profile's key only: a sibling profile's outcome is left
+    // untouched, so an in-flight edit elsewhere cannot blank it.
+    const setProfileState = (next: InferenceProfileRevisionState) =>
+      setStates((previous) => ({ ...previous, [profileId]: next }));
+    setProfileState({ status: "submitting" });
 
     // Local preconditions, from the sealed catalog in hand. The owner repeats
     // both of these itself; refusing here means the UI never offers a control
     // that could only fail, and never sends a request for a profile the owner
     // has already said is not editable.
     if (!descriptor.grants.edit) {
-      setState({
+      setProfileState({
         status: "refused",
         refusal: "edit_not_granted",
         detail: "The owner does not publish this inference profile as editable.",
@@ -119,7 +135,7 @@ export function useInferenceProfileRevisionEditor(
       return;
     }
     if (descriptor.state !== "available") {
-      setState({
+      setProfileState({
         status: "refused",
         refusal: "profile_not_available",
         detail: `Only an available revision can be edited; this one is ${descriptor.state}.`,
@@ -146,7 +162,7 @@ export function useInferenceProfileRevisionEditor(
     if (!candidate.success) {
       // The closed request shape rejects here rather than sending a payload
       // the owner would refuse with an opaque error.
-      setState({
+      setProfileState({
         status: "refused",
         refusal: "request_invalid",
         detail: "The edit does not satisfy the owner's editable request shape, so it was not sent.",
@@ -162,17 +178,17 @@ export function useInferenceProfileRevisionEditor(
         // A concurrent edit won. The winner is reported and left alone; this
         // editor does not retry, does not re-aim at the winner, and does not
         // carry the losing candidate forward.
-        setState({ status: "conflict", adoption });
+        setProfileState({ status: "conflict", adoption });
         return;
       }
-      setState({ status: adoption.adopted ? "adopted" : "replayed", adoption });
+      setProfileState({ status: adoption.adopted ? "adopted" : "replayed", adoption });
       // Re-read from the owner on any accepted outcome (`adopted` and
       // `replayed` both name a revision the owner accepted). The response is
       // not patched into local state: the owner decides what it now serves.
       if (adoption.adopted || adoption.outcome === "replayed") onCatalogChanged();
     } catch (error: unknown) {
       if (generation.current !== current) return;
-      setState({
+      setProfileState({
         status: "refused",
         refusal: error instanceof CapabilityGateError ? "owner_refused"
           : error instanceof ClientError ? "owner_refused" : "transport_failed",
@@ -181,12 +197,15 @@ export function useInferenceProfileRevisionEditor(
     }
   }, [client, onCatalogChanged]);
 
-  const reset = useCallback((): void => {
+  const reset = useCallback((profileId: string): void => {
     generation.current += 1;
-    setState({ status: "idle" });
+    setStates((previous) => ({ ...previous, [profileId]: { status: "idle" } }));
   }, []);
 
-  return { state, submit, reset };
+  const stateFor = useCallback((profileId: string): InferenceProfileRevisionState =>
+    states[profileId] ?? { status: "idle" }, [states]);
+
+  return { stateFor, submit, reset };
 }
 
 function cryptoRandomMutationId(): string {
