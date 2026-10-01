@@ -188,6 +188,7 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
     document,
     layout,
     suspended: Boolean(archivalImport),
+    inferenceProfileCatalog: inferenceProfiles,
     bridge: { replaceDocument, commitSnapshot, setLayout, reportValidation, setDiagnostics, editGeneration },
   });
 

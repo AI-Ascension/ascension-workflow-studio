@@ -200,6 +200,37 @@ export interface InferenceProfileSelection {
   digest: string;
 }
 
+/** Producer `InferenceProfileRef` exact-pin format: `profile_id:major.minor.patch:<sha256>`.
+ * The producer splits it with `rsplitn(3, ':')`, so the digest and version are
+ * always the LAST two segments and a `profile_id` may itself contain `:`.
+ *
+ * This codec is the single source of truth for the Studio's exact-pin format:
+ * the designer write path, the document admission check and the dispatch
+ * binding all parse and render pins through it, so they cannot drift apart and
+ * agree on what a "pin" means. */
+export function formatInferenceProfilePin(selection: InferenceProfileSelection): string {
+  return `${selection.profile_id}:${selection.version}:${selection.digest}`;
+}
+
+/** Parses an exact pin back into its three segments, or returns `undefined` for
+ * a floating id or any malformed value. It never guesses a revision and never
+ * falls back to a partial match: an unparseable reference is "unbound", which
+ * every caller reports rather than silently repairing. */
+export function parseInferenceProfilePin(reference: string): InferenceProfileSelection | undefined {
+  // Split from the RIGHT, exactly as the producer's `rsplitn(3, ':')` does.
+  // The head keeps every remaining colon, because `RegistryId` accepts `:`
+  // after an alphanumeric first byte.
+  const parts = reference.split(":");
+  if (parts.length < 3) return undefined;
+  const pinnedDigest = parts[parts.length - 1];
+  const version = parts[parts.length - 2];
+  const profileId = parts.slice(0, parts.length - 2).join(":");
+  if (!identifier.safeParse(profileId).success) return undefined;
+  if (!semver.safeParse(version).success) return undefined;
+  if (!digest.safeParse(pinnedDigest).success) return undefined;
+  return { profile_id: profileId, version, digest: pinnedDigest };
+}
+
 export interface InferenceProfileResolution {
   ok: boolean;
   selection?: InferenceProfileSelection;

@@ -65,6 +65,20 @@ describe("unsupported definition isolation", () => {
   it("does not publish after pending owner validation resolves in archive mode", async () => {
     vi.useFakeTimers();
     const client = await openDesigner();
+    // #112 T2: publication only reaches the owner once every profile-bearing
+    // node is bound to an identity the owner publishes. Bind this fixture's
+    // decide node to the catalog's exact pin so the test exercises the race it
+    // is named for (a stale in-flight validation) rather than being short
+    // circuited by profile admission.
+    const bound = structuredClone(fixtureDefinitions[0].definition);
+    const decision = bound.graphs[0].nodes.find((node) => node.kind === "decide")!;
+    const descriptor = (await client.listInferenceProfiles()).descriptors.find((d) => d.profile_id === "decision.synthetic.v1")!;
+    decision.config = {
+      ...decision.config,
+      decision_profile_ref: `${descriptor.profile_id}:${descriptor.version}:${descriptor.digest}`,
+      context_ref: "context.synthetic.v1",
+    };
+    applyRaw(JSON.stringify(bound));
     await act(async () => { await vi.advanceTimersByTimeAsync(800); });
     const result = await client.validate(fixtureDefinitions[0].definition);
     let finishValidation!: (value: typeof result) => void;
