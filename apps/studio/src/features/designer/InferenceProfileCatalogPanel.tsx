@@ -31,7 +31,7 @@ export function InferenceProfileCatalogPanel({ state, refresh, client }: {
     {state.status === "pending" ? <p role="status">Loading owner profile catalog. No profile can be selected while it is unverified.</p> : null}
     {state.status === "unavailable" ? <p role="status">{state.reason}</p> : null}
     {leaks.length ? <p className="field-error" role="alert">The owner response disclosed credential-bearing fields ({leaks.join(", ")}); it is withheld from this view.</p> : null}
-    {catalog ? <div data-testid="owner-inference-profile-catalog">
+    {catalog && leaks.length === 0 ? <div data-testid="owner-inference-profile-catalog">
       <p className="muted">Owner {catalog.owner_id} · {catalog.owner_version}</p>
       {catalog.descriptors.length === 0 ? <p>No inference profiles were disclosed.</p> : null}
       {catalog.descriptors.map((descriptor) => <section

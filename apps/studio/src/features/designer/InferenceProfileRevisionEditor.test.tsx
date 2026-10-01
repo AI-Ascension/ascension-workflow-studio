@@ -305,3 +305,31 @@ describe("refusals are reported honestly", () => {
     expect(adopt).not.toHaveBeenCalled();
   });
 });
+
+describe("the credential-leak guard and the catalog render agree", () => {
+  it("renders the catalog when the owner discloses nothing credential-bearing", () => {
+    renderPanel({ status: "available", catalog: catalog() });
+    // Positive control for the guard itself: a clean catalog is shown and no
+    // breach alert is raised, so the assertions below are not passing merely
+    // because the alert and the render are both absent for unrelated reasons.
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.getByTestId("owner-inference-profile-catalog")).toBeInTheDocument();
+  });
+
+  it("actually withholds the catalog when the owner discloses a credential-bearing field", () => {
+    // The alert has always claimed the catalog "is withheld from this view".
+    // It did not: the catalog rendered unconditionally on the next line, so an
+    // operator reading the warning was told the opposite of what the component
+    // did. This test pins the render guard to the claim, not the other way
+    // round, because "withheld" is the honest reading of a leak.
+    const leaked = catalog();
+    (leaked.descriptors[0] as unknown as Record<string, unknown>).api_key = "sk-not-real";
+    renderPanel({ status: "available", catalog: leaked });
+    expect(screen.getByRole("alert")).toHaveTextContent(/credential-bearing fields/);
+    expect(screen.getByRole("alert")).toHaveTextContent(/withheld from this view/);
+    // The claim above must be true of the DOM: no descriptor may reach the
+    // screen, and in particular not the planted secret itself.
+    expect(screen.queryByTestId("owner-inference-profile-catalog")).not.toBeInTheDocument();
+    expect(document.body.textContent ?? "").not.toContain("sk-not-real");
+  });
+});
