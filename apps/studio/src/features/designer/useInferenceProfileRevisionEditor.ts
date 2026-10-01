@@ -66,20 +66,29 @@ export function revisionDraftFor(descriptor: InferenceProfileDescriptor): Infere
 }
 
 export interface InferenceProfileRevisionEditor {
-  /** The outcome for one profile, or `idle` when that profile has none.
+  /** The outcome for one profile revision, or `idle` when it has none.
    *
-   * Outcome state is keyed by `profile_id` because the panel renders one
-   * editor per descriptor from a single hook. A single shared `state` would
-   * make every profile's card render the same banner, so profile B could
-   * display profile A's adopted reference or name the wrong winner on a
-   * conflict. The key is the profile the edit was submitted for, read from
-   * the descriptor at submit time — never from form input. */
-  stateFor(profileId: string): InferenceProfileRevisionState;
+   * Outcome state is keyed by profile IDENTITY — `(profile_id, version)` —
+   * because the panel renders one editor per descriptor from a single hook. A
+   * single shared `state` would make every card render the same banner, so one
+   * profile's card could display another's adopted reference or name the wrong
+   * winner on a conflict.
+   *
+   * The version is part of the key because a catalog may legally contain two
+   * revisions of the SAME `profile_id`: the catalog's own uniqueness rule is
+   * on `(profile_id, version)` (`InferenceProfileCatalogSchema` rejects only
+   * duplicates of that pair, and `resolveInferenceProfile` selects on both
+   * fields). Keying on `profile_id` alone would make those two revisions share
+   * one outcome, reintroducing exactly the misattribution this fixes.
+   *
+   * The key is read from the descriptor at submit time — never from form
+   * input. */
+  stateFor(profileId: string, version: string): InferenceProfileRevisionState;
   submit(
     descriptor: InferenceProfileDescriptor,
     draft: InferenceProfileRevisionDraft,
   ): Promise<void>;
-  reset(profileId: string): void;
+  reset(profileId: string, version: string): void;
 }
 
 /** The authorized revision editor for `POST
@@ -104,8 +113,10 @@ export function useInferenceProfileRevisionEditor(
   client: StudioClient,
   onCatalogChanged: () => void,
 ): InferenceProfileRevisionEditor {
-  // Keyed by profile_id so one profile's outcome cannot be attributed to
-  // another. A submission updates only its own key; every other profile keeps
+  // Keyed by profile IDENTITY (`profile_id` + `\0` + `version`), matching the
+  // catalog's own uniqueness rule, so one profile revision's outcome cannot be
+  // attributed to another -- including to a different VERSION of the same
+  // profile. A submission updates only its own key; every other revision keeps
   // whatever it had, including `idle`.
   const [states, setStates] = useState<Record<string, InferenceProfileRevisionState>>({});
   const generation = useRef(0);
@@ -115,11 +126,11 @@ export function useInferenceProfileRevisionEditor(
     draft: InferenceProfileRevisionDraft,
   ): Promise<void> => {
     const current = ++generation.current;
-    const profileId = descriptor.profile_id;
-    // Scoped to this profile's key only: a sibling profile's outcome is left
+    const key = outcomeKey(descriptor.profile_id, descriptor.version);
+    // Scoped to this revision's key only: a sibling's outcome is left
     // untouched, so an in-flight edit elsewhere cannot blank it.
     const setProfileState = (next: InferenceProfileRevisionState) =>
-      setStates((previous) => ({ ...previous, [profileId]: next }));
+      setStates((previous) => ({ ...previous, [key]: next }));
     setProfileState({ status: "submitting" });
 
     // Local preconditions, from the sealed catalog in hand. The owner repeats
@@ -197,15 +208,23 @@ export function useInferenceProfileRevisionEditor(
     }
   }, [client, onCatalogChanged]);
 
-  const reset = useCallback((profileId: string): void => {
+  const reset = useCallback((profileId: string, version: string): void => {
     generation.current += 1;
-    setStates((previous) => ({ ...previous, [profileId]: { status: "idle" } }));
+    setStates((previous) => ({ ...previous, [outcomeKey(profileId, version)]: { status: "idle" } }));
   }, []);
 
-  const stateFor = useCallback((profileId: string): InferenceProfileRevisionState =>
-    states[profileId] ?? { status: "idle" }, [states]);
+  const stateFor = useCallback((profileId: string, version: string): InferenceProfileRevisionState =>
+    states[outcomeKey(profileId, version)] ?? { status: "idle" }, [states]);
 
   return { stateFor, submit, reset };
+}
+
+/** The key an outcome is stored under.
+ *
+ * `\0` cannot appear in either field: both are `identifier`s, whose character
+ * class excludes control bytes, so this cannot be forged into a collision. */
+export function outcomeKey(profileId: string, version: string): string {
+  return `${profileId}\0${version}`;
 }
 
 function cryptoRandomMutationId(): string {

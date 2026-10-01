@@ -360,12 +360,19 @@ describe("outcome state is per profile, not shared across the catalog", () => {
     region(profileId).querySelectorAll(`[data-testid="${testId}"]`).length;
   // Both editors can be open at once, so the submit/cancel controls are
   // scoped to their own editor rather than queried globally.
-  const editorFor = (profileId: string): HTMLElement =>
-    screen.getByTestId(`inference-profile-revision-editor-${profileId}`);
-  const adoptIn = (profileId: string): HTMLElement =>
-    editorFor(profileId).querySelector("button.button-primary") as HTMLElement;
-  const cancelIn = (profileId: string): HTMLElement =>
-    editorFor(profileId).querySelector("button.button-quiet") as HTMLElement;
+  // A profile id can have more than one revision card, so callers that mean a
+  // specific revision pass its version; without one this falls back to the
+  // first card, which is correct only when the id is unique in the catalog.
+  // A profile id may have more than one revision card, so callers select a card
+  // by index into the catalog's descriptor order (its React key is
+  // `${profile_id}:${version}`, so DOM order matches). Index 0 is the only
+  // correct default when the id is unique in the catalog.
+  const adoptIn = (profileId: string, revisionIndex = 0): HTMLElement =>
+    screen.getAllByTestId(`inference-profile-revision-editor-${profileId}`)[revisionIndex]
+      .querySelector("button.button-primary") as HTMLElement;
+  const cancelIn = (profileId: string, revisionIndex = 0): HTMLElement =>
+    screen.getAllByTestId(`inference-profile-revision-editor-${profileId}`)[revisionIndex]
+      .querySelector("button.button-quiet") as HTMLElement;
 
   const adoptionFor = (descriptor: InferenceProfileDescriptor, outcome: "adopted" | "replayed" | "conflict") =>
     ({
@@ -459,5 +466,44 @@ describe("outcome state is per profile, not shared across the catalog", () => {
     fireEvent.click(screen.getByRole("button", { name: `Adopt a revision of ${second.profile_id}` }));
     fireEvent.click(cancelIn(second.profile_id));
     expect(outcomesIn(first.profile_id, "inference-profile-revision-adopted")).toBe(1);
+  });
+
+  it("keeps two VERSIONS of the same profile_id separate", async () => {
+    // The catalog's uniqueness rule is on `(profile_id, version)`
+    // (`InferenceProfileCatalogSchema` rejects only duplicate PAIRS, and
+    // `resolveInferenceProfile` selects on both fields), so a catalog may
+    // legally carry two revisions of one profile. Keying outcome state on
+    // `profile_id` alone would make those two cards share one banner —
+    // reintroducing the same misattribution under a different shape.
+    const two = catalog();
+    const first = two.descriptors.find((descriptor) => descriptor.grants.edit)!;
+    const second = structuredClone(first) as InferenceProfileDescriptor;
+    second.version = "9.9.9";
+    second.digest = "b".repeat(64);
+    two.descriptors = [structuredClone(first), second];
+    reseal(two);
+
+    const adopt = vi.fn().mockResolvedValue(adoptionFor(first, "adopted"));
+    const override = client();
+    override.adoptInferenceProfileRevision = adopt;
+    renderPanel({ status: "available", catalog: two }, vi.fn(), override);
+
+    // Both revisions are rendered as distinct cards for the SAME profile id.
+    expect(screen.getAllByRole("region", { name: `Inference profile ${first.profile_id}` })).toHaveLength(2);
+
+    fireEvent.click(screen.getAllByRole("button", { name: `Adopt a revision of ${first.profile_id}` })[0]);
+    fireEvent.change(screen.getAllByRole("textbox", { name: `New version for ${first.profile_id}` })[0],
+      { target: { value: "1.1.0" } });
+    await act(async () => {
+      fireEvent.click(adoptIn(first.profile_id, 0));
+    });
+
+    expect(adopt).toHaveBeenCalledTimes(1);
+    // One banner only, and it is the edited revision's — the sibling version of
+    // the same profile_id must not inherit it.
+    expect(screen.queryAllByTestId("inference-profile-revision-adopted")).toHaveLength(1);
+    const cards = screen.getAllByRole("region", { name: `Inference profile ${first.profile_id}` });
+    expect(cards[0].querySelectorAll('[data-testid="inference-profile-revision-adopted"]')).toHaveLength(1);
+    expect(cards[1].querySelectorAll('[data-testid="inference-profile-revision-adopted"]')).toHaveLength(0);
   });
 });
