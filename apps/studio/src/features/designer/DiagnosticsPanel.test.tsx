@@ -32,4 +32,40 @@ describe("DiagnosticsPanel", () => {
     expect(screen.getByText("Definition admitted")).toBeInTheDocument();
     expect(screen.getByText("No diagnostics returned by the active adapter.")).toBeInTheDocument();
   });
+
+  const digest = "c".repeat(64);
+
+  it("shows the owner's resolved decision beside the authored reference", () => {
+    render(<DiagnosticsPanel result={result({
+      inference_profiles: [{
+        graph_id: "campaign",
+        node_id: "decide-now",
+        node_kind: "decide",
+        profile_ref: "sts2.campaign.decision.v1",
+        resolved_pin: `sts2.campaign.decision.v1:1.0.0:${digest}`,
+        path: "$.graphs[0].nodes[0].config.decision_profile_ref",
+      }],
+    })} onFocusPath={vi.fn()} />);
+    // Both are visible: the author's FLOATING reference is shown as authored,
+    // and the owner's exact resolution beside it. The reference is not
+    // rewritten to the pin anywhere in the presentation.
+    expect(screen.getAllByText("sts2.campaign.decision.v1").length).toBeGreaterThan(0);
+    expect(screen.getByText(`sts2.campaign.decision.v1:1.0.0:${digest}`)).toBeInTheDocument();
+  });
+
+  it("says the owner published nothing rather than inventing a resolution", () => {
+    const { unmount } = render(
+      <DiagnosticsPanel result={result({ inference_profiles: undefined })} onFocusPath={vi.fn()} />,
+    );
+    expect(screen.getByText(/published no inference-profile decision/)).toBeInTheDocument();
+    unmount();
+
+    render(<DiagnosticsPanel result={result({ inference_profiles: null })} onFocusPath={vi.fn()} />);
+    expect(screen.getByText(/serves no inference-profile catalog/)).toBeInTheDocument();
+  });
+
+  it("distinguishes an empty resolution from an absent one", () => {
+    render(<DiagnosticsPanel result={result({ inference_profiles: [] })} onFocusPath={vi.fn()} />);
+    expect(screen.getByText(/references no inference profile/)).toBeInTheDocument();
+  });
 });
