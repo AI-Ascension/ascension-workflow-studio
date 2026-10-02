@@ -72,6 +72,7 @@ import { EdgeInspector } from "./EdgeInspector";
 
 import { DesignerCanvas } from "./DesignerCanvas";
 import { DiagnosticsPanel } from "./DiagnosticsPanel";
+import { focusTargetFromDiagnosticPath, focusTargetFromProfileEntry } from "./diagnosticsFocus";
 import { GraphNavigator, LoopBodyGraphNavigation } from "./GraphNavigator";
 import { ListEditor } from "./ListEditor";
 import { toFlowEdges, type FlowNode } from "./graphProjection";
@@ -710,10 +711,16 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
       </div>
     </div> : <ListEditor document={document} selectedIds={selectedIds} onSelect={selectNode} inspector={<InspectorPanel document={document} catalog={catalog} contextBindings={contextBindings} inferenceProfiles={inferenceProfiles} selected={selected} selectedConfigText={selectedConfigText} onUpdate={updateSelected} onRemove={removeSelected} onNavigateGraph={navigateIntoGraph} />} />}
     {diagnostics ? <DiagnosticsPanel result={diagnostics} onFocusPath={(path) => {
-      const target = document.graphs.flatMap((graph) => graph.nodes.map((node) => ({ graphId: graph.id, nodeId: node.id }))).find((candidate) => path.includes(candidate.nodeId));
+      const target = focusTargetFromDiagnosticPath(document, path);
       if (target) {
         setTab("list");
-        selectNode(`${target.graphId}:${target.nodeId}`);
+        selectNode(target.qualifiedId);
+      }
+    }} onFocusNode={(entry) => {
+      const target = focusTargetFromProfileEntry(document, entry);
+      if (target) {
+        setTab("list");
+        selectNode(target.qualifiedId);
       }
     }} /> : null}
   </section>;

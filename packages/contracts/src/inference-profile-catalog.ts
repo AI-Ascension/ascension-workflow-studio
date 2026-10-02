@@ -29,8 +29,12 @@ import { z } from "zod";
 
 /** Producer `validate_identifier`: 1..=128 BYTES, ASCII alphanumeric first,
  * then ASCII alphanumeric or `. _ : -`. Counted in bytes, not code units, so a
- * multi-byte character cannot smuggle a longer value past the bound. */
-const identifier = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/).refine(
+ * multi-byte character cannot smuggle a longer value past the bound.
+ *
+ * Exported so the owner's published-decision mirror decodes identifier fields
+ * through THIS gate. A second verbatim transcription of a producer gate is a
+ * second definition of it that the two copies could drift apart on. */
+export const identifier = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/).refine(
   (value) => new TextEncoder().encode(value).length <= 128,
   "identifier exceeds the 128-byte producer bound",
 );

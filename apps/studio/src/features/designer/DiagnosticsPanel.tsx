@@ -2,7 +2,14 @@ import { type ValidateResponse, ownerInferenceProfileDecision } from "@studio/co
 
 import { StatusBadge } from "../../components/StatusBadge";
 
-export function DiagnosticsPanel({ result, onFocusPath }: { result: ValidateResponse; onFocusPath: (path: string) => void }): JSX.Element {
+/** `onFocusNode` receives the ids the owner published, NOT the `path` string.
+ *
+ * Ordinary diagnostic rows are id-based (`$.graphs.{graph_id}.nodes.{node_id}`)
+ * and keep using `onFocusPath`. Owner inference-profile entries are INDEX-based
+ * (`$.graphs[1].nodes[1].config.decision_profile_ref`), so their ids are passed
+ * directly: resolving them from `path` would no-op every time, because an
+ * index path contains no id to resolve. */
+export function DiagnosticsPanel({ result, onFocusPath, onFocusNode }: { result: ValidateResponse; onFocusPath: (path: string) => void; onFocusNode: (entry: { graph_id: string; node_id: string }) => void }): JSX.Element {
   /* The owner's decision is REPORTED here, never derived. This panel shows
    * exactly what the owner published: a floating `profile_ref` is shown as the
    * author left it, alongside the exact revision the owner resolved it to.
@@ -15,7 +22,7 @@ export function DiagnosticsPanel({ result, onFocusPath }: { result: ValidateResp
     <div className="profile-decision" data-decision={profileDecision.kind}>
       <p className="eyebrow">Owner profile decision</p>
       <p className="muted">{profileDecision.message}</p>
-      {profileDecision.entries?.length ? <ul className="profile-decision-list">{profileDecision.entries.map((entry) => <li key={`${entry.graph_id}/${entry.node_id}`}><button className="diagnostic-target" onClick={() => onFocusPath(entry.path)} aria-label={`Focus ${entry.path}`}><code>{entry.path}</code></button><span><code>{entry.profile_ref}</code> → <code>{entry.resolved_pin}</code></span></li>)}</ul> : null}
+      {profileDecision.entries?.length ? <ul className="profile-decision-list">{profileDecision.entries.map((entry) => <li key={`${entry.graph_id}/${entry.node_id}`}><button className="diagnostic-target" onClick={() => onFocusNode(entry)} aria-label={`Focus ${entry.path}`}><code>{entry.path}</code></button><span><code>{entry.profile_ref}</code> → <code>{entry.resolved_pin}</code></span></li>)}</ul> : null}
     </div>
   </div>;
 }

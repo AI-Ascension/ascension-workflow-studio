@@ -8,7 +8,7 @@ import {
   ownerResolvedPinForNode,
   ownerUnresolvedProfileReferences,
 } from "./owner-inference-profile-decision";
-import { parseInferenceProfilePin } from "./inference-profile-catalog";
+import { identifier, parseInferenceProfilePin } from "./inference-profile-catalog";
 
 /** These assertions are CONTRACT ARITHMETIC on shapes the owner's own code
  * produces (`sts2-harness` at `a7b47ac1`,
@@ -171,10 +171,46 @@ describe("owner published inference-profile decision (harness #799)", () => {
     expect(gap).toEqual([{ graphId: "campaign", nodeId: "unadmitted" }]);
   });
 
-  it("invents no gap when the owner published no decision at all", () => {
+  it("invents no gap only when the owner published no decision at all", () => {
     const referenced = [{ graphId: "campaign", nodeId: "decide-now" }];
+    // ABSENT and NULL are "the owner published nothing", which is not a
+    // per-node omission. These are the ONLY two cases with no gap.
     expect(ownerUnresolvedProfileReferences(undefined, referenced)).toBeUndefined();
-    expect(ownerUnresolvedProfileReferences([], referenced)).toBeUndefined();
+    expect(ownerUnresolvedProfileReferences(null, referenced)).toBeUndefined();
+    // An EMPTY LIST is a different fact: the owner served a catalog and
+    // published zero resolutions, so a referenced node it said nothing about
+    // IS a real owner/document disagreement and is reported as one.
+    expect(ownerUnresolvedProfileReferences([], referenced))
+      .toEqual([{ graphId: "campaign", nodeId: "decide-now" }]);
+    expect(ownerUnresolvedProfileReferences([], [])).toBeUndefined();
+  });
+
+  it("bounds resolved_pin the way it bounds every sibling field", () => {
+    // `semver` in the shared pin codec has NO length bound, so without a byte
+    // ceiling on the whole pin a single entry could carry a multi-megabyte
+    // version run into the browser. A conforming owner's worst case is a
+    // 128-byte id, two colons, a 64-byte digest and a short version.
+    expect(ResolvedInferenceProfileRefSchema.safeParse(entry({
+      resolved_pin: `sts2.campaign.decision.v1:1.0.0:${DIGEST}`,
+    })).success).toBe(true);
+    expect(ResolvedInferenceProfileRefSchema.safeParse(entry({
+      resolved_pin: `sts2.campaign.decision.v1:${"9".repeat(400)}.0.0:${DIGEST}`,
+    })).success).toBe(false);
+    // The head alone is still held to the producer's own 128-byte gate.
+    expect(ResolvedInferenceProfileRefSchema.safeParse(entry({
+      resolved_pin: `${"a".repeat(129)}:1.0.0:${DIGEST}`,
+    })).success).toBe(false);
+  });
+
+  it("decodes identifier fields through the catalog's shared producer gate", () => {
+    // `graph_id`, `node_id`, `node_kind` and `profile_ref` reuse the SAME
+    // schema instance the inference-profile catalog uses, so the two copies of
+    // the producer gate cannot drift apart on any value.
+    expect(identifier.safeParse("campaign.iteration").success).toBe(true);
+    expect(identifier.safeParse("campaign.iteration:sub").success).toBe(true);
+    expect(ResolvedInferenceProfileRefSchema.safeParse(entry({ graph_id: "campaign.iteration" })).success).toBe(true);
+    expect(ResolvedInferenceProfileRefSchema.safeParse(entry({ graph_id: "$bad" })).success).toBe(false);
+    expect(ResolvedInferenceProfileRefSchema.safeParse(entry({ graph_id: "a".repeat(129) })).success).toBe(false);
   });
 
   it("keeps a profile_id that itself contains a colon", () => {

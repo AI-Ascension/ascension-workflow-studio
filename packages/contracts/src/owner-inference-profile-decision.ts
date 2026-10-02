@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { parseInferenceProfilePin } from "./inference-profile-catalog";
+import { identifier, parseInferenceProfilePin } from "./inference-profile-catalog";
 
 /** Consumer mirror of the owner's PUBLISHED inference-profile admission
  * decision.
@@ -21,19 +21,19 @@ import { parseInferenceProfilePin } from "./inference-profile-catalog";
  * for the presentation rule, and `packages/document/src/profile-bindings.ts` for
  * the Studio-side admission check, which only ever refuses. */
 
-/** Producer `validate_identifier`, transcribed rather than loosened.
+/** `graph_id`, `node_id`, `node_kind` and `profile_ref` all pass through the
+ * producer's identifier gate (`workflow/id_types.rs:38`), which this schema
+ * REUSES from `inference-profile-catalog` rather than transcribing a second
+ * copy: a duplicated producer gate is a second definition of it, and the two
+ * copies could drift apart on exactly the values that matter.
  *
- * `graph_id`, `node_id`, `node_kind` and `profile_ref` all pass through the
- * producer's identifier gate (`workflow/id_types.rs:38`): 1..=128 bytes, ASCII
- * alphanumeric first, then ASCII alphanumeric or `. _ : -`. `profile_ref` is the
- * reference exactly as authored, so a FLOATING id is a legal value here. This
- * schema must not refuse the owner's honest report of a reference that does not
- * look pinned; immutability is established by `resolved_pin`, not by this field.
+ * The gate is reused rather than loosened, but note it is a SHAPE gate here,
+ * not an admission one. `profile_ref` is the reference exactly as authored, so
+ * a FLOATING id is a legal value: this schema must not refuse the owner's honest
+ * report of a reference that does not look pinned. Immutability is established
+ * by `resolved_pin`, not by this field.
  */
-const ownerIdentifier = z.string().regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/).refine(
-  (value) => new TextEncoder().encode(value).length <= 128,
-  "identifier exceeds the 128-byte producer bound",
-);
+const ownerIdentifier = identifier;
 
 /** The producer composes the reference site path itself
  * (`inference_profile_binding.rs:188`):
@@ -92,10 +92,23 @@ const OWNER_INFERENCE_PROFILES_MAX = 1024;
  * already validated (`exact_pin`, `inference_profile_binding.rs:48`). So a
  * `resolved_pin` that fails to parse is a response this owner did not produce,
  * and is refused rather than displayed.
+ *
+ * The byte ceiling matters because `parseInferenceProfilePin` bounds only the
+ * head (through `identifier`) and the tail (through `digest`): its `semver`
+ * arm has NO length bound, so an unbounded version run would otherwise decode
+ * megabytes per entry, times 1024 entries, straight into the browser. The
+ * producer's own worst case is a 128-byte id, two `:` and a 64-byte digest plus
+ * a short semantic version, so 256 admits every pin a conforming owner can emit
+ * while closing the hole. Like the path bound above, this is a consumer ceiling
+ * rather than a claim about what the producer guarantees.
  */
+const OWNER_EXACT_PIN_MAX_BYTES = 256;
 const ownerExactPin = z.string().refine(
   (value) => parseInferenceProfilePin(value) !== undefined,
   "resolved_pin is not an exact profile_id:version:digest pin",
+).refine(
+  (value) => new TextEncoder().encode(value).length <= OWNER_EXACT_PIN_MAX_BYTES,
+  `resolved_pin exceeds the ${OWNER_EXACT_PIN_MAX_BYTES}-byte consumer bound`,
 );
 
 /** One authored inference-profile reference and the exact revision the owner
@@ -227,6 +240,11 @@ export function ownerInferenceProfileDecision(
  * still decide for itself whether to adopt it; returning `undefined` for an
  * unreferenced node is the honest answer, not a failure to fall back on to
  * something the Studio computed for itself.
+ *
+ * FIRST published entry wins if a node appears twice. A conforming owner emits
+ * at most one entry per profile-bearing node, so which one won would otherwise
+ * be an unstated function of array order; naming it keeps that under-specified
+ * case from silently deciding a lookup.
  */
 export function ownerResolvedPinForNode(
   decision: OwnerInferenceProfileDecision,
@@ -248,13 +266,15 @@ export function ownerResolvedPinForNode(
  *
  * Returns `undefined` when there is no such gap, and also when the owner
  * published no decision at all, because "the owner said nothing" is not a
- * per-node omission.
+ * per-node omission. An EMPTY published list is NOT that case: the owner served
+ * a catalog and published zero entries, so a referenced node it said nothing
+ * about is an owner/document disagreement and is reported as one.
  */
 export function ownerUnresolvedProfileReferences(
   decision: OwnerInferenceProfileDecision,
   referenced: readonly { graphId: string; nodeId: string }[],
 ): { graphId: string; nodeId: string }[] | undefined {
-  if (!decision || decision.length === 0) return undefined;
+  if (decision === undefined || decision === null) return undefined;
   const admitted = new Set(decision.map((entry) => `${entry.graph_id}\0${entry.node_id}`));
   const gap = referenced.filter((node) => !admitted.has(`${node.graphId}\0${node.nodeId}`));
   return gap.length > 0 ? gap : undefined;
