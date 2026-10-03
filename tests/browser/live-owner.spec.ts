@@ -49,6 +49,24 @@ async function reopenDesigner(page: Page): Promise<void> {
   await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
 }
 
+/// Read a node's saved `context_ref` straight from the owner's draft store.
+///
+/// The designer status line says "Autosaved" from the moment the first write
+/// lands and stays there, so waiting on it says nothing about whether a *later*
+/// write has been persisted. Reading the draft is what separates "the select
+/// changed" from "the owner has been told".
+async function savedContextRef(page: Page, draftId: string, nodeId: string): Promise<string | undefined> {
+  return await page.evaluate(async ([id, node]) => {
+    const headers = { Authorization: "Bearer studio-live-ci-token" };
+    const response = await fetch(`/v1/studio/drafts/draft.${id}`, { headers });
+    const draft = await response.json() as {
+      document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> };
+    };
+    return draft.document.graphs.find((graph) => graph.id === "main")?.nodes
+      .find((entry) => entry.id === node)?.config.context_ref;
+  }, [draftId, nodeId]);
+}
+
 /// Studio no longer submits a hardcoded synthetic target. Exercise the real
 /// catalog -> exact preflight -> submission path against the authenticated owner
 /// before the run inspector assertions.
@@ -179,7 +197,10 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   const incompatibleButDisclosed = "sts2.map.context.v1";
   await expect(contextSelect.locator("option", { hasText: incompatibleButDisclosed })).toHaveCount(1);
   await contextSelect.selectOption(incompatibleButDisclosed);
-  await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+  await expect.poll(
+    async () => await savedContextRef(page, "sts2.setup.strict", "decide"),
+    { timeout: 15_000 },
+  ).toBe(incompatibleButDisclosed);
   // The current pin stops being admissible for this node's context, and the
   // owner-published catalog says so rather than silently offering a different
   // profile.
@@ -187,7 +208,15 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
 
   // Selecting the compatible reference is admitted.
   await contextSelect.selectOption(SETUP_CONTEXT_REF);
-  await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+  // Wait for the *saved draft* to carry the restored reference, not for the
+  // status line. That line already reads "Autosaved" from the previous
+  // selection, so waiting on it returns immediately and lets the reload below
+  // race the write -- which is how this journey once asserted a value the owner
+  // had not been told yet.
+  await expect.poll(
+    async () => await savedContextRef(page, "sts2.setup.strict", "decide"),
+    { timeout: 15_000 },
+  ).toBe(SETUP_CONTEXT_REF);
 
   // The owner admits the selected, disclosed reference.
   await page.getByRole("button", { name: /Validate/ }).click();
@@ -237,11 +266,10 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   expect(rejection.unresolved[0].message).toMatch(/not available|incompatible/i);
 
   // The shared draft still holds the valid selection for the next journey.
-  await expect.poll(async () => await page.evaluate(async () => {
-    const response = await fetch("/v1/studio/drafts/draft.sts2.setup.strict", { headers: { Authorization: "Bearer studio-live-ci-token" } });
-    const draft = await response.json() as { document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> } };
-    return draft.document.graphs.find((graph) => graph.id === "main")?.nodes.find((entry) => entry.id === "decide")?.config.context_ref;
-  }), { timeout: 15_000 }).toBe(SETUP_CONTEXT_REF);
+  await expect.poll(
+    async () => await savedContextRef(page, "sts2.setup.strict", "decide"),
+    { timeout: 15_000 },
+  ).toBe(SETUP_CONTEXT_REF);
 });
 
 test("round-trips strict and dynamic definitions through the owner without semantic drift", async ({ page }) => {
