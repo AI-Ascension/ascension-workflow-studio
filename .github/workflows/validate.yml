@@ -36,6 +36,8 @@ jobs:
         run: node --test tools/verify-phase2-reconciliation.test.mjs
       - name: Verify live owner diagnostic preservation
         run: node --test tools/live-owner-diagnostics.test.mjs
+      - name: Verify PERF-08 bundle budget measurement
+        run: npm run test:bundle-budget
       - run: npm run lint
       - run: npm test -- --run --pool=threads --maxWorkers=1
       - run: npm run build

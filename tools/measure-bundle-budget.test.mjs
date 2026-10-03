@@ -62,6 +62,13 @@ test('reports an over-budget core route without changing the threshold', (t) => 
   assert.equal(measureBundleBudget(dist).threshold_bytes, 1_500_000);
 });
 
+test('a core route exactly at the threshold is within budget', (t) => {
+  const { dist } = writeDist(t);
+  const exact = measureBundleBudget(dist).core_route.gzip_bytes;
+  assert.equal(measureBundleBudget(dist, { thresholdBytes: exact }).within_budget, true);
+  assert.equal(measureBundleBudget(dist, { thresholdBytes: exact - 1 }).within_budget, false);
+});
+
 test('refuses a missing build, a dangling script reference and a route with no JavaScript', (t) => {
   assert.throws(() => measureBundleBudget(join(tmpdir(), 'studio-no-such-dist')), /run `npm run build`/);
   const dangling = writeDist(t, { head: '<script type="module" src="/assets/missing.js"></script>' });
