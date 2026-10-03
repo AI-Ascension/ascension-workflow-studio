@@ -2,6 +2,25 @@ import { readFileSync } from "node:fs";
 
 import { expect, test, type Page } from "@playwright/test";
 
+/// The context the `sts2.setup.strict` fixture's `decide` node declares, read
+/// from the fixture rather than written out here.
+///
+/// This journey's whole subject is that the owner admits a disclosed reference
+/// and refuses one it does not. It selects a context that must therefore be
+/// compatible with the profile that very node is pinned to, so the reference is
+/// derived from the document under test. Naming `context.synthetic.v1` instead
+/// would bind the owner's *other* profile pair to this node, and the owner
+/// would correctly refuse it -- a failure that reads like a product bug and is
+/// really a stale expectation. The draft is shared, so that mistake also
+/// poisons every later journey that opens `sts2.setup.strict`.
+const SETUP_CONTEXT_REF = (
+  JSON.parse(readFileSync("contracts/accepted/phase1/workflows/setup.strict.json", "utf8")) as {
+    graphs: Array<{ nodes: Array<{ id: string; config: { context_ref?: string } }> }>;
+  }
+).graphs[0].nodes.find((node) => node.id === "decide")?.config.context_ref ?? "";
+
+expect(SETUP_CONTEXT_REF).not.toBe("");
+
 async function connectLiveOwner(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByRole("button", { name: "Open settings" }).click();
@@ -144,15 +163,15 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
 
   // Discovery: the owner discloses the compatible context catalog before selection.
-  await expect(page.getByTestId("owner-context-catalog")).toContainText("context.synthetic.v1");
+  await expect(page.getByTestId("owner-context-catalog")).toContainText(SETUP_CONTEXT_REF);
 
   // Selection: choose a compatible owner-disclosed reference on the decide node.
   await page.getByRole("tab", { name: "List editor" }).click();
   await page.locator(".node-list-row", { hasText: "decide" }).first().click();
   const contextSelect = page.getByLabel("decide Decision context");
   await expect(contextSelect).toBeVisible();
-  await expect(contextSelect.locator("option", { hasText: "context.synthetic.v1" })).toHaveCount(1);
-  await contextSelect.selectOption("context.synthetic.v1");
+  await expect(contextSelect.locator("option", { hasText: SETUP_CONTEXT_REF })).toHaveCount(1);
+  await contextSelect.selectOption(SETUP_CONTEXT_REF);
   await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
 
   // The owner admits the selected, disclosed reference.
@@ -165,7 +184,7 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
   await page.getByRole("tab", { name: "List editor" }).click();
   await page.locator(".node-list-row", { hasText: "decide" }).first().click();
-  await expect(page.getByLabel("decide Decision context")).toHaveValue("context.synthetic.v1");
+  await expect(page.getByLabel("decide Decision context")).toHaveValue(SETUP_CONTEXT_REF);
 
   // Owner validation rejects a removed/undisclosed reference. The definition is submitted through
   // the owner's validation port from the browser — the same route the Studio client uses — against
@@ -207,13 +226,13 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
     const response = await fetch("/v1/studio/drafts/draft.sts2.setup.strict", { headers: { Authorization: "Bearer studio-live-ci-token" } });
     const draft = await response.json() as { document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> } };
     return draft.document.graphs.find((graph) => graph.id === "main")?.nodes.find((entry) => entry.id === "decide")?.config.context_ref;
-  }), { timeout: 15_000 }).toBe("context.synthetic.v1");
+  }), { timeout: 15_000 }).toBe(SETUP_CONTEXT_REF);
 });
 
 test("round-trips strict and dynamic definitions through the owner without semantic drift", async ({ page }) => {
   await connectLiveOwner(page);
 
-  const roundTrip = async (cardId: string, expectAdaptive: boolean): Promise<void> => {
+  const roundTrip = async (cardId: string, contextRef: string, expectAdaptive: boolean): Promise<void> => {
     await page.getByRole("button", { name: "Library", exact: true }).click();
     const card = page.locator(".definition-card").filter({ hasText: cardId });
     await expect(card).toHaveCount(1);
@@ -223,7 +242,7 @@ test("round-trips strict and dynamic definitions through the owner without seman
     await page.locator(".definition-card").filter({ hasText: cardId }).getByRole("button", { name: "Open designer" }).click();
     await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
     // The designer discovers the owner-disclosed context-binding catalog.
-    await expect(page.getByTestId("owner-context-catalog")).toContainText("context.synthetic.v1");
+    await expect(page.getByTestId("owner-context-catalog")).toContainText(contextRef);
 
     const before = await validateAndReadDigest(page);
     expect(before).not.toBe("not validated");
@@ -251,8 +270,8 @@ test("round-trips strict and dynamic definitions through the owner without seman
     }
   };
 
-  await roundTrip("sts2.setup.strict", false);
-  await roundTrip("sts2.combat.dynamic", true);
+  await roundTrip("sts2.setup.strict", "sts2.setup.context.v1", false);
+  await roundTrip("sts2.combat.dynamic", "sts2.combat.context.v1", true);
 });
 
 test("imports, edits, exports, and owner-validates every admitted node kind", async ({ page }) => {
