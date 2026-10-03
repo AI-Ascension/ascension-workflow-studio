@@ -65,6 +65,20 @@ describe("unsupported definition isolation", () => {
   it("does not publish after pending owner validation resolves in archive mode", async () => {
     vi.useFakeTimers();
     const client = await openDesigner();
+    // #112 T2: publication only reaches the owner once every profile-bearing
+    // node is bound to an identity the owner publishes. Bind this fixture's
+    // decide node to the catalog's exact pin so the test exercises the race it
+    // is named for (a stale in-flight validation) rather than being short
+    // circuited by profile admission.
+    const bound = structuredClone(fixtureDefinitions[0].definition);
+    const decision = bound.graphs[0].nodes.find((node) => node.kind === "decide")!;
+    const descriptor = (await client.listInferenceProfiles()).descriptors.find((d) => d.profile_id === "decision.synthetic.v1")!;
+    decision.config = {
+      ...decision.config,
+      decision_profile_ref: `${descriptor.profile_id}:${descriptor.version}:${descriptor.digest}`,
+      context_ref: "context.synthetic.v1",
+    };
+    applyRaw(JSON.stringify(bound));
     await act(async () => { await vi.advanceTimersByTimeAsync(800); });
     const result = await client.validate(fixtureDefinitions[0].definition);
     let finishValidation!: (value: typeof result) => void;
@@ -106,6 +120,130 @@ describe("owner context binding catalog", () => {
     expect(catalog).toHaveTextContent("context.fixture.v1");
     expect(catalog).not.toHaveTextContent("sts2.combat.context.v1");
     expect(catalog).toHaveTextContent("metadata-only");
+  });
+});
+
+describe("diagnostics focus wiring", () => {
+  afterEach(() => { vi.restoreAllMocks(); });
+
+  /** The list editor marks SELECTED NODES with a `.node-list-row` that has
+   * `aria-pressed="true"`. Graph-navigator tabs are also buttons, so selection
+   * is asserted on node rows specifically rather than on any pressed button. */
+  function selectedNodeRows(): HTMLElement[] {
+    return screen.getAllByRole("button", { pressed: true })
+      .filter((button) => button.classList.contains("node-list-row"));
+  }
+
+  const digest = "c".repeat(64);
+
+  /** Renders the REAL DesignerView with a REAL owner-shaped validate response
+   * and clicks the REAL focus button, so the production `onFocusNode` /
+   * `onFocusPath` handlers are what is under test. Stubbing the handler with a
+   * `vi.fn()`, as the panel test does, cannot see a focus target that resolves
+   * to nothing at all — which is exactly how the inert control survived review.
+   */
+  async function renderWithOwnerResponse(inferenceProfiles: unknown, diagnostics: unknown[]): Promise<void> {
+    const client = new FixtureClient(fixtureDefinitions);
+    vi.spyOn(client, "validate").mockResolvedValue({
+      schema_version: "ascension.management/v1",
+      valid: true,
+      definition_digest: digest,
+      diagnostics,
+      graph_count: 2,
+      node_count: 11,
+      compiler: "fixture",
+      inference_profiles: inferenceProfiles,
+    } as never);
+    const definition = fixtureDefinitions.find((candidate) => candidate.id === "sts2.campaign.strict")!;
+    render(<DesignerView client={client} catalog={fixtureDefinitions} definition={definition}
+      initialDocument={definition.definition} mode="fixture" onBack={vi.fn()}
+      onRun={vi.fn()} onRawTextChange={vi.fn()} />);
+    await act(async () => {});
+    fireEvent.click(await screen.findByRole("button", { name: "◈ Validate" }));
+    await act(async () => {});
+  }
+
+  it("selects the correct node from a genuine index-based owner profile path", async () => {
+    // The owner composes this path from ARRAY INDICES for graph 1 / node 1,
+    // which in the campaign fixture is `campaign.iteration` /
+    // `iteration_decide`. The path contains no id, so a substring match against
+    // node ids selects nothing and the button is inert.
+    await renderWithOwnerResponse(
+      [{
+        graph_id: "campaign.iteration",
+        node_id: "iteration_decide",
+        node_kind: "decide",
+        profile_ref: "sts2.campaign.decision.v1",
+        resolved_pin: `sts2.campaign.decision.v1:1.0.0:${digest}`,
+        path: "$.graphs[1].nodes[1].config.decision_profile_ref",
+      }],
+      [],
+    );
+    const button = screen.getByRole("button", { name: "Focus $.graphs[1].nodes[1].config.decision_profile_ref" });
+    expect(button).toBeInTheDocument();
+    fireEvent.click(button);
+    await act(async () => {});
+
+    // The list editor is now shown and `iteration_decide` is the selected row.
+    const rows = selectedNodeRows();
+    expect(rows.length).toBe(1);
+    expect(rows[0]).toHaveTextContent("iteration_decide");
+    expect(rows[0]).toHaveTextContent("decide");
+    // And specifically NOT a sibling that a wrong resolution would pick.
+    expect(rows[0]).not.toHaveTextContent("iteration_observe");
+  });
+
+  it("selects the node the owner's own ids name, not the index the path carries", async () => {
+    // `iteration_observe` is graph 1 / node 0. This entry deliberately pairs a
+    // path pointing at index [1][1] with the ids of a DIFFERENT node, so a
+    // resolver that trusted the path index or substring-matched would land on
+    // `iteration_decide`. The owner's own ids are the only trustworthy key.
+    await renderWithOwnerResponse(
+      [{
+        graph_id: "campaign.iteration",
+        node_id: "iteration_observe",
+        node_kind: "observe",
+        profile_ref: "sts2.campaign.decision.v1",
+        resolved_pin: `sts2.campaign.decision.v1:1.0.0:${digest}`,
+        path: "$.graphs[1].nodes[1].config.decision_profile_ref",
+      }],
+      [],
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Focus $.graphs[1].nodes[1].config.decision_profile_ref" }));
+    await act(async () => {});
+    const rows = selectedNodeRows();
+    expect(rows.length).toBe(1);
+    expect(rows[0]).toHaveTextContent("iteration_observe");
+  });
+
+  it("still resolves the owner's id-based diagnostic paths", async () => {
+    // `management/validation.rs:120` composes `$.graphs.{graph_id}.nodes.{node_id}`.
+    // These rows worked before this change and must keep working.
+    await renderWithOwnerResponse(undefined, [
+      { code: "bind.missing", severity: "error", path: "$.graphs.campaign.iteration.nodes.iteration_execute", message: "Missing binding." },
+    ]);
+    fireEvent.click(screen.getByRole("button", { name: "Focus diagnostic $.graphs.campaign.iteration.nodes.iteration_execute" }));
+    await act(async () => {});
+    const rows = selectedNodeRows();
+    expect(rows.length).toBe(1);
+    expect(rows[0]).toHaveTextContent("iteration_execute");
+  });
+
+  it("selects nothing when an owner entry names a node this document lacks", async () => {
+    await renderWithOwnerResponse(
+      [{
+        graph_id: "campaign.iteration",
+        node_id: "absent_node",
+        node_kind: "decide",
+        profile_ref: "sts2.campaign.decision.v1",
+        resolved_pin: `sts2.campaign.decision.v1:1.0.0:${digest}`,
+        path: "$.graphs[1].nodes[1].config.decision_profile_ref",
+      }],
+      [],
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Focus $.graphs[1].nodes[1].config.decision_profile_ref" }));
+    await act(async () => {});
+    expect(selectedNodeRows()).toHaveLength(0);
   });
 });
 

@@ -2,6 +2,8 @@ import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { type DraftRecord, type JsonObject, type LayoutSidecar, type ValidateResponse } from "@studio/contracts";
+import { formatInferenceProfilePin } from "@studio/contracts";
+import { catalogFixture } from "../../../../../packages/contracts/src/inference-profile-catalog.test-fixtures";
 import { type StudioClient } from "@studio/client";
 import { createEditGeneration, createLayout, type SemanticDocument } from "@studio/document";
 import { fixtureDefinitions } from "../../fixtures/catalog";
@@ -84,6 +86,25 @@ function bridge(): DraftPersistenceBridge & { replaceDocument: ReturnType<typeof
   } as DraftPersistenceBridge & { replaceDocument: ReturnType<typeof vi.fn>; commitSnapshot: ReturnType<typeof vi.fn>; reportValidation: ReturnType<typeof vi.fn>; setDiagnostics: ReturnType<typeof vi.fn> };
 }
 
+/**
+ * The published Phase 1 fixture `sts2.setup.strict` carries a FLOATING
+ * decision profile id (`sts2.setup.decision.v1`), which no owner catalog can
+ * resolve and which #112 T2 must refuse. Tests that are about publication
+ * mechanics rather than about profile admission therefore need a document
+ * bound to a pin the owner actually publishes; these helpers build one without
+ * mutating the shared fixture.
+ */
+const ownerCatalog = catalogFixture("synthetic");
+const decisionDescriptor = ownerCatalog.descriptors.find((d) => d.profile_id === "decision.synthetic.v1")!;
+
+function boundDocument(reference = formatInferenceProfilePin(decisionDescriptor)): SemanticDocument {
+  const document = structuredClone(base);
+  const node = document.graphs[0].nodes.find((candidate) => candidate.kind === "decide");
+  if (!node) throw new Error("the published fixture has no decide node");
+  node.config = { ...node.config, decision_profile_ref: reference, context_ref: "context.synthetic.v1" };
+  return document as SemanticDocument;
+}
+
 function renderController(client: StubClient, bridgeStub = bridge(), overrides: Partial<DraftPersistenceOptions> = {}) {
   return renderHook(
     (props: { document: SemanticDocument }) => useDraftPersistence({
@@ -96,7 +117,7 @@ function renderController(client: StubClient, bridgeStub = bridge(), overrides: 
       bridge: bridgeStub,
       ...overrides,
     }),
-    { initialProps: { document: base } },
+    { initialProps: { document: (overrides.document as SemanticDocument) ?? base } },
   );
 }
 
@@ -220,7 +241,8 @@ describe("useDraftPersistence", () => {
     const client = new StubClient();
     client.draft = record({ revision: 2, etag: "fixture-2" });
     const bridgeStub = bridge();
-    const { result } = renderController(client, bridgeStub);
+    const document = boundDocument();
+    const { result } = renderController(client, bridgeStub, { document, inferenceProfileCatalog: ownerCatalog });
     await act(async () => {});
 
     await act(async () => { await result.current.publish(); });
@@ -228,6 +250,96 @@ describe("useDraftPersistence", () => {
     expect(client.published).toHaveLength(1);
     expect(bridgeStub.reportValidation).toHaveBeenCalledWith("valid", "Published an immutable owner revision.");
     expect(result.current.publicationState).toBe("idle");
+  });
+
+  // --- #112 T2: immutable adoption is an admission condition ---------------------
+
+  it("refuses to publish a definition bound to a floating profile id and never upgrades it", async () => {
+    vi.useFakeTimers();
+    const client = new StubClient();
+    client.draft = record({ revision: 2, etag: "fixture-2" });
+    const bridgeStub = bridge();
+    // A floating id the catalog DOES serve, and for a node context it DOES
+    // accept — so the only thing that can refuse this is the pin requirement
+    // itself. The published fixtures carry exact pins now, so this case is
+    // stated explicitly rather than inherited from fixture state: admission
+    // must still refuse here, because auto-upgrading a floating id to the
+    // newest revision is precisely the silent change T2 forbids.
+    const document = boundDocument(decisionDescriptor.profile_id);
+    const { result } = renderController(client, bridgeStub, { document, inferenceProfileCatalog: ownerCatalog });
+    await act(async () => {});
+
+    await act(async () => { await result.current.publish(); });
+
+    expect(client.published).toHaveLength(0);
+    expect(bridgeStub.reportValidation).toHaveBeenCalledWith("invalid", expect.stringContaining("1 inference profile binding is not admitted"));
+    expect(bridgeStub.setDiagnostics).toHaveBeenCalledWith(expect.objectContaining({
+      valid: false,
+      compiler: "studio.profile_admission",
+      diagnostics: [expect.objectContaining({ code: "profile_pin_malformed", severity: "error" })],
+    }));
+  });
+
+  it("refuses to publish when the pinned digest is not the one the owner serves", async () => {
+    vi.useFakeTimers();
+    const client = new StubClient();
+    client.draft = record({ revision: 2, etag: "fixture-2" });
+    const bridgeStub = bridge();
+    // The document is bound to a pin the catalog does NOT serve, standing in
+    // for a profile that was revised after this definition was authored.
+    const orphan = formatInferenceProfilePin({
+      profile_id: decisionDescriptor.profile_id,
+      version: decisionDescriptor.version,
+      digest: "c".repeat(64),
+    });
+    const document = boundDocument(orphan);
+    const { result } = renderController(client, bridgeStub, { document, inferenceProfileCatalog: ownerCatalog });
+    await act(async () => {});
+
+    await act(async () => { await result.current.publish(); });
+
+    expect(client.published).toHaveLength(0);
+    expect(bridgeStub.setDiagnostics).toHaveBeenCalledWith(expect.objectContaining({
+      diagnostics: [expect.objectContaining({ code: "profile_digest_mismatch" })],
+    }));
+    // The refusal quotes the pin that was refused and does not offer the
+    // currently published digest as a silent replacement.
+    const reported = bridgeStub.setDiagnostics.mock.calls.at(-1)![0].diagnostics[0].message;
+    expect(reported).toContain(orphan);
+    expect(reported).not.toContain(decisionDescriptor.digest);
+  });
+
+  it("fails closed and refuses to publish when no owner profile catalog was received", async () => {
+    vi.useFakeTimers();
+    const client = new StubClient();
+    client.draft = record({ revision: 2, etag: "fixture-2" });
+    const bridgeStub = bridge();
+    const document = boundDocument();
+    const { result } = renderController(client, bridgeStub, { document, inferenceProfileCatalog: undefined });
+    await act(async () => {});
+
+    await act(async () => { await result.current.publish(); });
+
+    expect(client.published).toHaveLength(0);
+    expect(bridgeStub.setDiagnostics).toHaveBeenCalledWith(expect.objectContaining({
+      diagnostics: [expect.objectContaining({ code: "profile_catalog_unavailable" })],
+    }));
+  });
+
+  it("publishes a definition with no profile-bearing node and no catalog", async () => {
+    vi.useFakeTimers();
+    const client = new StubClient();
+    client.draft = record({ revision: 2, etag: "fixture-2" });
+    const bridgeStub = bridge();
+    const document = structuredClone(base) as SemanticDocument;
+    document.graphs[0].nodes = document.graphs[0].nodes.filter((node) => node.kind !== "decide");
+    const { result } = renderController(client, bridgeStub, { document, inferenceProfileCatalog: undefined });
+    await act(async () => {});
+
+    await act(async () => { await result.current.publish(); });
+
+    expect(client.published).toHaveLength(1);
+    expect(bridgeStub.reportValidation).toHaveBeenCalledWith("valid", "Published an immutable owner revision.");
   });
 
   it("resets draft state when the editor is re-seeded", async () => {

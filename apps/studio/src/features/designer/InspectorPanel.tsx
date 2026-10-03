@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 
 import {
   JsonObjectSchema,
+  formatInferenceProfilePin,
   type ContextBinding,
   type DefinitionRecord,
   type InferenceProfileCatalog,
@@ -10,6 +11,7 @@ import {
   type JsonValue,
   type WorkflowNode,
   inferenceProfilesForNodeKind,
+  parseInferenceProfilePin,
   resolveInferenceProfile,
 } from "@studio/contracts";
 import {
@@ -245,7 +247,7 @@ function ReferenceSelectField({ node, fieldKey, label, options, disabled, onUpda
  * producer refuses when several available revisions match — from ever being
  * written by this surface. */
 function inferenceProfilePin(profileId: string, version: string, digest: string): string {
-  return `${profileId}:${version}:${digest}`;
+  return formatInferenceProfilePin({ profile_id: profileId, version, digest });
 }
 
 /** Operator-facing wording for each refusal the owner can publish. The reason
@@ -285,7 +287,7 @@ function InferenceProfileSelectField({ node, fieldKey, label, catalog, contextRe
   // change, lost its selection grant, or become context-incompatible surfaces
   // as an explicit refusal. It is never silently dropped and never silently
   // replaced with a different profile.
-  const selection = current === undefined ? undefined : parseInferenceProfileSelection(current);
+  const selection = current === undefined ? undefined : parseInferenceProfilePin(current);
   const resolution = selection === undefined ? undefined
     : resolveInferenceProfile(catalog, selection, node.kind, contextRef);
   const refused = resolution !== undefined && !resolution.ok;
@@ -336,26 +338,6 @@ function InferenceProfileSelectField({ node, fieldKey, label, catalog, contextRe
   </div>;
 }
 
-/** Parses the exact-pin reference format back into a selection so the owner's
- * resolver can judge it. Returns undefined for a floating id or any malformed
- * value, which the field then treats as "no selectable binding" rather than
- * guessing a revision for the designer. */
-function parseInferenceProfileSelection(reference: string): { profile_id: string; version: string; digest: string } | undefined {
-  // Split from the RIGHT, exactly as the producer's `rsplitn(3, ':')` does.
-  // A `profile_id` may itself contain `:` — `RegistryId` accepts `.`, `_`, `:`,
-  // `-` after an alphanumeric first byte — so a left-to-right `split(":")`
-  // that insists on exactly three parts rejects a pin the producer accepts,
-  // and the field then silently reports "no selectable binding" for a profile
-  // the owner really published. The head keeps every remaining colon.
-  const parts = reference.split(":");
-  if (parts.length < 3) return undefined;
-  const digest = parts[parts.length - 1];
-  const version = parts[parts.length - 2];
-  const profileId = parts.slice(0, parts.length - 2).join(":");
-  if (!profileId || !/^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/.test(version)) return undefined;
-  if (!/^[a-f0-9]{64}$/.test(digest)) return undefined;
-  return { profile_id: profileId, version, digest };
-}
 function AllowedOperationsField({ node, options, disabled, onUpdate }: { node: WorkflowNode; options: string[]; disabled: boolean; onUpdate: TypedConfigFieldsProps["onUpdate"] }): JSX.Element {
   const raw = node.config.allowed_operations;
   const current = Array.isArray(raw) ? raw.filter((value): value is string => typeof value === "string") : [];

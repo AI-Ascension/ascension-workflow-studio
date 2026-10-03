@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { OwnerInferenceProfileDecisionSchema } from "./owner-inference-profile-decision";
+
 export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 export type JsonObject = { [key: string]: JsonValue };
@@ -430,6 +432,7 @@ export function contextBindingsFromCapabilities(value: JsonValue): ContextBindin
 export * from "./context-owner-catalog";
 export * from "./inference-profile-catalog";
 export * from "./inference-profile-revision";
+export * from "./owner-inference-profile-decision";
 
 export const ValidateResponseSchema = z.object({
   schema_version: z.string(),
@@ -442,6 +445,14 @@ export const ValidateResponseSchema = z.object({
     path: z.string(),
     message: z.string(),
   }).strict()),
+  /** The owner's published inference-profile admission decision (harness
+   * #799 / PR #802). Optional AND nullable, so this Studio keeps decoding an
+   * owner that predates the field, and still distinguishes "owner serves no
+   * catalog" (`null`) from "catalog served, nothing referenced" (`[]`).
+   * Decoding the decision is not deriving it: the owner stays the sole
+   * admission authority and nothing here upgrades a floating `profile_ref` to
+   * its `resolved_pin`. */
+  inference_profiles: OwnerInferenceProfileDecisionSchema,
 }).strict();
 export type ValidateResponse = z.infer<typeof ValidateResponseSchema>;
 
@@ -612,6 +623,11 @@ export const StudioOwnerPublishResponseSchema = z.object({
   outcome: z.enum(["published", "already_published", "conflict"]),
   definition: StudioOwnerDefinitionSchema.nullable(),
   draft: StudioOwnerDraftSchema.nullable(),
+  /** The same owner decision the validate surface publishes, for the same
+   * document: definition validation and Studio publication are two admission
+   * decisions about one document, so they must not hold two rules. Optional and
+   * nullable for the same back-compat reason as the validate response. */
+  inference_profiles: OwnerInferenceProfileDecisionSchema,
 }).strict();
 
 export const LayoutSidecarSchema = z.object({

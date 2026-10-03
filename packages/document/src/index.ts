@@ -46,6 +46,14 @@ export type {
 } from "./owner-nodes";
 
 export {
+  validateProfileBindings,
+} from "./profile-bindings";
+export type {
+  ProfileBindingDiagnostic,
+  ProfileBindingDiagnosticCode,
+} from "./profile-bindings";
+
+export {
   canonicalJsonComplete,
   canonicalize,
   canonicalJson,

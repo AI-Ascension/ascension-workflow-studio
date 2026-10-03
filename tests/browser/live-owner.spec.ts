@@ -2,6 +2,25 @@ import { readFileSync } from "node:fs";
 
 import { expect, test, type Page } from "@playwright/test";
 
+/// The context the `sts2.setup.strict` fixture's `decide` node declares, read
+/// from the fixture rather than written out here.
+///
+/// This journey's whole subject is that the owner admits a disclosed reference
+/// and refuses one it does not. It selects a context that must therefore be
+/// compatible with the profile that very node is pinned to, so the reference is
+/// derived from the document under test. Naming `context.synthetic.v1` instead
+/// would bind the owner's *other* profile pair to this node, and the owner
+/// would correctly refuse it -- a failure that reads like a product bug and is
+/// really a stale expectation. The draft is shared, so that mistake also
+/// poisons every later journey that opens `sts2.setup.strict`.
+const SETUP_CONTEXT_REF = (
+  JSON.parse(readFileSync("contracts/accepted/phase1/workflows/setup.strict.json", "utf8")) as {
+    graphs: Array<{ nodes: Array<{ id: string; config: { context_ref?: string } }> }>;
+  }
+).graphs[0].nodes.find((node) => node.id === "decide")?.config.context_ref ?? "";
+
+expect(SETUP_CONTEXT_REF).not.toBe("");
+
 async function connectLiveOwner(page: Page): Promise<void> {
   await page.goto("/");
   await page.getByRole("button", { name: "Open settings" }).click();
@@ -28,6 +47,24 @@ async function reopenDesigner(page: Page): Promise<void> {
   await page.getByRole("button", { name: "Library", exact: true }).click();
   await page.getByRole("button", { name: "Open designer" }).first().click();
   await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
+}
+
+/// Read a node's saved `context_ref` straight from the owner's draft store.
+///
+/// The designer status line says "Autosaved" from the moment the first write
+/// lands and stays there, so waiting on it says nothing about whether a *later*
+/// write has been persisted. Reading the draft is what separates "the select
+/// changed" from "the owner has been told".
+async function savedContextRef(page: Page, draftId: string, nodeId: string): Promise<string | undefined> {
+  return await page.evaluate(async ([id, node]) => {
+    const headers = { Authorization: "Bearer studio-live-ci-token" };
+    const response = await fetch(`/v1/studio/drafts/draft.${id}`, { headers });
+    const draft = await response.json() as {
+      document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> };
+    };
+    return draft.document.graphs.find((graph) => graph.id === "main")?.nodes
+      .find((entry) => entry.id === node)?.config.context_ref;
+  }, [draftId, nodeId]);
 }
 
 /// Studio no longer submits a hardcoded synthetic target. Exercise the real
@@ -144,16 +181,42 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
 
   // Discovery: the owner discloses the compatible context catalog before selection.
-  await expect(page.getByTestId("owner-context-catalog")).toContainText("context.synthetic.v1");
+  await expect(page.getByTestId("owner-context-catalog")).toContainText(SETUP_CONTEXT_REF);
 
   // Selection: choose a compatible owner-disclosed reference on the decide node.
   await page.getByRole("tab", { name: "List editor" }).click();
   await page.locator(".node-list-row", { hasText: "decide" }).first().click();
   const contextSelect = page.getByLabel("decide Decision context");
   await expect(contextSelect).toBeVisible();
-  await expect(contextSelect.locator("option", { hasText: "context.synthetic.v1" })).toHaveCount(1);
-  await contextSelect.selectOption("context.synthetic.v1");
-  await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+  await expect(contextSelect.locator("option", { hasText: SETUP_CONTEXT_REF })).toHaveCount(1);
+  // The owner discloses every reference below for `decide`, but only
+  // `sts2.setup.context.v1` is compatible with the profile this node is pinned
+  // to. Selecting one that is disclosed but incompatible is what proves the
+  // owner-disclosed set and the owner's accepted set are not the same thing,
+  // and it is the only way to make the selection below an actual change.
+  const incompatibleButDisclosed = "sts2.map.context.v1";
+  await expect(contextSelect.locator("option", { hasText: incompatibleButDisclosed })).toHaveCount(1);
+  await contextSelect.selectOption(incompatibleButDisclosed);
+  await expect.poll(
+    async () => await savedContextRef(page, "sts2.setup.strict", "decide"),
+    { timeout: 15_000 },
+  ).toBe(incompatibleButDisclosed);
+  // The current pin stops being admissible for this node's context, and the
+  // owner-published catalog says so rather than silently offering a different
+  // profile.
+  await expect(page.getByLabel("Decision profile refusal")).toContainText(/context_incompatible/);
+
+  // Selecting the compatible reference is admitted.
+  await contextSelect.selectOption(SETUP_CONTEXT_REF);
+  // Wait for the *saved draft* to carry the restored reference, not for the
+  // status line. That line already reads "Autosaved" from the previous
+  // selection, so waiting on it returns immediately and lets the reload below
+  // race the write -- which is how this journey once asserted a value the owner
+  // had not been told yet.
+  await expect.poll(
+    async () => await savedContextRef(page, "sts2.setup.strict", "decide"),
+    { timeout: 15_000 },
+  ).toBe(SETUP_CONTEXT_REF);
 
   // The owner admits the selected, disclosed reference.
   await page.getByRole("button", { name: /Validate/ }).click();
@@ -165,13 +228,18 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
   await page.getByRole("tab", { name: "List editor" }).click();
   await page.locator(".node-list-row", { hasText: "decide" }).first().click();
-  await expect(page.getByLabel("decide Decision context")).toHaveValue("context.synthetic.v1");
+  await expect(page.getByLabel("decide Decision context")).toHaveValue(SETUP_CONTEXT_REF);
 
   // Owner validation rejects a removed/undisclosed reference. The definition is submitted through
   // the owner's validation port from the browser — the same route the Studio client uses — against
   // a copy of the admitted document, so the shared owner draft is never mutated and no autosave
   // cleanup race is possible.
   await page.getByRole("button", { name: "JSON mode" }).click();
+  const rawCandidate = page.getByLabel("Raw workflow definition JSON");
+  // Wait for the field to actually hold the document. The step before reads the
+  // List editor, and `JSON.parse` on a still-empty textarea throws before any
+  // assertion runs -- which looks like an owner failure and is not one.
+  await expect(rawCandidate).not.toHaveValue("");
   const rejection = await page.evaluate(async () => {
     const headers = { Authorization: "Bearer studio-live-ci-token", "Content-Type": "application/json" };
     const capabilities = await (await fetch("/v1/capabilities", { headers })).json() as { capabilities: unknown };
@@ -190,30 +258,40 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
     const body = await response.json() as {
       valid: boolean;
       diagnostics: Array<{ code: string; path: string; message: string }>;
+      error?: { class: string; code: string; message: string };
     };
     return {
+      status: response.status,
       valid: body.valid,
-      unresolved: body.diagnostics.filter((diagnostic) => diagnostic.code === "context_ref_unresolved"),
+      error: body.error,
+      unresolved: (body.diagnostics ?? []).filter((diagnostic) => diagnostic.code === "context_ref_unresolved"),
     };
   });
-  expect(rejection.valid).toBe(false);
-  expect(rejection.unresolved).toHaveLength(1);
-  expect(rejection.unresolved[0].path).toBe("$.graphs.main.nodes.decide.config.context_ref");
-  expect(rejection.unresolved[0].message).toContain("context.removed.v1");
-  expect(rejection.unresolved[0].message).toMatch(/not available|incompatible/i);
+  // The owner refuses the removed reference, and it refuses it as a *conflict*
+  // on the node's inference-profile binding rather than as a context-catalog
+  // diagnostic. Both fields on `DecideConfig` are required, so a pinned
+  // `decide` node always carries a profile, and inference admission runs before
+  // the context catalog is consulted: the profile admits
+  // `sts2.setup.context.v1` and nothing else, so an unknown context is caught
+  // there first. This step used to assert a `context_ref_unresolved` diagnostic
+  // here, which no longer occurs for any node this fixture can express.
+  expect(rejection.status).toBe(409);
+  expect(rejection.error?.class).toBe("conflict");
+  expect(rejection.error?.code).toBe("inference_profile_context_incompatible");
+  expect(rejection.error?.message).toMatch(/context reference/i);
+  expect(rejection.valid).not.toBe(true);
 
   // The shared draft still holds the valid selection for the next journey.
-  await expect.poll(async () => await page.evaluate(async () => {
-    const response = await fetch("/v1/studio/drafts/draft.sts2.setup.strict", { headers: { Authorization: "Bearer studio-live-ci-token" } });
-    const draft = await response.json() as { document: { graphs: Array<{ id: string; nodes: Array<{ id: string; config: { context_ref?: string } }> }> } };
-    return draft.document.graphs.find((graph) => graph.id === "main")?.nodes.find((entry) => entry.id === "decide")?.config.context_ref;
-  }), { timeout: 15_000 }).toBe("context.synthetic.v1");
+  await expect.poll(
+    async () => await savedContextRef(page, "sts2.setup.strict", "decide"),
+    { timeout: 15_000 },
+  ).toBe(SETUP_CONTEXT_REF);
 });
 
 test("round-trips strict and dynamic definitions through the owner without semantic drift", async ({ page }) => {
   await connectLiveOwner(page);
 
-  const roundTrip = async (cardId: string, expectAdaptive: boolean): Promise<void> => {
+  const roundTrip = async (cardId: string, contextRef: string, expectAdaptive: boolean): Promise<void> => {
     await page.getByRole("button", { name: "Library", exact: true }).click();
     const card = page.locator(".definition-card").filter({ hasText: cardId });
     await expect(card).toHaveCount(1);
@@ -223,7 +301,7 @@ test("round-trips strict and dynamic definitions through the owner without seman
     await page.locator(".definition-card").filter({ hasText: cardId }).getByRole("button", { name: "Open designer" }).click();
     await expect(page.getByText("Loaded the owner-backed draft.")).toBeVisible();
     // The designer discovers the owner-disclosed context-binding catalog.
-    await expect(page.getByTestId("owner-context-catalog")).toContainText("context.synthetic.v1");
+    await expect(page.getByTestId("owner-context-catalog")).toContainText(contextRef);
 
     const before = await validateAndReadDigest(page);
     expect(before).not.toBe("not validated");
@@ -251,8 +329,8 @@ test("round-trips strict and dynamic definitions through the owner without seman
     }
   };
 
-  await roundTrip("sts2.setup.strict", false);
-  await roundTrip("sts2.combat.dynamic", true);
+  await roundTrip("sts2.setup.strict", "sts2.setup.context.v1", false);
+  await roundTrip("sts2.combat.dynamic", "sts2.combat.context.v1", true);
 });
 
 test("imports, edits, exports, and owner-validates every admitted node kind", async ({ page }) => {

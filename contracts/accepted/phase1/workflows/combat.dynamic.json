@@ -54,7 +54,7 @@
       "entry_node": "iteration_observe",
       "nodes": [
         {"id": "iteration_observe", "kind": "observe", "config": {"projection_ref": "sts2.combat.fair-play.v1"}},
-        {"id": "iteration_adaptive", "kind": "adaptive_region", "config": {"region_id": "sts2.combat.analysis", "planner_profile_ref": "sts2.combat.planner.v1", "allowed_operations": ["analyze.threat.v1", "analyze.resources.v1", "decide.synthesize.v1", "select.subworkflow.v1"], "max_plan_nodes": 8, "max_plan_edges": 16, "max_replans": 2, "output_type": "DecisionProposal"}},
+        {"id": "iteration_adaptive", "kind": "adaptive_region", "config": {"region_id": "sts2.combat.analysis", "planner_profile_ref": "sts2.combat.planner.v1:1.0.0:4458f12390ef6d5c03d6bf9524b3c3d586bd9766fa5af5e446e4c1b507b41c99", "allowed_operations": ["analyze.threat.v1", "analyze.resources.v1", "decide.synthesize.v1", "select.subworkflow.v1"], "max_plan_nodes": 8, "max_plan_edges": 16, "max_replans": 2, "output_type": "DecisionProposal"}},
         {"id": "iteration_execute", "kind": "execute_action", "config": {"proposal_from": {"node_id": "iteration_adaptive", "output": "proposal"}}},
         {"id": "iteration_settle", "kind": "observe", "config": {"projection_ref": "sts2.combat.fair-play.v1"}},
         {"id": "iteration_done", "kind": "terminal", "config": {"outcome": "completed"}},

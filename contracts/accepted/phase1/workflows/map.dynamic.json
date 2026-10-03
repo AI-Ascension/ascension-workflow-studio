@@ -31,7 +31,7 @@
       "nodes": [
         {"id": "observe", "kind": "observe", "config": {"projection_ref": "sts2.map.fair-play.v1"}},
         {"id": "route_map", "kind": "route", "config": {"selector_ref": "sts2.campaign.stage-selector.v1"}},
-        {"id": "adaptive", "kind": "adaptive_region", "config": {"region_id": "sts2.map.analysis", "planner_profile_ref": "sts2.map.planner.v1", "allowed_operations": ["analyze.map.routes.v1", "analyze.map.resources.v1", "decide.map.synthesize.v1", "select.map.subworkflow.v1"], "max_plan_nodes": 8, "max_plan_edges": 16, "max_replans": 2, "output_type": "DecisionProposal"}},
+        {"id": "adaptive", "kind": "adaptive_region", "config": {"region_id": "sts2.map.analysis", "planner_profile_ref": "sts2.map.planner.v1:1.0.0:26a5e1646f7b036ea09a12bbc28bb5ed06ce10f5c6e8ebac55d7915ce55a5340", "allowed_operations": ["analyze.map.routes.v1", "analyze.map.resources.v1", "decide.map.synthesize.v1", "select.map.subworkflow.v1"], "max_plan_nodes": 8, "max_plan_edges": 16, "max_replans": 2, "output_type": "DecisionProposal"}},
         {"id": "execute", "kind": "execute_action", "config": {"proposal_from": {"node_id": "adaptive", "output": "proposal"}}},
         {"id": "settlement_observe", "kind": "observe", "config": {"projection_ref": "sts2.map.fair-play.v1"}},
         {"id": "completed", "kind": "terminal", "config": {"outcome": "completed"}},

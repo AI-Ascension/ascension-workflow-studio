@@ -1,6 +1,6 @@
 import { type Dispatch, type MutableRefObject, type SetStateAction, useCallback, useEffect, useRef, useState } from "react";
 
-import { LayoutSidecarSchema, type LayoutSidecar, type ValidateResponse } from "@studio/contracts";
+import { LayoutSidecarSchema, type InferenceProfileCatalog, type LayoutSidecar, type ValidateResponse } from "@studio/contracts";
 import { CapabilityGateError, type StudioClient } from "@studio/client";
 import {
   canonicalJson,
@@ -9,13 +9,40 @@ import {
   mergeDocuments,
   mergeLayoutSidecars,
   semanticDigest,
+  validateProfileBindings,
   type EditGeneration,
+  type ProfileBindingDiagnostic,
   type SemanticDocument,
 } from "@studio/document";
 
 import { draftIdFor, initialDraftState, valueKey, type DraftState } from "./draftPersistence";
 
 export type ValidationState = "idle" | "running" | "valid" | "invalid" | "error";
+
+/**
+ * Renders Studio-side profile admission issues in the same `ValidateResponse`
+ * shape the owner uses, so the existing diagnostics panel can display them
+ * without a second, parallel report surface. These are clearly Studio-sourced
+ * (`studio.profile_admission` compiler, `profile_*` codes) and are never mixed
+ * into an owner response.
+ */
+function profileBindingDiagnostics(issues: ProfileBindingDiagnostic[]): ValidateResponse {
+  return {
+    schema_version: "ascension.workflow-validation/v1",
+    valid: false,
+    // A refused definition has no admitted owner digest. Reporting the
+    // document's semantic digest here would imply the owner compiled it, which
+    // it did not, so the field carries the honest "not compiled" marker.
+    definition_digest: "not-admitted",
+    compiler: "studio.profile_admission",
+    diagnostics: issues.map((issue) => ({
+      code: issue.code,
+      severity: "error" as const,
+      path: issue.path,
+      message: issue.message,
+    })),
+  };
+}
 
 export interface ReplaceDocumentOptions {
   /** Focus the document's entry graph (used when hydrating an owner draft). */
@@ -53,6 +80,13 @@ export interface DraftPersistenceOptions {
   layout: LayoutSidecar;
   /** True while an archival import suspends autosave and publication writes. */
   suspended: boolean;
+  /**
+   * The admitted owner inference profile catalog, or `undefined` when none was
+   * received. Publication checks every profile-bearing node against it so a
+   * definition cannot be published with a binding the owner no longer admits.
+ * A missing catalog fails closed; see `validateProfileBindings`.
+   */
+  inferenceProfileCatalog?: InferenceProfileCatalog;
   bridge: DraftPersistenceBridge;
 }
 
@@ -84,7 +118,7 @@ export interface DraftPersistence {
  * etag, value) triple, load/save generations reject stale responses, and a
  * reported conflict preserves the local candidate until an explicit review.
  */
-export function useDraftPersistence({ client, definitionId, initialDocument, initialRawText, document, layout, suspended, bridge }: DraftPersistenceOptions): DraftPersistence {
+export function useDraftPersistence({ client, definitionId, initialDocument, initialRawText, document, layout, suspended, inferenceProfileCatalog, bridge }: DraftPersistenceOptions): DraftPersistence {
   const { replaceDocument, commitSnapshot, setLayout, reportValidation, setDiagnostics, editGeneration } = bridge;
   const draftId = draftIdFor(definitionId);
 
@@ -212,6 +246,18 @@ export function useDraftPersistence({ client, definitionId, initialDocument, ini
     reportValidation("running", "");
     const generation = editGeneration.current.current();
     try {
+      // Issue #112 T2 — immutable adoption at admission. This runs BEFORE the
+      // owner validate/publish round trip so a definition whose bound profile
+      // identity the owner no longer admits is refused here rather than being
+      // published and then failing later. It only ever refuses: it never
+      // re-resolves a pin to a newer revision, because auto-upgrading a
+      // published binding is exactly the silent change T2 forbids.
+      const profileIssues = validateProfileBindings(document, inferenceProfileCatalog);
+      if (profileIssues.length > 0) {
+        setDiagnostics(profileBindingDiagnostics(profileIssues));
+        reportValidation("invalid", `Publication was blocked: ${profileIssues.length} inference profile binding${profileIssues.length === 1 ? "" : "s"} ${profileIssues.length === 1 ? "is" : "are"} not admitted by the owner. Re-adopt the exact revision deliberately.`);
+        return;
+      }
       const validation = await client.validate(document);
       if (!editGeneration.current.isCurrent(generation)) return;
       setDiagnostics(validation);

@@ -326,6 +326,6 @@ describe("owner definition identity digest", () => {
     const raw = JSON.parse(readFileSync("contracts/accepted/phase1/workflows/combat.dynamic.json", "utf8")) as WorkflowDefinition;
     // Independently produced by `sts2-workflow inspect` (SyntheticDefinitionPort raw_digest)
     // over the same file, so this pins producer/consumer canonical agreement.
-    expect(await definitionIdentityDigest(raw)).toBe("0724ff770512baa7d352ec431db1c55db92bf0e1b23f448fc208561ec187843e");
+    expect(await definitionIdentityDigest(raw)).toBe("ae776a783f9eb95fdb2952a9d4409d322dd5a3716c5a5b0e018878de7757ad47");
   });
 });

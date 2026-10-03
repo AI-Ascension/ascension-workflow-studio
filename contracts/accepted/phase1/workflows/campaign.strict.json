@@ -59,7 +59,7 @@
       "entry_node": "iteration_observe",
       "nodes": [
         {"id": "iteration_observe", "kind": "observe", "config": {"projection_ref": "sts2.campaign.fair-play.v1"}},
-        {"id": "iteration_decide", "kind": "decide", "config": {"decision_profile_ref": "sts2.campaign.decision.v1", "context_ref": "sts2.campaign.context.v1"}},
+        {"id": "iteration_decide", "kind": "decide", "config": {"decision_profile_ref": "sts2.campaign.decision.v1:1.0.0:6de625c609bf0acc3c468f90b1cb8941ea6e329140c6bb58d31cb44eb429f3a7", "context_ref": "sts2.campaign.context.v1"}},
         {"id": "iteration_execute", "kind": "execute_action", "config": {"proposal_from": {"node_id": "iteration_decide", "output": "proposal"}}},
         {"id": "iteration_settle", "kind": "observe", "config": {"projection_ref": "sts2.campaign.fair-play.v1"}},
         {"id": "iteration_done", "kind": "terminal", "config": {"outcome": "completed"}},
