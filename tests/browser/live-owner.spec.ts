@@ -258,17 +258,28 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
     const body = await response.json() as {
       valid: boolean;
       diagnostics: Array<{ code: string; path: string; message: string }>;
+      error?: { class: string; code: string; message: string };
     };
     return {
+      status: response.status,
       valid: body.valid,
-      unresolved: body.diagnostics.filter((diagnostic) => diagnostic.code === "context_ref_unresolved"),
+      error: body.error,
+      unresolved: (body.diagnostics ?? []).filter((diagnostic) => diagnostic.code === "context_ref_unresolved"),
     };
   });
-  expect(rejection.valid).toBe(false);
-  expect(rejection.unresolved).toHaveLength(1);
-  expect(rejection.unresolved[0].path).toBe("$.graphs.main.nodes.decide.config.context_ref");
-  expect(rejection.unresolved[0].message).toContain("context.removed.v1");
-  expect(rejection.unresolved[0].message).toMatch(/not available|incompatible/i);
+  // The owner refuses the removed reference, and it refuses it as a *conflict*
+  // on the node's inference-profile binding rather than as a context-catalog
+  // diagnostic. Both fields on `DecideConfig` are required, so a pinned
+  // `decide` node always carries a profile, and inference admission runs before
+  // the context catalog is consulted: the profile admits
+  // `sts2.setup.context.v1` and nothing else, so an unknown context is caught
+  // there first. This step used to assert a `context_ref_unresolved` diagnostic
+  // here, which no longer occurs for any node this fixture can express.
+  expect(rejection.status).toBe(409);
+  expect(rejection.error?.class).toBe("conflict");
+  expect(rejection.error?.code).toBe("inference_profile_context_incompatible");
+  expect(rejection.error?.message).toMatch(/context reference/i);
+  expect(rejection.valid).not.toBe(true);
 
   // The shared draft still holds the valid selection for the next journey.
   await expect.poll(
