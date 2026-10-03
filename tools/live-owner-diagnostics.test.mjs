@@ -118,6 +118,33 @@ test("preserved diagnostic copies are not group- or world-readable", async () =>
   });
 });
 
+test("preserved diagnostic copies are not group- or world-readable on the sync path either", async () => {
+  await withIsolatedDiagnosticsRoot(async ({ workspace }) => {
+    const targetDir = await makeFixtureDir(workspace, { "gateway.log": "exit-path diagnostics\n" });
+    const destination = preserveDiagnosticLogsSync(targetDir);
+    const stats = await stat(join(destination, "gateway.log"));
+    assert.equal(stats.mode & 0o077, 0, `expected mode-0600 file on the sync path, got ${(stats.mode & 0o777).toString(8)}`);
+  });
+});
+
+test("the diagnostic destination directory is not group- or world-traversable", async () => {
+  await withIsolatedDiagnosticsRoot(async ({ workspace }) => {
+    const targetDir = await makeFixtureDir(workspace, { "gateway.log": "directory mode\n" });
+    // mkdir's mode is masked by umask, and CI runs under a restrictive umask
+    // (077 here), which would make a 0755 destination *look* correct. Set a
+    // permissive umask for this assertion so it tests the mode the code asks
+    // for rather than the one the environment happens to allow.
+    const previousUmask = process.umask(0o000);
+    try {
+      const destination = preserveDiagnosticLogsSync(targetDir);
+      const stats = await stat(destination);
+      assert.equal(stats.mode & 0o077, 0, `expected mode-0700 directory, got ${(stats.mode & 0o777).toString(8)}`);
+    } finally {
+      process.umask(previousUmask);
+    }
+  });
+});
+
 test("DIAGNOSTIC_LOG_NAMES covers the evidence AC1 requires", () => {
   assert.deepEqual([...DIAGNOSTIC_LOG_NAMES].sort(), [
     "gateway.log",
