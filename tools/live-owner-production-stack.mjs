@@ -14,6 +14,7 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { preserveDiagnosticLogs, preserveDiagnosticLogsSync } from "./live-owner-diagnostics.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const harnessRoot = resolve(process.env.STUDIO_HARNESS_ROOT ?? join(root, "harness"));
@@ -540,6 +541,11 @@ function shutdown(signal) {
   shutdownPromise = (async () => {
     await Promise.all([closeServer(fixtureServer), closeServer(modServer)]);
     await Promise.all([...children.values()].map(stopChild));
+    // Preserve the gateway/runtime diagnostics BEFORE the recursive removal
+    // below destroys them; without this the evidence for a
+    // submission_refused_502 transport failure is gone before anyone reads it
+    // (#214).
+    await preserveDiagnosticLogs(targetDir);
     await rm(targetDir, { recursive: true, force: true }).catch(() => {});
     if (signal) process.exitCode = signal === "SIGINT" ? 130 : 143;
   })();
@@ -551,5 +557,9 @@ function emergencyCleanup() {
     if (!Number.isInteger(child.pid) || child.pid <= 1) continue;
     try { process.kill(-child.pid, "SIGKILL"); } catch {}
   }
+  // Same preservation as the orderly path: this runs on process exit, where no
+  // async work is possible, so the sync variant is used. Best-effort by
+  // contract -- it never throws and never changes the exit code.
+  preserveDiagnosticLogsSync(targetDir);
   try { rmSync(targetDir, { recursive: true, force: true }); } catch {}
 }

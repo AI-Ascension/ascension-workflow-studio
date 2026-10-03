@@ -253,5 +253,6 @@ jobs:
           path: |
             playwright-report
             test-results
+            /tmp/studio-live-diagnostics
           if-no-files-found: ignore
           retention-days: 7
