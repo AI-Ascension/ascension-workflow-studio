@@ -127,22 +127,37 @@ test("preserved diagnostic copies are not group- or world-readable on the sync p
   });
 });
 
-test("the diagnostic destination directory is not group- or world-traversable", async () => {
+test("preserved diagnostic copies are not group- or world-readable on the async path", async () => {
   await withIsolatedDiagnosticsRoot(async ({ workspace }) => {
-    const targetDir = await makeFixtureDir(workspace, { "gateway.log": "directory mode\n" });
-    // mkdir's mode is masked by umask, and CI runs under a restrictive umask
-    // (077 here), which would make a 0755 destination *look* correct. Set a
-    // permissive umask for this assertion so it tests the mode the code asks
-    // for rather than the one the environment happens to allow.
-    const previousUmask = process.umask(0o000);
-    try {
-      const destination = preserveDiagnosticLogsSync(targetDir);
-      const stats = await stat(destination);
-      assert.equal(stats.mode & 0o077, 0, `expected mode-0700 directory, got ${(stats.mode & 0o777).toString(8)}`);
-    } finally {
-      process.umask(previousUmask);
-    }
+    const targetDir = await makeFixtureDir(workspace, { "gateway.log": "shutdown-path diagnostics\n" });
+    const destination = await preserveDiagnosticLogs(targetDir);
+    const stats = await stat(join(destination, "gateway.log"));
+    assert.equal(stats.mode & 0o077, 0, `expected mode-0600 file on the async path, got ${(stats.mode & 0o777).toString(8)}`);
   });
+});
+
+test("the diagnostic destination directory is not group- or world-traversable", async () => {
+  // Both forms create the destination, so both are asserted. mkdir's mode is
+  // masked by umask, and this host runs under a restrictive umask (077), which
+  // would make a 0755 destination *look* correct. Each case sets a permissive
+  // umask so it tests the mode the code asks for rather than the one the
+  // environment happens to allow.
+  for (const [label, preserve] of [
+    ["async", async (targetDir) => await preserveDiagnosticLogs(targetDir)],
+    ["sync", (targetDir) => preserveDiagnosticLogsSync(targetDir)],
+  ]) {
+    await withIsolatedDiagnosticsRoot(async ({ workspace }) => {
+      const targetDir = await makeFixtureDir(workspace, { "gateway.log": `directory mode ${label}\n` });
+      const previousUmask = process.umask(0o000);
+      try {
+        const destination = await preserve(targetDir);
+        const stats = await stat(destination);
+        assert.equal(stats.mode & 0o077, 0, `expected mode-0700 directory on the ${label} path, got ${(stats.mode & 0o777).toString(8)}`);
+      } finally {
+        process.umask(previousUmask);
+      }
+    });
+  }
 });
 
 test("DIAGNOSTIC_LOG_NAMES covers the evidence AC1 requires", () => {
