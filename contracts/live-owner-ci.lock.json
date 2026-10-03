@@ -1,11 +1,11 @@
 {
   "repository": "AI-Ascension/sts2-harness",
-  "revision": "20c0c0c8b175aa28b5761ea60e16b57c4442adec",
+  "revision": "ab7f1214c659119ef5ca679df4acac039428ffe2",
   "gateway_repository": "AI-Ascension/sts2-gateway",
   "gateway_revision": "34464acc443fe4f683581668cdacd249d09f76cd",
   "mcp_repository": "AI-Ascension/sts2-mcp-server",
   "mcp_revision": "f7db2d4ac5346a9124fff0f1e121fc3a7979d3f4",
   "scope": "Synthetic authenticated live-owner journeys plus a production serve-workflow browser journey on one explicitly prebound admitted run; the durable owner journal is encrypted, while temporary fixture JSON stays in a private mode-0700 directory and is not logged",
   "baseline_admission": "contracts/accepted/phase1-integration.lock.json",
-  "note": "The Phase 1 admission lock preserves historical contract/source digests. This separate pin identifies the newer owner actually tested by CI; neither record claims game or provider compatibility."
+  "note": "The Phase 1 admission lock preserves historical contract/source digests. This separate pin identifies the newer owner actually tested by CI; neither record claims game or provider compatibility. The revision moves from 20c0c0c8 to ab7f121 so the live owner carries harness #802 (owner-side inference-profile resolution, AI-Ascension/sts2-harness#799). ab7f121 is 3 commits ahead of the previous pin and the only commit it adds is #802. This is a pin-correctness change: it is not claimed to fix the submission_refused_502 production-journey failure in AI-Ascension/ascension-workflow-studio#207."
 }
