@@ -19,6 +19,7 @@
     "test:owner-restart": "node --test tests/process/at-046-owner-restart.test.mjs",
     "test:owner-negative-auth": "node --test tests/process/studio109-owner-negative-auth.test.mjs",
     "test:bundle-budget": "node --test tools/measure-bundle-budget.test.mjs",
+    "measure:bundle-budget": "node tools/measure-bundle-budget.mjs",
     "test:recorded-browser": "playwright test --config playwright.recorded.config.ts",
     "recording:inspect": "node tools/inspect-recording.mjs",
     "test:watch": "vitest",
