@@ -41,6 +41,8 @@ jobs:
       - run: npm run lint
       - run: npm test -- --run --pool=threads --maxWorkers=1
       - run: npm run build
+      - name: Verify PERF-08 against the real production build
+        run: npm run measure:bundle-budget
 
   browser:
     name: Browser (${{ matrix.browser }})
