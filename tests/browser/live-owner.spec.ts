@@ -171,6 +171,21 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   const contextSelect = page.getByLabel("decide Decision context");
   await expect(contextSelect).toBeVisible();
   await expect(contextSelect.locator("option", { hasText: SETUP_CONTEXT_REF })).toHaveCount(1);
+  // The owner discloses every reference below for `decide`, but only
+  // `sts2.setup.context.v1` is compatible with the profile this node is pinned
+  // to. Selecting one that is disclosed but incompatible is what proves the
+  // owner-disclosed set and the owner's accepted set are not the same thing,
+  // and it is the only way to make the selection below an actual change.
+  const incompatibleButDisclosed = "sts2.map.context.v1";
+  await expect(contextSelect.locator("option", { hasText: incompatibleButDisclosed })).toHaveCount(1);
+  await contextSelect.selectOption(incompatibleButDisclosed);
+  await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
+  // The current pin stops being admissible for this node's context, and the
+  // owner-published catalog says so rather than silently offering a different
+  // profile.
+  await expect(page.getByLabel("Decision profile refusal")).toContainText(/context_incompatible/);
+
+  // Selecting the compatible reference is admitted.
   await contextSelect.selectOption(SETUP_CONTEXT_REF);
   await expect(page.getByText("Autosaved to the active adapter.")).toBeVisible();
 
