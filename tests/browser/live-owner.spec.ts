@@ -235,6 +235,11 @@ test("discovers, selects, saves, reloads, and owner-rejects a context reference"
   // a copy of the admitted document, so the shared owner draft is never mutated and no autosave
   // cleanup race is possible.
   await page.getByRole("button", { name: "JSON mode" }).click();
+  const rawCandidate = page.getByLabel("Raw workflow definition JSON");
+  // Wait for the field to actually hold the document. The step before reads the
+  // List editor, and `JSON.parse` on a still-empty textarea throws before any
+  // assertion runs -- which looks like an owner failure and is not one.
+  await expect(rawCandidate).not.toHaveValue("");
   const rejection = await page.evaluate(async () => {
     const headers = { Authorization: "Bearer studio-live-ci-token", "Content-Type": "application/json" };
     const capabilities = await (await fetch("/v1/capabilities", { headers })).json() as { capabilities: unknown };
