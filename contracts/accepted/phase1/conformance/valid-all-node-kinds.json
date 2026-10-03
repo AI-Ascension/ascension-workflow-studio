@@ -96,7 +96,7 @@
           "id": "decide",
           "kind": "decide",
           "config": {
-            "decision_profile_ref": "decision.synthetic.v1",
+            "decision_profile_ref": "decision.synthetic.v1:1.0.0:373a273fb8999d23443025bbdef3a129f59a22ca3d67d6e64418a94185fb57f5",
             "context_ref": "context.synthetic.v1"
           }
         },
@@ -105,7 +105,7 @@
           "kind": "adaptive_region",
           "config": {
             "region_id": "region.synthetic.v1",
-            "planner_profile_ref": "planner.synthetic.v1",
+            "planner_profile_ref": "planner.synthetic.v1:1.0.0:4c331b9bd1db35651aed312b0b5e09a52b51f149d081b8c092d1060bb0a221d1",
             "allowed_operations": [
               "operation.synthetic.v1"
             ],

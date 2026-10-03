@@ -30,7 +30,7 @@
       "nodes": [
         {"id": "observe", "kind": "observe", "config": {"projection_ref": "sts2.selection.fair-play.v1"}},
         {"id": "parent_checkpoint", "kind": "checkpoint", "config": {"label": "selection.parent.cursor"}},
-        {"id": "decide", "kind": "decide", "config": {"decision_profile_ref": "sts2.selection.decision.v1", "context_ref": "sts2.selection.context.v1"}},
+        {"id": "decide", "kind": "decide", "config": {"decision_profile_ref": "sts2.selection.decision.v1:1.0.0:38f6ecf3d3fc5abf131ab0dd27aa964e295fef82d53cd9860caf56a2bf47088d", "context_ref": "sts2.selection.context.v1"}},
         {"id": "execute", "kind": "execute_action", "config": {"proposal_from": {"node_id": "decide", "output": "proposal"}}},
         {"id": "settlement_observe", "kind": "observe", "config": {"projection_ref": "sts2.selection.fair-play.v1"}},
         {"id": "return_checkpoint", "kind": "checkpoint", "config": {"label": "selection.parent.return"}},

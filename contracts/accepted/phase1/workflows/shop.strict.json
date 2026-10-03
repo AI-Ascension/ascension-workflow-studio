@@ -29,7 +29,7 @@
       "entry_node": "observe",
       "nodes": [
         {"id": "observe", "kind": "observe", "config": {"projection_ref": "sts2.shop.fair-play.v1"}},
-        {"id": "decide", "kind": "decide", "config": {"decision_profile_ref": "sts2.shop.decision.v1", "context_ref": "sts2.shop.context.v1"}},
+        {"id": "decide", "kind": "decide", "config": {"decision_profile_ref": "sts2.shop.decision.v1:1.0.0:7bc095a598f85f7c4023961d01e7f84f76d1c40e2af7407535218e3f9ed37852", "context_ref": "sts2.shop.context.v1"}},
         {"id": "execute", "kind": "execute_action", "config": {"proposal_from": {"node_id": "decide", "output": "proposal"}}},
         {"id": "settlement_observe", "kind": "observe", "config": {"projection_ref": "sts2.shop.fair-play.v1"}},
         {"id": "completed", "kind": "terminal", "config": {"outcome": "completed"}},

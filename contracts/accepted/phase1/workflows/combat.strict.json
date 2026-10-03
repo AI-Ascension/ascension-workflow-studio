@@ -51,7 +51,7 @@
       "entry_node": "iteration_observe",
       "nodes": [
         {"id": "iteration_observe", "kind": "observe", "config": {"projection_ref": "sts2.combat.fair-play.v1"}},
-        {"id": "iteration_decide", "kind": "decide", "config": {"decision_profile_ref": "sts2.combat.decision.v1", "context_ref": "sts2.combat.context.v1"}},
+        {"id": "iteration_decide", "kind": "decide", "config": {"decision_profile_ref": "sts2.combat.decision.v1:1.0.0:f793b74d5b6a0a986adb1e42890372aac2922a16063982f925604c9d8a556af0", "context_ref": "sts2.combat.context.v1"}},
         {"id": "iteration_execute", "kind": "execute_action", "config": {"proposal_from": {"node_id": "iteration_decide", "output": "proposal"}}},
         {"id": "iteration_settle", "kind": "observe", "config": {"projection_ref": "sts2.combat.fair-play.v1"}},
         {"id": "iteration_done", "kind": "terminal", "config": {"outcome": "completed"}},

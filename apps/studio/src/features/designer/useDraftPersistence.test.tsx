@@ -259,9 +259,14 @@ describe("useDraftPersistence", () => {
     const client = new StubClient();
     client.draft = record({ revision: 2, etag: "fixture-2" });
     const bridgeStub = bridge();
-    // The unmodified published fixture: its decision node names
-    // `sts2.setup.decision.v1`, a floating id.
-    const { result } = renderController(client, bridgeStub, { inferenceProfileCatalog: ownerCatalog });
+    // A floating id the catalog DOES serve, and for a node context it DOES
+    // accept — so the only thing that can refuse this is the pin requirement
+    // itself. The published fixtures carry exact pins now, so this case is
+    // stated explicitly rather than inherited from fixture state: admission
+    // must still refuse here, because auto-upgrading a floating id to the
+    // newest revision is precisely the silent change T2 forbids.
+    const document = boundDocument(decisionDescriptor.profile_id);
+    const { result } = renderController(client, bridgeStub, { document, inferenceProfileCatalog: ownerCatalog });
     await act(async () => {});
 
     await act(async () => { await result.current.publish(); });

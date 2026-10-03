@@ -6,7 +6,7 @@
     {
       "name": "valid-strict-semantic",
       "source": "../../conformance/workflow-v1/valid-strict.json",
-      "semantic_digest": "55e0763a496a97373a4e3641eda83157d1a7ae440eb8810a8a337b24a49f4230"
+      "semantic_digest": "66f85bc5d5f6d582f09731218738adc8810723447223cae10511013d6c3dc80d"
     }
   ]
 }
