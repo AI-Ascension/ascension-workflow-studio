@@ -1,2 +1,8 @@
 # Preserve the immutable reference package's recorded bytes on every platform.
 docs/reference/phase2-package/** -text
+# Contract pins, retained release evidence, and historical snapshots hash bytes.
+contracts/** -text
+history/** -text
+artifacts/** -text
+docs/evidence/** -text
+public/recordings/** -text

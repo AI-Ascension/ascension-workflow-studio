@@ -40,8 +40,11 @@ test('contract pins reject corruption, omissions, duplicates and escaping paths'
   assert.throws(() => verifyEntries(root, [{ path: 'schema.json', sha256: 'bad' }]), /Invalid SHA/);
   writeFileSync(join(temp, 'outside.json'), '{}');
   assert.throws(() => verifyEntries(root, [{ path: '../outside.json', sha256 }]), /escapes/);
-  symlinkSync(join(temp, 'outside.json'), join(root, 'link.json'));
-  assert.throws(() => verifyEntries(root, [{ path: 'link.json', sha256 }]), /escapes/);
+  const outsideDirectory = join(temp, 'outside');
+  mkdirSync(outsideDirectory);
+  writeFileSync(join(outsideDirectory, 'schema.json'), '{}');
+  symlinkSync(outsideDirectory, join(root, 'link'), process.platform === 'win32' ? 'junction' : 'dir');
+  assert.throws(() => verifyEntries(root, [{ path: 'link/schema.json', sha256 }]), /escapes/);
   writeFileSync(join(root, 'schema.json'), '{"changed":true}');
   assert.throws(() => verifyEntries(root, entries), /digest mismatch/);
 });
@@ -64,6 +67,9 @@ test('inference-profile catalog pin binds the fixture to the sealing producer so
     { producer_sources: [] },
     { producer_sources: [{ producer_path: '../../../etc/passwd', sha256: '0'.repeat(64) }] },
     { producer_sources: [{ producer_path: '/etc/passwd', sha256: '0'.repeat(64) }] },
+    { producer_sources: [{ producer_path: 'C:/private/source.rs', sha256: '0'.repeat(64) }] },
+    { producer_sources: [{ producer_path: 'C:\\private\\source.rs', sha256: '0'.repeat(64) }] },
+    { producer_sources: [{ producer_path: 'crates\\harness\\source.rs', sha256: '0'.repeat(64) }] },
     { producer_sources: [{ producer_path: 'crates/../../escape.rs', sha256: '0'.repeat(64) }] },
     { producer_sources: [{ producer_path: 'crates/harness/src/management/contract_json.rs', sha256: 'nope' }] },
     { consumed_artifacts: [] }, { consumed_artifacts: [...pin.consumed_artifacts, ...pin.consumed_artifacts] },
