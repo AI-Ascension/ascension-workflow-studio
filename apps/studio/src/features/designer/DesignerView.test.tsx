@@ -13,8 +13,11 @@ async function openDesigner(): Promise<FixtureClient> {
   render(<DesignerView client={client} catalog={fixtureDefinitions} definition={definition}
     initialDocument={definition.definition} mode="fixture" onBack={vi.fn()}
     onRun={vi.fn()} onRawTextChange={vi.fn()} />);
-  await act(async () => {});
-  fireEvent.click(screen.getByRole("button", { name: "JSON mode" }));
+  // Synchronise on the control this helper actually depends on. A bare
+  // `await act(async () => {})` flushes whatever has happened to be scheduled,
+  // so whether the editor is mounted depended on unrelated scheduling and the
+  // render cost, not on the settled condition (studio#222).
+  fireEvent.click(await screen.findByRole("button", { name: "JSON mode" }));
   return client;
 }
 
@@ -27,8 +30,8 @@ describe("unsupported definition isolation", () => {
   afterEach(() => { vi.useRealTimers(); vi.restoreAllMocks(); });
 
   it.each(["future schema", "future node"])("suspends writes and shortcuts for a %s until returning to the draft", async (kind) => {
-    vi.useFakeTimers();
     const client = await openDesigner();
+    vi.useFakeTimers();
     const save = vi.spyOn(client, "saveDraft");
     const recover = vi.spyOn(IndexedDbRecoveryStore.prototype, "put").mockResolvedValue({ prunedForQuota: false });
     fireEvent.click(screen.getByRole("button", { name: "Enable recovery" }));
@@ -45,8 +48,26 @@ describe("unsupported definition isolation", () => {
     const archive = screen.getByRole("textbox", { name: "Archived unsupported workflow definition JSON" });
     expect(archive).toHaveValue(original);
     expect(archive).toHaveAttribute("readonly");
+    // One pass instead of seven full-DOM rescans: each `queryByRole` call
+    // re-walks every element, which is what pushed this test past the budget
+    // under `--maxWorkers=1` (studio#222).
+    //
+    // `button.textContent` is the accessible name for these plain-text
+    // controls, so this asserts the same thing the seven individual role
+    // queries did. It would silently weaken if one of them ever gained an
+    // `aria-label` or `title` that overrides its contents, so the names are
+    // also asserted to match their contents.
+    const buttons = screen.queryAllByRole("button");
+    const available = new Set(buttons.map((button) => (
+      button.getAttribute("aria-label") ?? button.getAttribute("title") ?? button.textContent?.trim()
+    )));
+    for (const button of buttons) {
+      expect(
+        button.getAttribute("aria-label") ?? button.getAttribute("title") ?? button.textContent?.trim(),
+      ).toBe(button.textContent?.trim());
+    }
     for (const name of ["Publish revision", "Run inspection", "Retry save", "Apply candidate", "＋ Node", "Undo", "Export"]) {
-      expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+      expect(available.has(name)).toBe(false);
     }
     fireEvent.keyDown(window, { key: "z", ctrlKey: true });
     fireEvent.keyDown(window, { key: "v", metaKey: true });
@@ -63,8 +84,8 @@ describe("unsupported definition isolation", () => {
   });
 
   it("does not publish after pending owner validation resolves in archive mode", async () => {
-    vi.useFakeTimers();
     const client = await openDesigner();
+    vi.useFakeTimers();
     // #112 T2: publication only reaches the owner once every profile-bearing
     // node is bound to an identity the owner publishes. Bind this fixture's
     // decide node to the catalog's exact pin so the test exercises the race it
@@ -158,7 +179,6 @@ describe("diagnostics focus wiring", () => {
     render(<DesignerView client={client} catalog={fixtureDefinitions} definition={definition}
       initialDocument={definition.definition} mode="fixture" onBack={vi.fn()}
       onRun={vi.fn()} onRawTextChange={vi.fn()} />);
-    await act(async () => {});
     fireEvent.click(await screen.findByRole("button", { name: "◈ Validate" }));
     await act(async () => {});
   }

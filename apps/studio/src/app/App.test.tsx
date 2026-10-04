@@ -4,6 +4,16 @@ import { describe, expect, it } from "vitest";
 
 import { App } from "./App";
 
+/**
+ * `userEvent.setup()` defaults to a real-time `delay` between dispatched
+ * events, so every interaction in these tests paid an `await setTimeout` that
+ * no assertion depends on. `delay: null` dispatches without that artificial
+ * wait while keeping the same event semantics (studio#222).
+ */
+function studioUser() {
+  return userEvent.setup({ delay: null });
+}
+
 async function openRunAdmission(user: ReturnType<typeof userEvent.setup>) {
   render(<App />);
   await screen.findByRole("heading", { name: "Workflow library" });
@@ -15,7 +25,7 @@ async function openRunAdmission(user: ReturnType<typeof userEvent.setup>) {
 
 describe("Studio shell", () => {
   it("shows an explicit fixture library and opens the equivalent designer", async () => {
-    const user = userEvent.setup();
+    const user = studioUser();
     render(<App />);
     expect(await screen.findByRole("heading", { name: "Workflow library" })).toBeInTheDocument();
     expect(screen.getByText("fixture mode", { exact: false })).toBeInTheDocument();
@@ -28,7 +38,7 @@ describe("Studio shell", () => {
   });
 
   it("exposes bounded raw JSON and template provenance entry points", async () => {
-    const user = userEvent.setup();
+    const user = studioUser();
     render(<App />);
     await screen.findByRole("heading", { name: "Workflow library" });
     await user.click(screen.getAllByRole("button", { name: "Clone draft" })[0]);
@@ -42,7 +52,7 @@ describe("Studio shell", () => {
   });
 
   it("keeps unsupported definition text in a read-only archival panel", async () => {
-    const user = userEvent.setup();
+    const user = studioUser();
     const original = '{\n  "graphs": [],\n  "schema_version": "ascension.workflow/v2"\n}';
     render(<App />);
     await screen.findByRole("heading", { name: "Workflow library" });
@@ -58,7 +68,7 @@ describe("Studio shell", () => {
   });
 
   it("shows bounded context evidence without turning fixture inspection into a control surface", async () => {
-    const user = userEvent.setup();
+    const user = studioUser();
     render(<App />);
     await screen.findByRole("heading", { name: "Workflow library" });
     await user.click(screen.getByRole("button", { name: "Runs" }));
@@ -71,7 +81,7 @@ describe("Studio shell", () => {
   });
 
   it("keeps replay Context comparison unavailable when fixture runs lack bound snapshots", async () => {
-    const user = userEvent.setup();
+    const user = studioUser();
     render(<App />);
     await screen.findByRole("heading", { name: "Workflow library" });
     await user.click(screen.getByRole("button", { name: "Replay / Compare" }));
@@ -85,7 +95,7 @@ describe("Studio shell", () => {
 
 describe("Studio run admission", () => {
   it("requires an explicit target and reviews the exact owner binding before running", async () => {
-    const user = userEvent.setup();
+    const user = studioUser();
     const panel = await openRunAdmission(user);
     const targetSelect = await within(panel).findByLabelText("Target instance");
     expect(targetSelect).toHaveValue("");
@@ -111,7 +121,7 @@ describe("Studio run admission", () => {
   });
 
   it("does not silently reuse a reviewed admission after the selection changes", async () => {
-    const user = userEvent.setup();
+    const user = studioUser();
     const panel = await openRunAdmission(user);
     await user.selectOptions(within(panel).getByLabelText("Target instance"), "studio-inspection");
     await user.selectOptions(within(panel).getByLabelText("Execution profile"), "synthetic");
@@ -125,7 +135,7 @@ describe("Studio run admission", () => {
   });
 
   it("submits only once when the start control is double-clicked", async () => {
-    const user = userEvent.setup();
+    const user = studioUser();
     const panel = await openRunAdmission(user);
     await user.selectOptions(within(panel).getByLabelText("Target instance"), "studio-inspection");
     await user.selectOptions(within(panel).getByLabelText("Execution profile"), "synthetic");
