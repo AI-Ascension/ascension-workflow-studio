@@ -7,6 +7,13 @@ import { DesignerView } from "./DesignerView";
 import { IndexedDbRecoveryStore } from "./recoveryStore";
 import { catalogFixture } from "../../../../../packages/contracts/src/context-owner-catalog.test-fixtures";
 
+/**
+ * The autosave debounce in `useDraftPersistence`. Advancing the fake clock past
+ * this is what proves a save fired; advancing to an arbitrary 2000ms spent most
+ * of the 5s budget proving nothing extra (studio#222).
+ */
+const AUTOSAVE_DEBOUNCE_MS = 700;
+
 async function openDesigner(): Promise<FixtureClient> {
   const client = new FixtureClient(fixtureDefinitions);
   const definition = fixtureDefinitions[0];
@@ -71,13 +78,15 @@ describe("unsupported definition isolation", () => {
     }
     fireEvent.keyDown(window, { key: "z", ctrlKey: true });
     fireEvent.keyDown(window, { key: "v", metaKey: true });
-    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    // Past the debounce, so a save *would* have fired if the archive had not
+    // suspended it.
+    await act(async () => { await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS + 1); });
     expect(save).not.toHaveBeenCalled();
     expect(recover).not.toHaveBeenCalled();
     expect(archive).toHaveValue(original);
     fireEvent.click(screen.getByRole("button", { name: "Return to previous draft" }));
     expect(JSON.parse((screen.getByRole("textbox", { name: "Raw workflow definition JSON" }) as HTMLTextAreaElement).value)).toEqual(edited);
-    await act(async () => { await vi.advanceTimersByTimeAsync(800); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS + 1); });
     expect(save).toHaveBeenCalledTimes(1);
     expect(save.mock.calls[0][0].document).toEqual(edited);
     expect(recover).toHaveBeenCalledTimes(1);
@@ -100,7 +109,7 @@ describe("unsupported definition isolation", () => {
       context_ref: "context.synthetic.v1",
     };
     applyRaw(JSON.stringify(bound));
-    await act(async () => { await vi.advanceTimersByTimeAsync(800); });
+    await act(async () => { await vi.advanceTimersByTimeAsync(AUTOSAVE_DEBOUNCE_MS + 1); });
     const result = await client.validate(fixtureDefinitions[0].definition);
     let finishValidation!: (value: typeof result) => void;
     vi.spyOn(client, "validate").mockImplementation(() => new Promise((resolve) => { finishValidation = resolve; }));

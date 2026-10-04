@@ -61,8 +61,13 @@ at three measured points:
   `queryAllByRole` and asserts against that set.
 - Mounting under real timers and switching to fake timers afterwards lets the
   real render settle once instead of being re-driven by the fake clock.
+- Advancing the fake clock by an arbitrary `2000ms` where the autosave debounce
+  is `700ms`. `advanceTimersByTimeAsync` spends that time for real, so the
+  margin over the real delay was ~1300ms of proving nothing. Both advances are
+  now `AUTOSAVE_DEBOUNCE_MS + 1`, named after the constant it is waiting for
+  rather than an unrelated round number.
 
-Worst case across the three named files fell from 6578ms to 2977ms.
+Worst case across the three named files fell from 6578ms to 2684ms.
 
 ### 4. A cheaper query must not quietly narrow what is asserted
 
@@ -91,3 +96,8 @@ the default delay leaves all 8 tests passing), confirming it changes cost, not
 behaviour. The single-pass assertion was mutation-tested — inverting it fails
 the test — and the accessible-name guard was checked against an introduced
 `aria-label` divergence, which it catches.
+
+The debounce advance is pinned too: shortening it to `AUTOSAVE_DEBOUNCE_MS - 100`
+— so the save has not fired — makes the test fail. Without that check, the
+advance could have been reduced to zero and the test would still have passed,
+having silently stopped testing that an archive suppresses the save at all.
