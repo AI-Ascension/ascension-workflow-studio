@@ -26,6 +26,9 @@ jobs:
           node-version: 24.16.0
       - run: node --test tools/verify-checkout-portability.test.mjs
       - run: node tools/verify-checkout-portability.mjs
+      - run: node --test tools/verify-contract-pins.test.mjs
+      - run: node tools/verify-contract-pins.mjs
+      - run: node tools/verify-byte-stability.mjs
 
   verify:
     name: Unit, type, and production build
@@ -44,6 +47,7 @@ jobs:
         run: |
           node --test tools/verify-checkout-portability.test.mjs
           node tools/verify-checkout-portability.mjs
+          node tools/verify-byte-stability.mjs
       - name: Verify pinned producer contracts
         run: |
           node --test tools/verify-contract-pins.test.mjs

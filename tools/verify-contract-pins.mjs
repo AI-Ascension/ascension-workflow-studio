@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, realpathSync } from 'node:fs';
-import { isAbsolute, normalize, relative, resolve, sep } from 'node:path';
+import { isAbsolute, posix, relative, resolve, sep, win32 } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -92,9 +92,12 @@ export function verifyInferenceProfileCatalogPin(root, pin, { requireProducerChe
     // checkout without the sibling producer present, and the escape would only
     // be caught on the machine that happens to have it. Reject the traversal
     // and absolute paths up front, whatever the working tree contains.
-    assert(!isAbsolute(entry.producer_path)
-      && normalize(entry.producer_path) === entry.producer_path
-      && !entry.producer_path.split(/[\\/]/).includes('..'),
+    // Producer paths are repository-relative POSIX identities on every host.
+    // Native Windows normalization rewrites valid '/' separators to '\\'.
+    assert(!posix.isAbsolute(entry.producer_path) && !win32.isAbsolute(entry.producer_path)
+      && posix.normalize(entry.producer_path) === entry.producer_path
+      && !entry.producer_path.includes('\\')
+      && !entry.producer_path.split('/').includes('..'),
     `Pinned producer path escapes the producer checkout: ${entry.producer_path}`);
   }
   if (existsSync(resolve(root, producerCrate.checkout))) {
