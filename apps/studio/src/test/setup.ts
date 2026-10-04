@@ -14,17 +14,23 @@ if (!globalThis.ResizeObserver) {
 }
 
 /**
- * jsdom resolves no base URL, so every relative `fetch` — the recordings
- * catalog that `useRecording` requests on mount, once per `<App />` render —
- * rejects only after Node has attempted real URL resolution. Measured at
- * ~500ms on the first mount of a file, which is charged to whichever test
- * happens to render first and has pushed that test past the default 5s budget
- * under load (studio#222).
+ * Vitest's jsdom environment DOES set a base URL — `http://localhost:3000/`.
+ * So a relative `fetch` does not fail to resolve. What happens instead is
+ * that Node's undici takes the resolved absolute URL and attempts a REAL
+ * network request to that port, which nothing is listening on, and only then
+ * rejects with `TypeError: Failed to fetch`.
  *
- * No test asserts on this request, so rejecting it up front removes the cost
- * without changing what any test observes. Each test restores the previous
- * implementation, so a test that needs to observe a real request can still
- * install its own.
+ * That real network attempt is the cost. It hits the recordings catalog that
+ * `useRecording` requests on mount, once per `<App />` render, and is charged
+ * to whichever test renders first. Measured front-loaded and decaying across
+ * mounts in a file: `[343.5, 139.0, 85.8, 20.3]`ms. It has pushed that test
+ * past the default 5s budget under load (studio#222).
+ *
+ * Rejecting the request up front with the SAME `TypeError` removes the network
+ * attempt without changing what any test observes: both paths are `TypeError`s
+ * that reach the same `.catch()`, and no test branches on the message. Each
+ * test restores the previous implementation, so a test that needs to observe a
+ * real request can still install its own.
  */
 const nativeFetch = globalThis.fetch;
 
