@@ -184,7 +184,9 @@ test("the live-owner stack preserves diagnostics before every fixture removal", 
 
   // Locate each removal of targetDir and assert a preserve call precedes it
   // within the same function body.
-  assert.match(source, /import \{ preserveDiagnosticLogs, preserveDiagnosticLogsSync \} from "\.\/live-owner-diagnostics\.mjs";/);
+  assert.match(source, /from "\.\/live-owner-diagnostics\.mjs";/);
+  assert.match(source, /preserveDiagnosticLogs,/);
+  assert.match(source, /preserveDiagnosticLogsSync,/);
 
   const shutdownBody = source.slice(source.indexOf("function shutdown("));
   const shutdownPreserveIndex = shutdownBody.indexOf("await preserveDiagnosticLogs(targetDir)");

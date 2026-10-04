@@ -132,6 +132,73 @@ test("the owned children report names each process without leaking its environme
   assert.match(source, /args: \[\.\.\.entry\.args\]/);
 });
 
+test("owner output is captured outside the fixture directory cleanup removes", async () => {
+  const source = readFileSync(join(root, "tools/live-owner-production-stack.mjs"), "utf8");
+
+  // #227 AC2 asks for proof by test, not by inspection. The capture paths are
+  // derived from `diagnosticDestination(targetDir)`, which is rooted at the
+  // diagnostics root and keyed by the fixture directory's basename -- never
+  // inside `targetDir`. Assert the construction, so moving a capture back into
+  // the fixture directory fails here.
+  assert.match(
+    source,
+    /const ownerOutputPath = join\(diagnosticDestination\(targetDir\), "owner-stdout\.log"\)/,
+    "owner stdout must be captured under the diagnostics destination, not targetDir",
+  );
+  assert.match(
+    source,
+    /const ownerErrorPath = join\(diagnosticDestination\(targetDir\), "owner-stderr\.log"\)/,
+    "owner stderr must be captured under the diagnostics destination, not targetDir",
+  );
+  assert.doesNotMatch(
+    source,
+    /join\(targetDir, "owner-std(out|err)\.log"\)/,
+    "no owner capture may be written inside the directory cleanup removes",
+  );
+
+  // Both `serve-workflow` and the runtime path must be captured (#227 AC4):
+  // it is not established which process the reset occurs in.
+  assert.match(source, /startWorkflowService\(\)[\s\S]*?owner-stderr\.log|owner-stdout\.log[\s\S]*?return startChild\(\s*harnessBinary/);
+  assert.match(source, /ownerOutputPath, stderr: ownerErrorPath/);
+  assert.match(source, /stdout: gatewayOutputPath, stderr: gatewayErrorPath/);
+
+  // The captured streams must be created outside the in-fixture log path, and
+  // the lifecycle markers must be written with appendFileSync so they survive a
+  // capture stream that could not be opened.
+  assert.match(source, /function createDiagnosticCapture\(path\)/);
+  assert.match(source, /function appendDiagnosticLine\(path, line, stream\)/);
+  assert.match(
+    source,
+    /starting serve-workflow owner at/,
+    "each owner start is marked so a restart is visible in the captured output",
+  );
+  assert.match(
+    source,
+    /exited code=\$\{code \?\? "null"\} signal=\$\{signal \?\? "null"\}/,
+    "each owner exit is marked so a crash is not inferred from silence",
+  );
+  // The exit marker must go through the same stream as the owner's output.
+  // Writing it with `appendFileSync` after `stream.end()` would open the file
+  // independently and could land ahead of output still buffered in the stream,
+  // making the marker appear to precede the owner's last words.
+  assert.match(
+    source,
+    /appendDiagnosticLine\(\s*stderrCapture \? capture\.stderr : undefined,[\s\S]*?stderrCapture,?\s*\);/,
+    "the exit marker must be written through the capture stream, not appended independently",
+  );
+  assert.match(
+    source,
+    /function appendDiagnosticLine\(path, line, stream\)[\s\S]*?stream\.end\(`\$\{line\}\\n`\);/,
+    "appendDiagnosticLine must write through the stream when one is supplied",
+  );
+
+  // The CI job must print the captures, not only upload them (#227 AC1).
+  const workflow = readFileSync(join(root, ".github/workflows/validate.yml"), "utf8");
+  assert.match(workflow, /Show live owner diagnostics/);
+  assert.match(workflow, /owner-std\*\.log/);
+  assert.match(workflow, /\/tmp\/studio-live-diagnostics/);
+});
+
 // The stack copies its diagnostics to a per-run directory keyed by the fixture
 // directory's basename, then deletes the fixture directory itself. Resolving the
 // copy the same way the runner does is what makes this assertion about the
