@@ -97,6 +97,9 @@ const gatewayOutputPath = join(diagnosticDestination(targetDir), "gateway-stdout
 const gatewayErrorPath = join(diagnosticDestination(targetDir), "gateway-stderr.log");
 mkdirSync(diagnosticDestination(targetDir), { recursive: true, mode: 0o700 });
 const children = new Map();
+// Spawns that never produced a pid. Kept apart from `children`, which is keyed
+// by pid and iterated by the teardown paths to signal processes.
+const spawnFailures = [];
 let fixtureServer;
 let closing = false;
 let serviceEnvironment;
@@ -370,7 +373,23 @@ function startChild(command, args, env, logPath, capture) {
   const entry = { child, output, logPath, command, args, spawnError: undefined };
   if (Number.isInteger(child.pid)) children.set(child.pid, entry);
   recordOwnedChildren();
-  child.on("error", (error) => { entry.spawnError = error; recordOwnedChildren(); });
+  child.on("error", (error) => {
+    entry.spawnError = error;
+    // A spawn that fails never receives a pid, so the line above never put this
+    // entry in `children` -- and `children` is the only thing the serialiser
+    // reads, so the advertised `spawn_error` field was unreachable. Record
+    // these separately: a failed spawn is exactly the case with no process to
+    // signal, so it belongs in no signalable set (#228 review).
+    if (!Number.isInteger(child.pid)) {
+      spawnFailures.push({
+        command,
+        args: [...args],
+        spawn_error: String(error.code ?? error.message),
+        exit: null,
+      });
+    }
+    recordOwnedChildren();
+  });
   child.on("close", (code, signal) => {
     // A child that stops answering is the observable fact #214 needs and that
     // the captured stdout/stderr logs cannot supply: both are empty for a
@@ -430,13 +449,22 @@ function recordOwnedChildren() {
   writeFileSync(ownedChildrenPath, JSON.stringify([...children.keys()]), { mode: 0o600 });
   writeFileSync(
     ownedChildrenReportPath,
-    JSON.stringify([...children.entries()].map(([pid, entry]) => ({
-      pid,
-      command: entry.command,
-      args: [...entry.args],
-      spawn_error: entry.spawnError ? String(entry.spawnError.code ?? entry.spawnError.message) : null,
-      exit: entry.exit ?? null,
-    })), null, 2),
+    JSON.stringify(
+      [
+        ...[...children.entries()].map(([pid, entry]) => ({
+          pid,
+          command: entry.command,
+          args: [...entry.args],
+          spawn_error: entry.spawnError
+            ? String(entry.spawnError.code ?? entry.spawnError.message)
+            : null,
+          exit: entry.exit ?? null,
+        })),
+        ...spawnFailures,
+      ],
+      null,
+      2,
+    ),
     { mode: 0o600 },
   );
 }
@@ -616,7 +644,21 @@ async function stopChild(entry) {
   signalOwnedGroup(child.pid, "SIGKILL");
   await waitForChild(child, 1_000);
   entry.output.end();
-  children.delete(child.pid);
+  // The entry is deliberately KEPT in `children` after teardown. Deleting it
+  // here dropped the owner's terminal status from the report that CI actually
+  // uploads: `recordOwnedChildren()` serialises whatever the map holds at the
+  // instant it is last called, and the `close` handler that records `exit` for
+  // the *other* child can fire after this one has already been removed. The
+  // preserved report then held only the survivor -- and, worse, the owner that
+  // was SIGKILLed mid-run was replaced in the artifact by the SIGTERM that this
+  // routine shutdown sent it afterwards.
+  //
+  // Two CI artifacts from run 37185413888 reproduce exactly that: two children
+  // are spawned, and each preserved `owned-children-report.json` holds one.
+  // Retaining the entry makes the report a record of every process this fixture
+  // owned, which is the property #214 needs to tell a crash from a signal from
+  // a surviving owner.
+  recordOwnedChildren();
 }
 
 function signalOwnedGroup(pid, signal) {

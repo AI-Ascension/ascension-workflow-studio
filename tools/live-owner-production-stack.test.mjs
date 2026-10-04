@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { chmod, mkdtemp, mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -94,6 +94,134 @@ test("terminating the production fixture reaps only its owned process groups and
   }
 });
 
+test("the preserved owned children report carries a terminal status on disk, not only in memory", async () => {
+  // The test above asserts the same property, but it can only do so where the
+  // four Rust fixture binaries have been built. That is why the M7 mutant --
+  // `if (closing) return;` at the top of `recordOwnedChildren()` -- survived:
+  // this file runs in CI only through `production-policy-browser.mjs`, and the
+  // behavioural assertion is the one that fails first when the binaries are
+  // absent, so the guard above was the only assertion left standing.
+  //
+  // The fixture resolves every binary through a STUDIO_*_BINARY environment
+  // variable, so stub executables bring the real fixture to readiness without
+  // a Rust build. That makes this assertion available to every checkout,
+  // including the source-only job, and it drives the real teardown path and
+  // then reads the preserved artifact -- the only evidence a red run uploads.
+  const harnessRoot = harnessCheckoutRoot();
+  const target = join(root, "target");
+  await mkdir(target, { recursive: true, mode: 0o700 });
+  const fixtureRoot = await mkdtemp(join(target, "studio-stack-report-"));
+  await chmod(fixtureRoot, 0o700);
+  const stubDirectory = await mkdtemp(join(target, "studio-stack-stubs-"));
+  await chmod(stubDirectory, 0o700);
+  const stubs = join(root, "tools", "test-fixtures", "live-owner-stubs");
+  const [ownerPort, gatewayPort, modPort, controlPort] = await allocateLoopbackPorts(4);
+  const stack = spawn(process.execPath, [stackScript], {
+    cwd: root,
+    detached: true,
+    stdio: "ignore",
+    env: {
+      ...process.env,
+      STUDIO_LIVE_FIXTURE_ROOT: fixtureRoot,
+      STUDIO_LIVE_OWNER_PORT: String(ownerPort),
+      STUDIO_LIVE_GATEWAY_PORT: String(gatewayPort),
+      STUDIO_LIVE_MOD_PORT: String(modPort),
+      STUDIO_LIVE_OWNER_STACK_PORT: String(controlPort),
+      STUDIO_HARNESS_ROOT: harnessRoot,
+      STUDIO_HARNESS_RUNTIME_BINARY: stubExecutable(stubs, stubDirectory, "owner-stub"),
+      STUDIO_GATEWAY_BINARY: stubExecutable(stubs, stubDirectory, "gateway-stub"),
+      STUDIO_MCP_BINARY: stubExecutable(stubs, stubDirectory, "mcp-stub"),
+      STUDIO_PROVIDER_POLICY_FIXTURE_BINARY: stubExecutable(stubs, stubDirectory, "policy-fixture-stub"),
+    },
+  });
+  let stackClosed;
+  const closed = new Promise((resolveClose, rejectClose) => {
+    stack.once("error", rejectClose);
+    stack.once("close", (code, signal) => {
+      stackClosed = { code, signal };
+      resolveClose();
+    });
+  });
+
+  let fixtureDirectory;
+  let ownedPids = [];
+  try {
+    await waitForReady(`http://127.0.0.1:${controlPort}/ready`, stack);
+    fixtureDirectory = (await readdir(fixtureRoot)).map((name) => join(fixtureRoot, name))[0];
+    assert.ok(fixtureDirectory, "fixture created its private data directory");
+    ownedPids = JSON.parse(await readFile(join(fixtureDirectory, "owned-child-pids.json"), "utf8"));
+
+    stack.kill("SIGTERM");
+    await withTimeout(closed, 15_000, "fixture did not exit after SIGTERM");
+    assert.equal(stackClosed?.signal, null);
+    assert.equal(stackClosed?.code, 143);
+    await assertGroupsGone(ownedPids);
+
+    const preserved = JSON.parse(await readFile(
+      join(await preservedReportDirectory(fixtureDirectory), "owned-children-report.json"),
+      "utf8",
+    ));
+    // Every spawned child must survive teardown in the preserved artifact.
+    assert.equal(
+      preserved.length,
+      ownedPids.length,
+      `the preserved report must carry all ${ownedPids.length} owned children`,
+    );
+    for (const entry of preserved) {
+      // The discriminating assertion. `recordOwnedChildren()` no-ops while
+      // `closing` is true, so a report that reaches disk with a stale entry
+      // set is exactly the `exit: null` blindness #214 exists to prevent.
+      assert.ok(
+        entry.exit,
+        `owned child ${entry.pid} reached the preserved report with no exit status; `
+          + "teardown did not re-record the report before the fixture directory was removed",
+      );
+      assert.ok(
+        Number.isInteger(entry.exit.code) || typeof entry.exit.signal === "string",
+        `owned child ${entry.pid} recorded neither exit code nor signal`,
+      );
+    }
+  } finally {
+    if (stack.exitCode === null && stack.signalCode === null) {
+      try { process.kill(-stack.pid, "SIGTERM"); } catch {}
+      await withTimeout(closed, 10_000, "fixture cleanup timed out").catch(() => {});
+      try { process.kill(-stack.pid, "SIGKILL"); } catch {}
+    }
+    await Promise.all([
+      assertGroupsGone(ownedPids),
+      rm(fixtureRoot, { recursive: true, force: true }),
+      rm(stubDirectory, { recursive: true, force: true }),
+    ]);
+  }
+});
+
+// The fixture reads its golden protocol artifacts from the harness checkout.
+// STUDIO_HARNESS_ROOT is already set by every job that builds the harness, so
+// prefer it and fall back to the sibling checkout the monorepo uses.
+function harnessCheckoutRoot() {
+  const configured = process.env.STUDIO_HARNESS_ROOT;
+  if (configured && existsSync(join(configured, "protocol-artifact"))) return resolve(configured);
+  const sibling = resolve(root, "..", "sts2-harness");
+  assert.ok(
+    existsSync(join(sibling, "protocol-artifact")),
+    "the live-owner stub run needs a harness checkout with protocol-artifact; "
+      + "set STUDIO_HARNESS_ROOT to one",
+  );
+  return sibling;
+}
+
+// The fixture spawns its children with a sanitised PATH and execs the binary
+// path directly, so each stub needs a real executable whose interpreter is
+// absolute. Writing the wrapper into the fixture's own private directory keeps
+// the repository tree free of generated executables.
+function stubExecutable(stubs, stubDirectory, name) {
+  const script = join(stubs, `${name}.mjs`);
+  assert.ok(existsSync(script), `missing live-owner stub ${script}`);
+  const executable = join(stubDirectory, name);
+  writeFileSync(executable, `#!/bin/sh\nexec ${process.execPath} ${script} "$@"\n`, { mode: 0o700 });
+  return executable;
+}
+
 test("the owned children report names each process without leaking its environment", () => {
   const reportPath = join(root, "tools/live-owner-production-stack.mjs");
   const source = readFileSync(reportPath, "utf8");
@@ -130,6 +258,77 @@ test("the owned children report names each process without leaking its environme
   assert.doesNotMatch(environmentInEntry, /\benv\b/);
   assert.match(source, /command: entry\.command/);
   assert.match(source, /args: \[\.\.\.entry\.args\]/);
+});
+
+test("teardown keeps every owned child in the report it preserves", () => {
+  const source = readFileSync(join(root, "tools/live-owner-production-stack.mjs"), "utf8");
+
+  // The fixture always spawns two children (gateway and owner), and
+  // `recordOwnedChildren()` serialises whatever `children` holds at the instant
+  // it is last called. `stopChild` used to `children.delete(child.pid)` after
+  // teardown, so whichever child's `close` handler recorded `exit` last won and
+  // the surviving report held ONE entry.
+  //
+  // This was not theoretical. Two CI artifacts from run 37185413888 each hold
+  // exactly one entry for two spawned children, and in the #214 scenario the
+  // owner's SIGKILL was overwritten in the artifact by the SIGTERM that routine
+  // shutdown sent it afterwards -- evidence destroyed by the very teardown that
+  // was meant to preserve it.
+  assert.doesNotMatch(
+    source,
+    /children\.delete\(/,
+    "teardown must not delete a child from the tracking map; its terminal status is the #214 evidence",
+  );
+
+  // Retaining entries must still leave a record on disk at the end of teardown,
+  // otherwise the last `close` handler to fire wins again -- the original race,
+  // one level down.
+  // Bound the slice to the body of `stopChild` itself. An unbounded slice runs
+  // to end-of-file and matches a `recordOwnedChildren()` call from some later
+  // function, which makes this assertion pass for the wrong reason -- the same
+  // class of defect this review exists to catch.
+  //
+  // The end is found by matching the body's braces rather than by measuring
+  // its length. A character budget made this assertion a test of the
+  // author's comment style: the real function left only 54 characters of
+  // headroom, so the next honest explanatory comment would have failed a
+  // guard whose subject is unrelated to prose length.
+  const stopStart = source.indexOf("async function stopChild");
+  assert.notEqual(stopStart, -1, "stopChild must exist");
+  const stopBody = sliceFunctionBody(source, stopStart);
+  // Strip line comments before asserting. A prose mention of the call inside
+  // the function's own comment block would otherwise satisfy the assertion
+  // while the code calls nothing -- which is exactly the failure mode this
+  // review exists to catch, reproduced in the test that guards against it.
+  const stopCode = stopBody
+    .split("\n")
+    .map((line) => line.replace(/\/\/.*$/, ""))
+    .join("\n");
+  assert.match(
+    stopCode,
+    /recordOwnedChildren\(\)/,
+    "teardown must re-record after each child so the last close handler cannot truncate the report",
+  );
+
+  // `spawn_error` is advertised in the report schema, but a spawn that fails is
+  // never given a pid, so it never enters `children` -- the only collection the
+  // serialiser reads. The field could therefore never carry a value. Failures
+  // are tracked separately and folded in by the serialiser.
+  assert.match(
+    source,
+    /const spawnFailures = \[\]/,
+    "spawn failures have no pid, so they must be tracked outside the pid-keyed map",
+  );
+  assert.match(
+    source,
+    /\.\.\.spawnFailures/,
+    "the serialiser must fold spawn failures into the report",
+  );
+
+  // Retained entries must not make teardown unbounded or repeat the signal work:
+  // an already-exited child is detected and skipped, so a second `stopChild`
+  // over the retained map is a no-op rather than a fresh wait.
+  assert.match(source, /const exited = childHasExited\(child\);\s*\n\s*if \(!exited\)/);
 });
 
 test("owner output is captured outside the fixture directory cleanup removes", async () => {
@@ -241,6 +440,23 @@ async function allocateLoopbackPorts(count) {
     ));
     throw error;
   }
+}
+
+// Return `source` from `start` through the brace that closes the function
+// declared there. Counting braces is enough for this file: `stopChild`
+// contains no string or template literal with an unbalanced brace.
+function sliceFunctionBody(source, start) {
+  const open = source.indexOf("{", start);
+  assert.notEqual(open, -1, "function body must open with a brace");
+  let depth = 0;
+  for (let index = open; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    else if (source[index] === "}") {
+      depth -= 1;
+      if (depth === 0) return source.slice(start, index + 1);
+    }
+  }
+  throw new Error("function body is not closed");
 }
 
 async function waitForReady(url, child) {
