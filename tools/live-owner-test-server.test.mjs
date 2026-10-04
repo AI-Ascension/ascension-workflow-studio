@@ -2,13 +2,121 @@ import assert from "node:assert/strict";
 import { execFileSync, spawn } from "node:child_process";
 import { createServer as createHttpServer } from "node:http";
 import { createServer as createNetServer } from "node:net";
-import { dirname, resolve } from "node:path";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const serverScript = resolve(root, "tools/live-owner-test-server.mjs");
 const viteCli = resolve(root, "node_modules/vite/bin/vite.js");
+
+test("the proxy records the transport error that caused an owner 502", {
+  skip: process.platform !== "linux",
+}, async () => {
+  const [ownerPort, proxyPort, previewPort] = await allocateLoopbackPorts(3);
+  const diagnosticDir = await mkdtemp(join(tmpdir(), "studio-live-proxy-log-"));
+  const diagnosticLog = join(diagnosticDir, "studio-live-proxy.log");
+  // Nothing listens on this port, so every owner route is refused at the socket
+  // level. That is exactly the condition the live-owner production job reports
+  // as `submission_refused_502`.
+  const owner = createNetServer();
+  await listen(owner, ownerPort);
+  const ownerPortHolder = owner.address().port;
+  await close(owner);
+  const fixture = startProxyServer({
+    ownerPort,
+    proxyPort,
+    previewPort,
+    extraEnvironment: {
+      STUDIO_LIVE_OWNER_PORT: String(ownerPortHolder),
+      STUDIO_LIVE_PROXY_DIAGNOSTIC_DIR: diagnosticDir,
+    },
+  });
+
+  try {
+    await fixture.previewPid;
+    fixture.child.send({ type: "start-proxy" });
+    await waitForStatus(`http://127.0.0.1:${proxyPort}/`, fixture.child, 200);
+    const refused = await fetch(`http://127.0.0.1:${proxyPort}/v1/workflow-runs`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    });
+    assert.equal(refused.status, 502);
+
+    const entries = (await readFile(diagnosticLog, "utf8"))
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .map((line) => JSON.parse(line));
+    const ownerFailure = entries.find((entry) => (
+      entry.role === "owner"
+      && entry.path === "/v1/workflow-runs"
+      && entry.outcome === "upstream_transport_error"
+    ));
+    assert.ok(
+      ownerFailure,
+      `the proxy must name the owner transport failure, got ${JSON.stringify(entries)}`,
+    );
+    assert.equal(ownerFailure.detail.code, "ECONNREFUSED");
+    assert.equal(ownerFailure.method, "POST");
+    assert.equal(ownerFailure.target_port, ownerPortHolder);
+    assert.equal(typeof ownerFailure.at, "string");
+    assert.equal(typeof ownerFailure.duration_ms, "number");
+    assert.equal(
+      entries.some((entry) => entry.role === "preview" && entry.path === "/v1/workflow-runs"),
+      false,
+      "an owner route must never be recorded against the preview target",
+    );
+  } finally {
+    await stopOwnedServer(fixture.child);
+    await rm(diagnosticDir, { recursive: true, force: true });
+  }
+});
+
+test("the proxy records the owner status it forwarded for a served owner route", {
+  skip: process.platform !== "linux",
+}, async () => {
+  const [ownerPort, proxyPort, previewPort] = await allocateLoopbackPorts(3);
+  const diagnosticDir = await mkdtemp(join(tmpdir(), "studio-live-proxy-log-"));
+  const diagnosticLog = join(diagnosticDir, "studio-live-proxy.log");
+  const owner = createHttpServer((_request, response) => {
+    response.writeHead(503, { "content-type": "application/json" });
+    response.end(JSON.stringify({ error_code: "live_runtime_unavailable" }));
+  });
+  await listen(owner, ownerPort);
+  const fixture = startProxyServer({
+    ownerPort,
+    proxyPort,
+    previewPort,
+    extraEnvironment: { STUDIO_LIVE_PROXY_DIAGNOSTIC_DIR: diagnosticDir },
+  });
+
+  try {
+    await fixture.previewPid;
+    fixture.child.send({ type: "start-proxy" });
+    await waitForStatus(`http://127.0.0.1:${proxyPort}/`, fixture.child, 200);
+    const refused = await fetch(`http://127.0.0.1:${proxyPort}/v1/health`);
+    assert.equal(refused.status, 503);
+    await refused.text();
+
+    const entries = (await readFile(diagnosticLog, "utf8"))
+      .split("\n")
+      .filter((line) => line.trim().length > 0)
+      .map((line) => JSON.parse(line));
+    const ownerResponse = entries.find((entry) => (
+      entry.role === "owner" && entry.path === "/v1/health"
+    ));
+    assert.ok(ownerResponse, `an answered owner route must be recorded, got ${JSON.stringify(entries)}`);
+    assert.equal(ownerResponse.outcome, "upstream_response");
+    assert.equal(ownerResponse.detail, "status=503");
+  } finally {
+    await stopOwnedServer(fixture.child);
+    await close(owner);
+    await rm(diagnosticDir, { recursive: true, force: true });
+  }
+});
 
 test("SIGTERM closes the preview process group after the live-owner browser server stops", {
   skip: process.platform !== "linux",
@@ -73,7 +181,7 @@ test("proxy startup failure also reaps its detached preview process group", {
   }
 });
 
-function startProxyServer({ ownerPort, proxyPort, previewPort }) {
+function startProxyServer({ ownerPort, proxyPort, previewPort, extraEnvironment }) {
   const child = spawn(process.execPath, [serverScript], {
     cwd: root,
     stdio: ["ignore", "ignore", "ignore", "ipc"],
@@ -82,6 +190,7 @@ function startProxyServer({ ownerPort, proxyPort, previewPort }) {
       STUDIO_LIVE_OWNER_PORT: String(ownerPort),
       STUDIO_LIVE_OWNER_PROXY_PORT: String(proxyPort),
       STUDIO_LIVE_OWNER_PREVIEW_PORT: String(previewPort),
+      ...extraEnvironment,
     },
   });
   const previewPid = new Promise((resolvePid, rejectPid) => {

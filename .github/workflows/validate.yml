@@ -250,7 +250,11 @@ jobs:
         run: npm run test:production-policy-browser
       - name: Show live owner diagnostics
         if: failure()
-        run: cat /tmp/studio-live.log
+        run: |
+          cat /tmp/studio-live.log
+          # The Studio proxy is the only process that knows whether a 502 came
+          # from a refused socket, a reset upstream, or an answered request.
+          test -f tmp/studio-live-proxy.log && cat tmp/studio-live-proxy.log
       - name: Upload live owner browser diagnostics
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -260,5 +264,6 @@ jobs:
             playwright-report
             test-results
             /tmp/studio-live-diagnostics
+            tmp/studio-live-proxy.log
           if-no-files-found: ignore
           retention-days: 7
