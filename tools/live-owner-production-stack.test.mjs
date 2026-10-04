@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { chmod, mkdtemp, mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
 import { createServer } from "node:net";
-import { dirname, join, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { basename, dirname, join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
@@ -39,6 +41,7 @@ test("terminating the production fixture reaps only its owned process groups and
 
   let fixtureDirectory;
   let ownedPids = [];
+  let ownedChildren = [];
   try {
     await waitForReady(`http://127.0.0.1:${controlPort}/ready`, stack);
     const fixture = await fetch(`http://127.0.0.1:${controlPort}/fixture`).then((response) => response.json());
@@ -53,6 +56,30 @@ test("terminating the production fixture reaps only its owned process groups and
     assert.equal(stackClosed?.signal, null);
     assert.equal(stackClosed?.code, 143);
     await assertGroupsGone(ownedPids);
+    // The fixture directory is removed during shutdown, so the preserved copy
+    // is what a failing CI run actually uploads. Reading it also proves the
+    // report is reachable by the diagnostics allowlist.
+    ownedChildren = JSON.parse(await readFile(
+      join(await preservedReportDirectory(fixtureDirectory), "owned-children-report.json"),
+      "utf8",
+    ));
+    // Every owned child must carry a recorded terminal status. For a child
+    // that was killed the report shows a signal and no exit code; what must
+    // never happen is an entry with `exit: null` -- that is the state that
+    // makes a failure unattributable in the uploaded artifact (#214).
+    for (const entry of ownedChildren) {
+      assert.ok(entry.exit, `owned child ${entry.pid} recorded no exit status`);
+      assert.ok(
+        Number.isInteger(entry.exit.code) || typeof entry.exit.signal === "string",
+        `owned child ${entry.pid} recorded neither exit code nor signal`,
+      );
+      assert.equal(typeof entry.command, "string");
+      assert.ok(Array.isArray(entry.args));
+    }
+    assert.ok(
+      ownedChildren.some((entry) => typeof entry.exit.signal === "string"),
+      "at least one owned child was terminated by signal during cleanup",
+    );
     await assertPathMissing(fixtureDirectory);
   } finally {
     if (stack.exitCode === null && stack.signalCode === null) {
@@ -66,6 +93,59 @@ test("terminating the production fixture reaps only its owned process groups and
     ]);
   }
 });
+
+test("the owned children report names each process without leaking its environment", () => {
+  const reportPath = join(root, "tools/live-owner-production-stack.mjs");
+  const source = readFileSync(reportPath, "utf8");
+
+  // The exit status is the whole point of this file (#214): the captured
+  // stdout/stderr logs are empty for a child that stopped answering, so
+  // `exit: null` is precisely the unattributable state. If the `close`
+  // handler stops recording it, this report can no longer distinguish a
+  // crash from a clean exit and AC3 regresses silently.
+  assert.match(source, /child\.on\("close", \(code, signal\) =>/);
+  assert.match(source, /entry\.exit = \{ code: code \?\? null, signal: signal \?\? null }/);
+  // The status must be flushed to the report, not merely held in memory,
+  // because the fixture directory is deleted during shutdown.
+  const closeHandler = source.slice(source.indexOf('child.on("close"'));
+  const closeHandlerEnd = closeHandler.indexOf('child.on("error"');
+  const closeBody = closeHandler.slice(0, closeHandlerEnd === -1 ? closeHandler.indexOf("return entry") : closeHandlerEnd);
+  assert.match(
+    closeBody,
+    /entry\.exit = \{[^}]*\}[^]*recordOwnedChildren\(\)/,
+    "the close handler must persist the exit status before ending captured output",
+  );
+
+  // The report is the only per-child evidence uploaded for #214, so it must
+  // identify the process from values passed to startChild rather than from
+  // ChildProcess internals, which are not part of the public API.
+  assert.match(source, /const entry = \{ child, output, logPath, command, args,/);
+  assert.doesNotMatch(source, /entry\.child\.spawnfile/);
+
+  // `entry` carries `command`/`args` but no environment: the service
+  // environment holds the provider and context keys, so it must never reach
+  // this mode-0600 file that gets uploaded as a CI artifact.
+  const entryDeclaration = source.slice(source.indexOf("const entry = {"));
+  const environmentInEntry = entryDeclaration.slice(0, entryDeclaration.indexOf("}"));
+  assert.doesNotMatch(environmentInEntry, /\benv\b/);
+  assert.match(source, /command: entry\.command/);
+  assert.match(source, /args: \[\.\.\.entry\.args\]/);
+});
+
+// The stack copies its diagnostics to a per-run directory keyed by the fixture
+// directory's basename, then deletes the fixture directory itself. Resolving the
+// copy the same way the runner does is what makes this assertion about the
+// uploaded artifact rather than about an intermediate file.
+async function preservedReportDirectory(fixtureDirectory) {
+  const diagnosticRoot = process.env.STUDIO_LIVE_DIAGNOSTIC_ROOT ?? join(tmpdir(), "studio-live-diagnostics");
+  const destination = join(diagnosticRoot, basename(fixtureDirectory));
+  const preserved = await readdir(destination);
+  assert.ok(
+    preserved.includes("owned-children-report.json"),
+    "the owned children report is preserved alongside the logs it complements",
+  );
+  return destination;
+}
 
 async function allocateLoopbackPorts(count) {
   const reservations = [];

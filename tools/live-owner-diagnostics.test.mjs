@@ -43,6 +43,7 @@ test("preserveDiagnosticLogs copies the named logs outside targetDir and they su
       "gateway.log": "gateway diagnostics\n",
       "serve-workflow.log": "runtime diagnostics\n",
       "owned-child-pids.json": "[1234,5678]\n",
+      "owned-children-report.json": "[]\n",
       // A file we must NOT copy: the fixture directory holds provider/context
       // keys and must never be carried wholesale.
       "provider-policy.sqlite3": "SECRET-KEY-MATERIAL",
@@ -62,10 +63,11 @@ test("preserveDiagnosticLogs copies the named logs outside targetDir and they su
     await rm(targetDir, { recursive: true, force: true });
     await assert.rejects(stat(targetDir), { code: "ENOENT" });
 
-    // All three named diagnostics survived and kept their bytes.
+    // All four named diagnostics survived and kept their bytes.
     assert.equal(await readFile(join(destination, "gateway.log"), "utf8"), "gateway diagnostics\n");
     assert.equal(await readFile(join(destination, "serve-workflow.log"), "utf8"), "runtime diagnostics\n");
     assert.equal(await readFile(join(destination, "owned-child-pids.json"), "utf8"), "[1234,5678]\n");
+    assert.equal(await readFile(join(destination, "owned-children-report.json"), "utf8"), "[]\n");
     // And the secret-bearing store was NOT copied.
     await assert.rejects(stat(join(destination, "provider-policy.sqlite3")), { code: "ENOENT" });
   });
@@ -164,6 +166,7 @@ test("DIAGNOSTIC_LOG_NAMES covers the evidence AC1 requires", () => {
   assert.deepEqual([...DIAGNOSTIC_LOG_NAMES].sort(), [
     "gateway.log",
     "owned-child-pids.json",
+    "owned-children-report.json",
     "serve-workflow.log",
   ]);
 });

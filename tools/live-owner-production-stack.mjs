@@ -79,6 +79,7 @@ const contextSourceDocument = {
 const contextSourceDigest = createHash("sha256").update(JSON.stringify(contextSourceDocument)).digest("hex");
 const gatewayLogPath = join(targetDir, "gateway.log");
 const ownedChildrenPath = join(targetDir, "owned-child-pids.json");
+const ownedChildrenReportPath = join(targetDir, "owned-children-report.json");
 const children = new Map();
 let fixtureServer;
 let closing = false;
@@ -323,14 +324,46 @@ function startChild(command, args, env, logPath) {
   });
   child.stdout.pipe(output, { end: false });
   child.stderr.pipe(output, { end: false });
-  const entry = { child, output, logPath, spawnError: undefined };
+  // `command`/`args` are captured here rather than read back off the
+  // ChildProcess: `spawnfile` is an internal field, and the report must name the
+  // owned process from data this function was actually given. Only the
+  // executable and its argv are recorded -- never the environment, which
+  // carries the provider and context keys.
+  const entry = { child, output, logPath, command, args, spawnError: undefined };
   if (Number.isInteger(child.pid)) children.set(child.pid, entry);
-  writeFileSync(ownedChildrenPath, JSON.stringify([...children.keys()]), { mode: 0o600 });
-  child.on("error", (error) => { entry.spawnError = error; });
-  child.on("close", () => {
+  recordOwnedChildren();
+  child.on("error", (error) => { entry.spawnError = error; recordOwnedChildren(); });
+  child.on("close", (code, signal) => {
+    // A child that stops answering is the observable fact #214 needs and that
+    // the captured stdout/stderr logs cannot supply: both are empty for a
+    // process that died mid-request, so the exit status is the only remaining
+    // evidence of whether the owner crashed, was signalled, or exited cleanly.
+    entry.exit = { code: code ?? null, signal: signal ?? null };
+    recordOwnedChildren();
     output.end();
   });
   return entry;
+}
+
+// Records bounded process identity plus lifecycle for every owned child. The
+// point of this file (#214) is to distinguish the three states that all look
+// identical from an empty log: the owner exited non-zero, the owner was killed
+// by a signal, or the owner stayed alive and the fault is elsewhere. The
+// captured stdout/stderr logs cannot tell those apart, so the exit status is
+// recorded next to them.
+function recordOwnedChildren() {
+  writeFileSync(ownedChildrenPath, JSON.stringify([...children.keys()]), { mode: 0o600 });
+  writeFileSync(
+    ownedChildrenReportPath,
+    JSON.stringify([...children.entries()].map(([pid, entry]) => ({
+      pid,
+      command: entry.command,
+      args: [...entry.args],
+      spawn_error: entry.spawnError ? String(entry.spawnError.code ?? entry.spawnError.message) : null,
+      exit: entry.exit ?? null,
+    })), null, 2),
+    { mode: 0o600 },
+  );
 }
 
 async function waitForWorkflowService() {

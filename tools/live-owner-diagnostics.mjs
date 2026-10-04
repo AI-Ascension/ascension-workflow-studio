@@ -17,6 +17,7 @@ export const DIAGNOSTIC_LOG_NAMES = [
   "gateway.log",
   "serve-workflow.log",
   "owned-child-pids.json",
+  "owned-children-report.json",
 ];
 
 export function diagnosticRoot() {
