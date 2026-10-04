@@ -26,6 +26,18 @@ jobs:
           node-version: 24.16.0
       - run: node --test tools/verify-checkout-portability.test.mjs
       - run: node tools/verify-checkout-portability.mjs
+      # Studio #234: the digests recorded in contracts/ are claims about exact
+      # bytes, and this job is the only one that runs on Windows -- where
+      # `core.autocrlf=true` is the default and would rewrite line endings
+      # unless .gitattributes forbids it. Running the pin verification here is
+      # what makes that default fail loudly instead of silently corrupting
+      # provenance. It needs no dependencies and no build, because both the
+      # digest check and the byte-stability audit read the checkout only.
+      - name: Verify contract pins survive a Windows checkout
+        run: |
+          node --test tools/verify-contract-pins.test.mjs
+          node tools/verify-contract-pins.mjs
+          node tools/audit-digest-bound.mjs
 
   verify:
     name: Unit, type, and production build

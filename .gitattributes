@@ -1,2 +1,52 @@
 # Preserve the immutable reference package's recorded bytes on every platform.
 docs/reference/phase2-package/** -text
+
+# Digest-bound contract records must also survive an ordinary Windows checkout
+# unchanged (#234).
+#
+# Every file named by a SHA-256 recorded in this repository is provenance
+# evidence: the recorded digest is a claim about *exact* bytes, taken from the
+# committed blob. `core.autocrlf=true` -- the Git for Windows default -- would
+# otherwise rewrite LF to CRLF in the working tree for every file Git treats as
+# text, so the digest of the working-tree bytes would necessarily stop matching
+# a digest taken from LF bytes. That is what broke
+# `node tools/verify-contract-pins.mjs` on a plain Windows clone.
+#
+# `-text` (rather than `text eol=lf`) is deliberate. It means Git performs no
+# conversion in either direction, for these paths, on any platform, so the
+# working tree always holds exactly the committed bytes. That is the property
+# the digests depend on, and it holds no matter how a blob was committed.
+# `text eol=lf` would keep the working tree LF for an LF-committed blob, but it
+# only holds because of an assumption about how each blob was committed, and
+# applying `text` to a directory would also mark its binary members for
+# conversion.
+#
+# The consequence is intentionally fail-closed: a contributor who edits one of
+# these files on Windows and commits will commit CRLF bytes, and
+# `tools/verify-contract-pins.mjs` will report a digest mismatch rather than
+# silently accept a converted artifact. Changing a pinned contract is a
+# deliberate act that must re-pin the digest deliberately.
+#
+# `tools/audit-digest-bound.mjs` enforces this: it enumerates every tracked
+# file pinned by a digest anywhere in the repository and fails if Git's
+# effective attributes would expose any of them to line-ending conversion, so
+# a newly pinned file cannot be added without coverage.
+
+# Accepted contract artifacts: schemas, fixtures and the Phase 1 inventory.
+contracts/accepted/** -text
+
+# The recorded-run candidate contracts, including their SHA256SUMS inventory.
+contracts/recorded-run-candidate/** -text
+
+# The archived second recorded-run candidate contracts.
+history/recorded-run-candidate2/contracts/** -text
+
+# The bundle artifacts whose bytes docs/evidence/studio-bundle.SHA256SUMS pins.
+# Scoped to these three files rather than all of docs/evidence/, because the
+# ledgers and reports beside the inventory are not digest-bound.
+artifacts/studio-bundle/** -text
+docs/evidence/studio-bundle.SHA256SUMS -text
+
+# The rule file is itself read by Git on every platform, so it must never be
+# rewritten: a CRLF-terminated rule is silently ignored by Git.
+.gitattributes -text

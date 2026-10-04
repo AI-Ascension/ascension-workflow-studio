@@ -4,6 +4,7 @@ import { existsSync, readFileSync, realpathSync } from 'node:fs';
 import { isAbsolute, normalize, relative, resolve, sep } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { auditByteStability } from './audit-digest-bound.mjs';
 
 export function verifyEntries(root, entries) {
   assert(Array.isArray(entries) && entries.length > 0, 'Contract pin inventory must not be empty');
@@ -181,5 +182,19 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   assert(recorded.checksums && typeof recorded.checksums === 'object', 'Missing recorded-run pins');
   const recordedCount = verifyEntries(recordedRoot,
     Object.entries(recorded.checksums).map(([path, sha256]) => ({ path, sha256 })));
+  /**
+   * The digests above are claims about exact bytes, so the digests can only be
+   * reproduced if the working tree still holds the committed bytes. On a
+   * Windows checkout `core.autocrlf=true` would otherwise rewrite line endings
+   * and every comparison above would fail for a reason that has nothing to do
+   * with the contract (Studio #234). This asserts the declared cause rather
+   * than the symptom: it fails if any tracked digest-bound file is exposed to
+   * line-ending conversion, including files a future lock or inventory adds.
+   */
+  const stability = auditByteStability({ repositoryRoot: root });
+  assert.deepEqual(stability.problems, [],
+    'Digest-bound files are exposed to line-ending conversion:\n  ' +
+    stability.problems.join('\n  '));
   console.log(`Verified ${phase1Count} Phase 1, ${effectiveCount} effective-limit, ${contextCatalogCount} context catalog, ${inferenceCatalogCount} inference-profile catalog and ${recordedCount} recorded-run contract pins`);
+  console.log(`Confirmed ${stability.checked} tracked digest-bound text files are byte-stable under checkout`);
 }
