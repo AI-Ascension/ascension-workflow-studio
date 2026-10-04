@@ -1,0 +1,2 @@
+# Preserve the immutable reference package's recorded bytes on every platform.
+docs/reference/phase2-package/** -text
