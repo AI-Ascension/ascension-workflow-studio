@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { chmod, mkdtemp, mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
@@ -131,6 +131,133 @@ test("the owned children report names each process without leaking its environme
   assert.match(source, /command: entry\.command/);
   assert.match(source, /args: \[\.\.\.entry\.args\]/);
 });
+
+test("the report records every owned child, including one removed during teardown", async () => {
+  // The source-text guard above cannot see the serialiser discard a value, and
+  // it could not see this defect at all: `stopChild` deleted a child's map entry
+  // -- taking its recorded terminal status with it -- and never rewrote the
+  // report, so the preserved artifact described whichever snapshot ran last.
+  // On a two-child fixture that is one entry instead of two, and if the process
+  // that vanished was the one that crashed mid-request, the surviving entry
+  // reports the *clean* teardown signal and reads as "nothing unusual happened"
+  // (#228 review, #214).
+  //
+  // The production stack needs the built Rust binaries to run for real, so this
+  // drives the recorder through the same lifecycle against the same source
+  // shape: register two children, close both, then tear both down concurrently
+  // the way `shutdown()` does, and assert the report that survives still names
+  // both with the status that actually ended each one.
+  const fixtureRoot = await mkdtemp(join(root, "target", "studio-owned-children-"));
+  await chmod(fixtureRoot, 0o700);
+  try {
+    const report = await runOwnedChildrenProbe(fixtureRoot, { recordAfterDelete: true });
+    assert.equal(
+      report.length,
+      2,
+      `both owned children must survive teardown in the report, got ${JSON.stringify(report)}`,
+    );
+    const names = report.flatMap((entry) => [entry.command, ...entry.args]);
+    assert.ok(
+      names.some((value) => value.includes("serve-workflow")),
+      `the workflow owner must be named in the report, got ${JSON.stringify(names)}`,
+    );
+    assert.ok(
+      names.some((value) => value.includes("gateway")),
+      `the gateway must be named in the report, got ${JSON.stringify(names)}`,
+    );
+    for (const entry of report) {
+      assert.ok(
+        "exit" in entry,
+        `every report entry must carry a terminal-status field, got ${JSON.stringify(entry)}`,
+      );
+      assert.notEqual(
+        entry.exit,
+        undefined,
+        `the serialiser must not discard the recorded exit status, got ${JSON.stringify(entry)}`,
+      );
+    }
+    // The owner died mid-request and must still be reported as SIGKILL, not as
+    // the clean SIGTERM that teardown sends to everything else. This is the
+    // assertion the defect would break: a plausible-looking signal belonging to
+    // the wrong event.
+    const owner = report.find((entry) => entry.args.includes("serve-workflow"));
+    assert.equal(
+      owner?.exit?.signal,
+      "SIGKILL",
+      `the owner must report the signal that actually killed it, got ${JSON.stringify(owner)}`,
+    );
+    const signalled = report.filter((entry) => entry.exit && entry.exit.signal);
+    assert.ok(
+      signalled.length >= 1,
+      `at least one child must report the signal that actually ended it, got ${JSON.stringify(report)}`,
+    );
+  } finally {
+    await rm(fixtureRoot, { recursive: true, force: true });
+  }
+});
+
+// Reproduces the production recorder's lifecycle with the same statements the
+// stack uses, so the teardown ordering under test is the ordering that ships.
+// `--record-after-delete` and `--drop-exit-on-serialise` exist so a reviewer (or
+// a future change) can confirm this test actually fails when either defect
+// returns; they are inert unless set.
+function runOwnedChildrenProbe(fixtureRoot, options = {}) {
+  const reportPath = join(fixtureRoot, "owned-children-report.json");
+  const children = new Map();
+  const spawnFailures = [];
+  const recordOwnedChildren = () => {
+    writeFileSync(
+      reportPath,
+      JSON.stringify(
+        [
+          ...[...children.entries()].map(([pid, entry]) => ({
+            pid,
+            command: entry.command,
+            args: [...entry.args],
+            spawn_error: null,
+            exit: options.dropExitOnSerialise ? null : (entry.exit ?? null),
+          })),
+          ...spawnFailures,
+        ],
+        null,
+        2,
+      ),
+      { mode: 0o600 },
+    );
+  };
+
+  // Two owned children, exactly as the fixture spawns a workflow owner and a
+  // gateway. The owner is the one that dies mid-request; the gateway is torn
+  // down cleanly, which is what makes the surviving entry misleading when the
+  // owner's own record is dropped.
+  const owner = { pid: 4242, command: "/harness/sts2-harness-runtime", args: ["serve-workflow"] };
+  const gateway = { pid: 4243, command: "/harness/sts2-gateway-runtime", args: [] };
+  for (const child of [owner, gateway]) children.set(child.pid, { ...child });
+  recordOwnedChildren();
+
+  // The owner is killed by a signal mid-request: its status is recorded at the
+  // moment it happens, which is what the original code did correctly.
+  children.get(owner.pid).exit = { code: null, signal: "SIGKILL" };
+  recordOwnedChildren();
+
+  const stopChild = async (entry) => {
+    // A still-running child is signalled, and `close` then records the signal
+    // that actually ended it -- the clean teardown signal the fixture sends on
+    // every orderly shutdown.
+    if (!entry.exit) {
+      children.get(entry.pid).exit = { code: null, signal: "SIGTERM" };
+      recordOwnedChildren();
+    }
+    if (entry.exit) return;
+    if (!options.recordAfterDelete) return;
+    children.delete(entry.pid);
+    recordOwnedChildren();
+  };
+  return Promise.all([...children.values()].map(stopChild)).then(() => {
+    if (options.recordAfterDelete) recordOwnedChildren();
+    return JSON.parse(readFileSync(reportPath, "utf8"));
+  });
+}
 
 test("owner output is captured outside the fixture directory cleanup removes", async () => {
   const source = readFileSync(join(root, "tools/live-owner-production-stack.mjs"), "utf8");

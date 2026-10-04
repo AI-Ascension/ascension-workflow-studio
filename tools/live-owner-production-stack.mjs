@@ -97,6 +97,12 @@ const gatewayOutputPath = join(diagnosticDestination(targetDir), "gateway-stdout
 const gatewayErrorPath = join(diagnosticDestination(targetDir), "gateway-stderr.log");
 mkdirSync(diagnosticDestination(targetDir), { recursive: true, mode: 0o700 });
 const children = new Map();
+// A spawn that fails never receives a pid, so it can never become a key in
+// `children` -- which is keyed by pid, and which the teardown paths iterate to
+// signal processes. Recording those separately is what makes `spawn_error`
+// reachable at all: a failed spawn is precisely the case where there is no
+// process to signal, so it belongs in no signalable set (#228 review).
+const spawnFailures = [];
 let fixtureServer;
 let closing = false;
 let serviceEnvironment;
@@ -370,7 +376,18 @@ function startChild(command, args, env, logPath, capture) {
   const entry = { child, output, logPath, command, args, spawnError: undefined };
   if (Number.isInteger(child.pid)) children.set(child.pid, entry);
   recordOwnedChildren();
-  child.on("error", (error) => { entry.spawnError = error; recordOwnedChildren(); });
+  child.on("error", (error) => {
+    entry.spawnError = error;
+    if (!Number.isInteger(child.pid)) {
+      spawnFailures.push({
+        command,
+        args: [...args],
+        spawn_error: String(error.code ?? error.message),
+        exit: null,
+      });
+    }
+    recordOwnedChildren();
+  });
   child.on("close", (code, signal) => {
     // A child that stops answering is the observable fact #214 needs and that
     // the captured stdout/stderr logs cannot supply: both are empty for a
@@ -430,13 +447,22 @@ function recordOwnedChildren() {
   writeFileSync(ownedChildrenPath, JSON.stringify([...children.keys()]), { mode: 0o600 });
   writeFileSync(
     ownedChildrenReportPath,
-    JSON.stringify([...children.entries()].map(([pid, entry]) => ({
-      pid,
-      command: entry.command,
-      args: [...entry.args],
-      spawn_error: entry.spawnError ? String(entry.spawnError.code ?? entry.spawnError.message) : null,
-      exit: entry.exit ?? null,
-    })), null, 2),
+    JSON.stringify(
+      [
+        ...[...children.entries()].map(([pid, entry]) => ({
+          pid,
+          command: entry.command,
+          args: [...entry.args],
+          spawn_error: entry.spawnError
+            ? String(entry.spawnError.code ?? entry.spawnError.message)
+            : null,
+          exit: entry.exit ?? null,
+        })),
+        ...spawnFailures,
+      ],
+      null,
+      2,
+    ),
     { mode: 0o600 },
   );
 }
@@ -616,7 +642,21 @@ async function stopChild(entry) {
   signalOwnedGroup(child.pid, "SIGKILL");
   await waitForChild(child, 1_000);
   entry.output.end();
+  // A child that already recorded a terminal status has told us what killed it,
+  // and that status is the entire point of this report (#214). Dropping the
+  // entry here -- which is what the original code did -- destroys the evidence
+  // for exactly the case the report exists to explain: an owner that died
+  // mid-request. `close` fires for these children during `waitForChild`, so the
+  // map is already unwinding by the time we get here. Retain the entry and let
+  // the final snapshot in `shutdown()`/`emergencyCleanup()` write it out.
+  if (entry.exit) return;
   children.delete(child.pid);
+  // The delete above removed this child's entry -- including the terminal
+  // status its `close` handler recorded -- so the report on disk no longer
+  // describes every owned process. Rewrite it after the removal so the
+  // preserved artifact reflects the full set rather than whichever snapshot
+  // happened to run last (#228 review).
+  recordOwnedChildren();
 }
 
 function signalOwnedGroup(pid, signal) {
@@ -649,6 +689,11 @@ function shutdown(signal) {
   shutdownPromise = (async () => {
     await Promise.all([closeServer(fixtureServer), closeServer(modServer)]);
     await Promise.all([...children.values()].map(stopChild));
+    // Final authoritative snapshot. Teardown deletes children as it goes, so
+    // without this the preserved report is whatever the last `close` handler
+    // left behind -- which can omit a process that crashed mid-request, which
+    // is the exact case this instrumentation exists to explain (#214).
+    recordOwnedChildren();
     // Preserve the gateway/runtime diagnostics BEFORE the recursive removal
     // below destroys them; without this the evidence for a
     // submission_refused_502 transport failure is gone before anyone reads it
@@ -665,6 +710,10 @@ function emergencyCleanup() {
     if (!Number.isInteger(child.pid) || child.pid <= 1) continue;
     try { process.kill(-child.pid, "SIGKILL"); } catch {}
   }
+  // Sync path, same reason as above: `process.on("exit")` allows no async work,
+  // and this must run before the diagnostics are preserved and the directory
+  // removed.
+  recordOwnedChildren();
   // Same preservation as the orderly path: this runs on process exit, where no
   // async work is possible, so the sync variant is used. Best-effort by
   // contract -- it never throws and never changes the exit code.
