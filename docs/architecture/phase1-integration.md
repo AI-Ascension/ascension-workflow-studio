@@ -7,7 +7,11 @@ actually exercised by the live-owner CI job is recorded separately in
 [live-owner-ci.lock.json](../../contracts/live-owner-ci.lock.json); the workflow
 reads that pin directly. Update this tested-owner pin alongside consumer regression
 evidence when adopting a newer owner. Do not rewrite the historical source digests
-to suggest that the original admission included later authoring routes.
+to suggest that the original admission included later authoring routes. The current
+tested-owner pin was advanced to 44e63cf3222ec6f73d9156a48387f446fc689609 after its
+post-merge CI passed; its bounded stderr lifecycle events support future correlation in
+the synthetic loopback job. This does not prove the cause or recurrence of the earlier
+connection resets tracked in #214.
 
 The admitted management surface is an authenticated loopback API under the relative `/v1` base. It includes health, capabilities, definition validation/inspection/diff, run submission, run snapshots, bounded event pages, revision-safe commands, offline replay, and redacted export. The Studio's `OwnerApiClient` sends these requests with same-origin relative paths and validates each response at runtime.
 
