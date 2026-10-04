@@ -17,6 +17,19 @@ export const DIAGNOSTIC_LOG_NAMES = [
   "gateway.log",
   "serve-workflow.log",
   "owned-child-pids.json",
+  "owned-children-report.json",
+];
+
+// Files the stack writes directly outside the fixture directory, so they need
+// no preserving -- they are already in the uploaded directory by the time
+// cleanup runs (#227). They are listed separately because
+// `preserveDiagnosticLogs` copies files *out of* `targetDir` and these are not
+// in it.
+export const OWNER_CAPTURE_NAMES = [
+  "owner-stdout.log",
+  "owner-stderr.log",
+  "gateway-stdout.log",
+  "gateway-stderr.log",
 ];
 
 export function diagnosticRoot() {

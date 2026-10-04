@@ -255,6 +255,16 @@ jobs:
           # The Studio proxy is the only process that knows whether a 502 came
           # from a refused socket, a reset upstream, or an answered request.
           test -f tmp/studio-live-proxy.log && cat tmp/studio-live-proxy.log
+          # The owner's own stdout/stderr is the only source that can say what
+          # it did about a request it abandoned. These are written outside the
+          # fixture directory cleanup removes, so they survive to this point
+          # (studio#227).
+          for capture in /tmp/studio-live-diagnostics/*/owner-std*.log /tmp/studio-live-diagnostics/*/gateway-std*.log; do
+            if [ -f "$capture" ]; then
+              echo "===== $capture ====="
+              cat "$capture"
+            fi
+          done
       - name: Upload live owner browser diagnostics
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

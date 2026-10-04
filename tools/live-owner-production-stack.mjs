@@ -4,6 +4,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { connect as connectTcp } from "node:net";
 import { chmod, rm, stat, writeFile } from "node:fs/promises";
 import {
+  appendFileSync,
   chmodSync,
   createWriteStream,
   mkdirSync,
@@ -14,7 +15,11 @@ import {
 } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { preserveDiagnosticLogs, preserveDiagnosticLogsSync } from "./live-owner-diagnostics.mjs";
+import {
+  diagnosticDestination,
+  preserveDiagnosticLogs,
+  preserveDiagnosticLogsSync,
+} from "./live-owner-diagnostics.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const harnessRoot = resolve(process.env.STUDIO_HARNESS_ROOT ?? join(root, "harness"));
@@ -79,6 +84,18 @@ const contextSourceDocument = {
 const contextSourceDigest = createHash("sha256").update(JSON.stringify(contextSourceDocument)).digest("hex");
 const gatewayLogPath = join(targetDir, "gateway.log");
 const ownedChildrenPath = join(targetDir, "owned-child-pids.json");
+const ownedChildrenReportPath = join(targetDir, "owned-children-report.json");
+// The owner's own stdout/stderr is the one source that can say what the owner
+// decided to do about a request it abandoned (#227). `serve-workflow.log` lives
+// inside `targetDir`, so on a teardown path that removes `targetDir` it is gone
+// before anyone can read it. These files are created directly in the
+// diagnostics root -- outside `targetDir` by construction, not by convention --
+// and are appended to for the whole life of the process.
+const ownerOutputPath = join(diagnosticDestination(targetDir), "owner-stdout.log");
+const ownerErrorPath = join(diagnosticDestination(targetDir), "owner-stderr.log");
+const gatewayOutputPath = join(diagnosticDestination(targetDir), "gateway-stdout.log");
+const gatewayErrorPath = join(diagnosticDestination(targetDir), "gateway-stderr.log");
+mkdirSync(diagnosticDestination(targetDir), { recursive: true, mode: 0o700 });
 const children = new Map();
 let fixtureServer;
 let closing = false;
@@ -288,11 +305,19 @@ function verifyFixture() {
 }
 
 function startWorkflowService() {
+  // Marking each start makes a restart or an owner exit visible in the owner's
+  // own captured output rather than something a reader has to infer from an
+  // absence of bytes (#227).
+  appendDiagnosticLine(
+    ownerErrorPath,
+    `== studio-live fixture: starting serve-workflow owner at ${new Date().toISOString()} ==`,
+  );
   return startChild(
     harnessBinary,
     ["serve-workflow"],
     serviceEnvironment,
     runtimeLogPath,
+    { stdout: ownerOutputPath, stderr: ownerErrorPath },
   );
 }
 
@@ -309,10 +334,15 @@ function startGateway() {
     STS2_MCP_SESSION_ID: "mcp-session-1",
     STS2_LEASE_ID: "lease-1",
     STS2_LEASE_EPOCH: "1",
-  }, gatewayLogPath);
+  }, gatewayLogPath, { stdout: gatewayOutputPath, stderr: gatewayErrorPath });
 }
 
-function startChild(command, args, env, logPath) {
+// `capture` names the two files the child's own stdout and stderr are also
+// teed into. They are required because the in-fixture `logPath` is destroyed by
+// the same cleanup that runs on the failure path (#227): without a copy outside
+// `targetDir`, everything the owner said about the request it abandoned is gone
+// before anyone can read it.
+function startChild(command, args, env, logPath, capture) {
   assertActive();
   const output = createWriteStream(logPath, { flags: "a", mode: 0o600 });
   const child = spawn(command, args, {
@@ -321,16 +351,94 @@ function startChild(command, args, env, logPath) {
     detached: true,
     stdio: ["ignore", "pipe", "pipe"],
   });
+  // The owner/gateway's own stdout and stderr are teed into files that live
+  // outside `targetDir`, because #227's whole point is that the only component
+  // that knows why the submission reset is the one whose output is otherwise
+  // discarded. The in-fixture copy is kept so existing assertions and the
+  // existing artifact keep working unchanged.
+  const stdoutCapture = capture ? createDiagnosticCapture(capture.stdout) : undefined;
+  const stderrCapture = capture ? createDiagnosticCapture(capture.stderr) : undefined;
   child.stdout.pipe(output, { end: false });
   child.stderr.pipe(output, { end: false });
-  const entry = { child, output, logPath, spawnError: undefined };
+  if (stdoutCapture) child.stdout.pipe(stdoutCapture, { end: false });
+  if (stderrCapture) child.stderr.pipe(stderrCapture, { end: false });
+  // `command`/`args` are captured here rather than read back off the
+  // ChildProcess: `spawnfile` is an internal field, and the report must name the
+  // owned process from data this function was actually given. Only the
+  // executable and its argv are recorded -- never the environment, which
+  // carries the provider and context keys.
+  const entry = { child, output, logPath, command, args, spawnError: undefined };
   if (Number.isInteger(child.pid)) children.set(child.pid, entry);
-  writeFileSync(ownedChildrenPath, JSON.stringify([...children.keys()]), { mode: 0o600 });
-  child.on("error", (error) => { entry.spawnError = error; });
-  child.on("close", () => {
+  recordOwnedChildren();
+  child.on("error", (error) => { entry.spawnError = error; recordOwnedChildren(); });
+  child.on("close", (code, signal) => {
+    // A child that stops answering is the observable fact #214 needs and that
+    // the captured stdout/stderr logs cannot supply: both are empty for a
+    // process that died mid-request, so the exit status is the only remaining
+    // evidence of whether the owner crashed, was signalled, or exited cleanly.
+    entry.exit = { code: code ?? null, signal: signal ?? null };
+    recordOwnedChildren();
     output.end();
+    // The marker goes through the same stream as the child's own output, and
+    // `end()` is deferred until that stream flushes. `appendFileSync` here
+    // would open the file independently and could land *before* output still
+    // buffered in the stream, which would make the exit marker appear to
+    // precede output the owner actually emitted last.
+    appendDiagnosticLine(
+      stderrCapture ? capture.stderr : undefined,
+      `== studio-live fixture: child pid ${child.pid ?? "unknown"} exited code=${code ?? "null"} signal=${signal ?? "null"} ==`,
+      stderrCapture,
+    );
   });
   return entry;
+}
+
+// Opens a diagnostic file that cleanup cannot remove and never fails the
+// fixture over: a capture path that cannot be opened simply disables the
+// capture rather than refusing to run the browser gate.
+function createDiagnosticCapture(path) {
+  try {
+    mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
+    return createWriteStream(path, { flags: "a", mode: 0o600 });
+  } catch {
+    return undefined;
+  }
+}
+
+// Appends one diagnostic line. With an open stream the marker is written
+// through it so it keeps its place relative to buffered output; without one the
+// file is appended directly, so a lifecycle marker still survives in the
+// degraded case where the capture could not be opened.
+function appendDiagnosticLine(path, line, stream) {
+  if (!path) return;
+  if (stream) {
+    stream.end(`${line}\n`);
+    return;
+  }
+  try {
+    appendFileSync(path, `${line}\n`, { mode: 0o600 });
+  } catch {}
+}
+
+// Records bounded process identity plus lifecycle for every owned child. The
+// point of this file (#214) is to distinguish the three states that all look
+// identical from an empty log: the owner exited non-zero, the owner was killed
+// by a signal, or the owner stayed alive and the fault is elsewhere. The
+// captured stdout/stderr logs cannot tell those apart, so the exit status is
+// recorded next to them.
+function recordOwnedChildren() {
+  writeFileSync(ownedChildrenPath, JSON.stringify([...children.keys()]), { mode: 0o600 });
+  writeFileSync(
+    ownedChildrenReportPath,
+    JSON.stringify([...children.entries()].map(([pid, entry]) => ({
+      pid,
+      command: entry.command,
+      args: [...entry.args],
+      spawn_error: entry.spawnError ? String(entry.spawnError.code ?? entry.spawnError.message) : null,
+      exit: entry.exit ?? null,
+    })), null, 2),
+    { mode: 0o600 },
+  );
 }
 
 async function waitForWorkflowService() {
