@@ -181,6 +181,21 @@ test("teardown keeps every owned child in the report it preserves", () => {
     "teardown must re-record after each child so the last close handler cannot truncate the report",
   );
 
+  // `spawn_error` is advertised in the report schema, but a spawn that fails is
+  // never given a pid, so it never enters `children` -- the only collection the
+  // serialiser reads. The field could therefore never carry a value. Failures
+  // are tracked separately and folded in by the serialiser.
+  assert.match(
+    source,
+    /const spawnFailures = \[\]/,
+    "spawn failures have no pid, so they must be tracked outside the pid-keyed map",
+  );
+  assert.match(
+    source,
+    /\.\.\.spawnFailures/,
+    "the serialiser must fold spawn failures into the report",
+  );
+
   // Retained entries must not make teardown unbounded or repeat the signal work:
   // an already-exited child is detected and skipped, so a second `stopChild`
   // over the retained map is a no-op rather than a fresh wait.
