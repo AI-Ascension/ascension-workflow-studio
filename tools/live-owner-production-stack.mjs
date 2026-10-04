@@ -616,7 +616,21 @@ async function stopChild(entry) {
   signalOwnedGroup(child.pid, "SIGKILL");
   await waitForChild(child, 1_000);
   entry.output.end();
-  children.delete(child.pid);
+  // The entry is deliberately KEPT in `children` after teardown. Deleting it
+  // here dropped the owner's terminal status from the report that CI actually
+  // uploads: `recordOwnedChildren()` serialises whatever the map holds at the
+  // instant it is last called, and the `close` handler that records `exit` for
+  // the *other* child can fire after this one has already been removed. The
+  // preserved report then held only the survivor -- and, worse, the owner that
+  // was SIGKILLed mid-run was replaced in the artifact by the SIGTERM that this
+  // routine shutdown sent it afterwards.
+  //
+  // Two CI artifacts from run 37185413888 reproduce exactly that: two children
+  // are spawned, and each preserved `owned-children-report.json` holds one.
+  // Retaining the entry makes the report a record of every process this fixture
+  // owned, which is the property #214 needs to tell a crash from a signal from
+  // a surviving owner.
+  recordOwnedChildren();
 }
 
 function signalOwnedGroup(pid, signal) {

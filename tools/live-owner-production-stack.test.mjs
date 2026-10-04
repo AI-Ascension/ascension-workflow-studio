@@ -132,6 +132,61 @@ test("the owned children report names each process without leaking its environme
   assert.match(source, /args: \[\.\.\.entry\.args\]/);
 });
 
+test("teardown keeps every owned child in the report it preserves", () => {
+  const source = readFileSync(join(root, "tools/live-owner-production-stack.mjs"), "utf8");
+
+  // The fixture always spawns two children (gateway and owner), and
+  // `recordOwnedChildren()` serialises whatever `children` holds at the instant
+  // it is last called. `stopChild` used to `children.delete(child.pid)` after
+  // teardown, so whichever child's `close` handler recorded `exit` last won and
+  // the surviving report held ONE entry.
+  //
+  // This was not theoretical. Two CI artifacts from run 37185413888 each hold
+  // exactly one entry for two spawned children, and in the #214 scenario the
+  // owner's SIGKILL was overwritten in the artifact by the SIGTERM that routine
+  // shutdown sent it afterwards -- evidence destroyed by the very teardown that
+  // was meant to preserve it.
+  assert.doesNotMatch(
+    source,
+    /children\.delete\(/,
+    "teardown must not delete a child from the tracking map; its terminal status is the #214 evidence",
+  );
+
+  // Retaining entries must still leave a record on disk at the end of teardown,
+  // otherwise the last `close` handler to fire wins again -- the original race,
+  // one level down.
+  // Bound the slice to the body of `stopChild` itself. An unbounded slice runs
+  // to end-of-file and matches a `recordOwnedChildren()` call from some later
+  // function, which makes this assertion pass for the wrong reason -- the same
+  // class of defect this review exists to catch.
+  const stopStart = source.indexOf("async function stopChild");
+  assert.notEqual(stopStart, -1, "stopChild must exist");
+  const stopEnd = source.indexOf("\nfunction ", stopStart);
+  const stopBody = source.slice(stopStart, stopEnd === -1 ? undefined : stopEnd);
+  assert.ok(
+    stopBody.length < 1_500,
+    `the stopChild slice must be bounded to the function, got ${stopBody.length} characters`,
+  );
+  // Strip line comments before asserting. A prose mention of the call inside
+  // the function's own comment block would otherwise satisfy the assertion
+  // while the code calls nothing -- which is exactly the failure mode this
+  // review exists to catch, reproduced in the test that guards against it.
+  const stopCode = stopBody
+    .split("\n")
+    .map((line) => line.replace(/\/\/.*$/, ""))
+    .join("\n");
+  assert.match(
+    stopCode,
+    /recordOwnedChildren\(\)/,
+    "teardown must re-record after each child so the last close handler cannot truncate the report",
+  );
+
+  // Retained entries must not make teardown unbounded or repeat the signal work:
+  // an already-exited child is detected and skipped, so a second `stopChild`
+  // over the retained map is a no-op rather than a fresh wait.
+  assert.match(source, /const exited = childHasExited\(child\);\s*\n\s*if \(!exited\)/);
+});
+
 test("owner output is captured outside the fixture directory cleanup removes", async () => {
   const source = readFileSync(join(root, "tools/live-owner-production-stack.mjs"), "utf8");
 
