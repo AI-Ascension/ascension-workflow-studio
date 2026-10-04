@@ -1,11 +1,11 @@
 {
   "repository": "AI-Ascension/sts2-harness",
-  "revision": "ab7f1214c659119ef5ca679df4acac039428ffe2",
+  "revision": "00d165629fb8aa976ec9a9999666695ab6763fe9",
   "gateway_repository": "AI-Ascension/sts2-gateway",
   "gateway_revision": "34464acc443fe4f683581668cdacd249d09f76cd",
   "mcp_repository": "AI-Ascension/sts2-mcp-server",
   "mcp_revision": "f7db2d4ac5346a9124fff0f1e121fc3a7979d3f4",
   "scope": "Synthetic authenticated live-owner journeys plus a production serve-workflow browser journey on one explicitly prebound admitted run; the durable owner journal is encrypted, while temporary fixture JSON stays in a private mode-0700 directory and is not logged",
   "baseline_admission": "contracts/accepted/phase1-integration.lock.json",
-  "note": "The Phase 1 admission lock preserves historical contract/source digests. This separate pin identifies the newer owner actually tested by CI; neither record claims game or provider compatibility. The revision moves from 20c0c0c8 to ab7f121 so the live owner carries harness #802 (owner-side inference-profile resolution, AI-Ascension/sts2-harness#799). ab7f121 is 3 commits ahead of the previous pin and the only commit it adds is #802. This is a pin-correctness change: it is not claimed to fix the submission_refused_502 production-journey failure in AI-Ascension/ascension-workflow-studio#207."
+  "note": "The Phase 1 admission lock preserves historical contract/source digests. This separate pin identifies the newer owner actually tested by CI; neither record claims game or provider compatibility. The revision moves from ab7f121 to 00d16562 so the live owner carries harness #816 (a management response that could not be transmitted is no longer discarded in silence, and the read and write phases no longer share one deadline budget). 00d16562 is 9 commits ahead of the previous pin and adds #803, #805, #807, #808, #810, #811, #812, #814, #815 and #817. This is a pin-correctness change: it delivers the #816 fix to the production serve-workflow journey, which is the root cause of the submission_refused_502 failure in AI-Ascension/ascension-workflow-studio#214. It is not claimed to fix that failure outright -- #214 remains open until a recurrence either does not occur or is explained -- and no game or provider compatibility is claimed for this pin."
 }
