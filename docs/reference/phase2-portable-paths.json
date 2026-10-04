@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "package_root": "docs/reference/phase2-package",
+  "original_repository_commit": "2875551329047d956819db7331dfc526aeb8da5a",
+  "original_metadata_sha256": {
+    "PACKAGE_MANIFEST.json": "7da05effc2ecfd1550bc13150e6338283122e65c3f340430a9d2595243dbedca",
+    "SHA256SUMS": "2a18e7b130dd0645911794d598b79c4dce52ffe5b8d6c3217136f1e6f63dca10"
+  },
+  "paths": {
+    "prompts/workstreams/CON.md": "prompts/workstreams/CON-contracts.md"
+  }
+}
