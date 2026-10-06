@@ -70,7 +70,11 @@ async function preflightBody(client: OwnerApiClient, requestId: string): Promise
   return { ...seededOptions(requestId), admission: admission.admission };
 }
 
-function responseFor(requestId: string, mode: "explicit" | "derive_once", explicitSeed = "choice.1"): Record<string, unknown> {
+function responseFor(
+  requestId: string,
+  mode: "explicit" | "derive_once",
+  explicitSeed = "choice.1",
+): Record<string, unknown> & { seed_binding: Record<string, unknown> } {
   const explicit = mode === "explicit";
   return {
     schema_version: "ascension.workflow-run-submission/v2",
@@ -204,7 +208,10 @@ describe("owner seeded workflow v2 client", () => {
       return new Response(JSON.stringify(responseFor("studio.derive.1", "derive_once")));
     } });
     const initial = await preflightBody(client, "studio.derive.1");
-    const derive = { ...initial, seed: { schema_version: "ascension.workflow-seed-request/v2", mode: "derive_once" as const, seed: null } };
+    const derive: SeededRunSubmissionOptionsV2 = {
+      ...initial,
+      seed: { schema_version: "ascension.workflow-seed-request/v2", mode: "derive_once", seed: null },
+    };
     await expect(client.submitSeededRunV2(definition(), "instance.1", "live", derive))
       .rejects.toMatchObject({ code: "seeded_submission_outcome_unknown" });
     expect(postCalls).toBe(1);
@@ -310,7 +317,7 @@ describe("owner seeded workflow v2 client", () => {
     for (let index = 0; index < 33; index += 1) {
       const id = `studio.capacity.${index}`;
       await client.preflightTarget({ schema_version: "ascension.workflow-admission/v1", request_id: id, workflow_definition_digest: digest, target: admissionTarget });
-      const options = { ...seededOptions(id), admission: {
+      const options: SeededRunSubmissionOptionsV2 = { ...seededOptions(id), admission: {
         schema_version: "ascension.workflow-admission/v1", request_id: id, workflow_definition_digest: digest,
         target: admissionTarget, descriptor_digest: "b".repeat(64), catalog_revision: "catalog.1",
       } };
@@ -347,9 +354,10 @@ describe("owner seeded workflow v2 client", () => {
     } });
     const options = await preflightBody(client, "studio.timeout.1");
     const pending = client.submitSeededRunV2(definition(), "instance.1", "live", options);
+    const rejected = expect(pending).rejects.toMatchObject({ code: "seeded_submission_outcome_unknown" });
     await started;
     await vi.advanceTimersByTimeAsync(15_001);
-    await expect(pending).rejects.toMatchObject({ code: "seeded_submission_outcome_unknown" });
+    await rejected;
   });
 
   it("refuses an oversized serialized request before contacting the v2 route", async () => {
