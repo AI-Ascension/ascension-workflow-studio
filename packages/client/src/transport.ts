@@ -14,11 +14,46 @@ export function normalizeRelativeBase(baseUrl: string): string {
   return baseUrl.replace(/\/$/, "");
 }
 
+/** Derive the additive v2 root only from an already configured v1 root. This
+ * replaces the terminal version segment and preserves the same-origin prefix;
+ * it never appends `/v2` beneath `/v1` or accepts an unversioned base. */
+export function ownerApiV2BaseFromV1(baseUrl: string): string {
+  const normalized = normalizeRelativeBase(baseUrl);
+  const segments = normalized.split("/");
+  if (normalized.includes("?")
+    || normalized.includes("%")
+    || normalized.includes("@")
+    || segments.length < 2
+    || segments[0] !== ""
+    || segments[segments.length - 1] !== "v1"
+    || segments.slice(1).some((segment) =>
+      segment === "" || segment === "." || segment === ".." || !/^[A-Za-z0-9._:-]+$/.test(segment))) {
+    throw new ClientError(
+      "Owner API v2 requires a same-origin base ending in the exact /v1 segment",
+      "invalid_api_base_version",
+    );
+  }
+  const prefix = normalized.slice(0, -"/v1".length);
+  return prefix.length === 0 ? "/v2" : `${prefix}/v2`;
+}
+
 export function encodeIdentifier(value: string): string {
   if (!/^[A-Za-z0-9._:-]+$/.test(value)) {
     throw new ClientError("Identifier contains unsupported characters", "invalid_identifier");
   }
   return encodeURIComponent(value);
+}
+
+/** Keep admitted v2 run IDs literal in the request target: Harness rejects `%`
+ * before routing, so percent-encoding the legal colon would make a valid ID
+ * unreadable. The raw path parser also refuses any `..` substring. */
+export function seedRunIdV2PathSegment(value: string): string {
+  if (value.length > 128
+    || !/^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(value)
+    || value.includes("..")) {
+    throw new ClientError("Workflow run ID is not an admitted v2 path segment", "invalid_identifier");
+  }
+  return value;
 }
 
 /** Encodes ONE path segment for the owner's inference-profile routes.

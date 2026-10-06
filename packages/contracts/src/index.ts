@@ -484,6 +484,155 @@ export const RunSubmissionResponseSchema = z.object({
 }).strict();
 export type RunSubmissionResponse = z.infer<typeof RunSubmissionResponseSchema>;
 
+export const WORKFLOW_RUN_REQUEST_V2_SCHEMA_VERSION = "ascension.workflow-run-request/v2";
+export const WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION = "ascension.workflow-seed-request/v2";
+export const WORKFLOW_SEED_BINDING_V2_SCHEMA_VERSION = "ascension.workflow-seed-binding/v2";
+export const WORKFLOW_RUN_SUBMISSION_V2_SCHEMA_VERSION = "ascension.workflow-run-submission/v2";
+export const SEED_DERIVATION_ALGORITHM_V1 = "hmac-sha256-v1";
+
+export const SeedModeV2Schema = z.enum(["explicit", "derive_once"]);
+export type SeedModeV2 = z.infer<typeof SeedModeV2Schema>;
+
+function isRustControlCodePoint(codePoint: number): boolean {
+  return codePoint <= 0x1f || (codePoint >= 0x7f && codePoint <= 0x9f);
+}
+
+/** Rust char::is_whitespace's Unicode White_Space set. ECMAScript trim also
+ * removes U+FEFF, which Rust does not, and does not remove every Rust member. */
+function isRustWhitespaceCodePoint(codePoint: number): boolean {
+  return (codePoint >= 0x09 && codePoint <= 0x0d)
+    || codePoint === 0x20
+    || codePoint === 0x85
+    || codePoint === 0xa0
+    || codePoint === 0x1680
+    || (codePoint >= 0x2000 && codePoint <= 0x200a)
+    || (codePoint >= 0x2028 && codePoint <= 0x2029)
+    || codePoint === 0x202f
+    || codePoint === 0x205f
+    || codePoint === 0x3000;
+}
+
+/** Match the pinned Harness canonicalizer without normalizing or trimming. */
+function isCanonicalSeedV2(value: string): boolean {
+  if (value.length === 0) return false;
+  let firstCodePoint: number | undefined;
+  let lastCodePoint: number | undefined;
+  for (let index = 0; index < value.length;) {
+    const firstUnit = value.charCodeAt(index);
+    let codePoint = firstUnit;
+    if (firstUnit >= 0xd800 && firstUnit <= 0xdbff) {
+      const secondUnit = value.charCodeAt(index + 1);
+      if (index + 1 >= value.length || secondUnit < 0xdc00 || secondUnit > 0xdfff) return false;
+      codePoint = 0x10000 + ((firstUnit - 0xd800) << 10) + (secondUnit - 0xdc00);
+      index += 2;
+    } else {
+      if (firstUnit >= 0xdc00 && firstUnit <= 0xdfff) return false;
+      index += 1;
+    }
+    if (isRustControlCodePoint(codePoint)) return false;
+    firstCodePoint ??= codePoint;
+    lastCodePoint = codePoint;
+  }
+  if (firstCodePoint === undefined || lastCodePoint === undefined
+    || isRustWhitespaceCodePoint(firstCodePoint) || isRustWhitespaceCodePoint(lastCodePoint)) {
+    return false;
+  }
+  return new TextEncoder().encode(value).byteLength <= 64;
+}
+
+const SeedV2IdentifierSchema = z.string().min(1).refine((value) =>
+  value.length <= 128
+  && /^[A-Za-z0-9][A-Za-z0-9._:-]*$/.test(value),
+"identifier must match the Harness 1..=128 byte ASCII identifier rule");
+
+const SeedKeyIdentityV2Schema = z.string().min(1).max(64).regex(/^[A-Za-z0-9._-]+$/,
+  "key identity must match the Harness 1..=64 byte ASCII key identifier rule");
+
+const CanonicalSeedV2Schema = z.string().refine(isCanonicalSeedV2,
+  "seed must be canonical UTF-8, contain 1..=64 bytes, and have no control or edge whitespace");
+
+export const SeedRequestV2Schema = z.discriminatedUnion("mode", [
+  z.object({
+    schema_version: z.literal(WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION),
+    mode: z.literal("explicit"),
+    seed: CanonicalSeedV2Schema,
+  }).strict(),
+  z.object({
+    schema_version: z.literal(WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION),
+    mode: z.literal("derive_once"),
+    // Serde's Option accepts either a missing field or null for None. The
+    // OwnerApiClient emits the canonical omitted-field representation.
+    seed: z.null().optional(),
+  }).strict(),
+]);
+export type SeedRequestV2 = z.infer<typeof SeedRequestV2Schema>;
+
+export const WorkflowRunRequestV2Schema = z.object({
+  schema_version: z.literal(WORKFLOW_RUN_REQUEST_V2_SCHEMA_VERSION),
+  request_id: SeedV2IdentifierSchema,
+  definition: JsonValueSchema.nullable().optional(),
+  artifact_id: SeedV2IdentifierSchema.nullable().optional(),
+  instance_id: SeedV2IdentifierSchema,
+  profile: SeedV2IdentifierSchema,
+  admission: TargetAdmissionBindingSchema.nullable().optional(),
+  seed: SeedRequestV2Schema,
+}).strict().superRefine((request, context) => {
+  const hasDefinition = request.definition !== undefined && request.definition !== null;
+  const hasArtifact = request.artifact_id !== undefined && request.artifact_id !== null;
+  if (hasDefinition === hasArtifact) {
+    context.addIssue({ code: "custom", path: ["definition"], message: "exactly one definition or artifact_id is required" });
+  }
+});
+export type WorkflowRunRequestV2 = z.infer<typeof WorkflowRunRequestV2Schema>;
+
+const SeedBindingReadbackCommonV2Schema = {
+  schema_version: z.literal(WORKFLOW_SEED_BINDING_V2_SCHEMA_VERSION),
+  workflow_run_id: SeedV2IdentifierSchema,
+  operation_id: SeedV2IdentifierSchema,
+  configuration_digest: z.string().regex(/^[a-f0-9]{64}$/),
+  state: z.enum(["candidate_persisted", "awaiting_host_context", "resolved"]),
+};
+
+export const SeedBindingReadbackV2Schema = z.discriminatedUnion("mode", [
+  z.object({
+    ...SeedBindingReadbackCommonV2Schema,
+    mode: z.literal("explicit"),
+    requested_seed: CanonicalSeedV2Schema,
+    effective_seed: CanonicalSeedV2Schema,
+    algorithm_id: z.null(),
+    key_authority_id: z.null(),
+    key_version: z.null(),
+  }).strict(),
+  z.object({
+    ...SeedBindingReadbackCommonV2Schema,
+    mode: z.literal("derive_once"),
+    requested_seed: z.null(),
+    effective_seed: CanonicalSeedV2Schema,
+    algorithm_id: z.literal(SEED_DERIVATION_ALGORITHM_V1),
+    key_authority_id: SeedKeyIdentityV2Schema,
+    key_version: SeedKeyIdentityV2Schema,
+  }).strict(),
+]).superRefine((binding, context) => {
+  if (binding.mode === "explicit" && binding.requested_seed !== binding.effective_seed) {
+    context.addIssue({ code: "custom", path: ["effective_seed"], message: "explicit effective seed must equal requested seed" });
+  }
+});
+export type SeedBindingReadbackV2 = z.infer<typeof SeedBindingReadbackV2Schema>;
+
+export const SeededRunSubmissionResponseV2Schema = z.object({
+  schema_version: z.literal(WORKFLOW_RUN_SUBMISSION_V2_SCHEMA_VERSION),
+  run: RunSubmissionResponseSchema,
+  seed_binding: SeedBindingReadbackV2Schema,
+}).strict().superRefine((response, context) => {
+  if (response.run.schema_version !== "ascension.management/v1") {
+    context.addIssue({ code: "custom", path: ["run", "schema_version"], message: "run response must use the management v1 schema" });
+  }
+  if (response.run.workflow_run_id !== response.seed_binding.workflow_run_id) {
+    context.addIssue({ code: "custom", path: ["seed_binding", "workflow_run_id"], message: "run and seed binding identities differ" });
+  }
+});
+export type SeededRunSubmissionResponseV2 = z.infer<typeof SeededRunSubmissionResponseV2Schema>;
+
 export const StatusResponseSchema = z.object({
   schema_version: z.string(),
   run: RunSnapshotSchema,
