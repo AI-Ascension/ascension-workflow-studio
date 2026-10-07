@@ -18,7 +18,8 @@
  * - `owner-api`: the live owner API adapter and provider-session policy client.
  * - `fixture`: the in-memory fixture adapter.
  *
- * Behavior is preserved verbatim; nothing here alters semantics.
+ * Existing v1 and fixture APIs keep their behavior; versioned owner APIs are
+ * additive and remain optional for fixture consumers.
  */
 export { ClientError, CapabilityGateError } from "./errors";
 export type {
@@ -32,7 +33,8 @@ export type {
   RunProjection,
   ProjectionResult,
 } from "./types";
-export { normalizeRelativeBase, encodeProfileIdSegment } from "./transport";
+export type { SeededRunSubmissionOptionsV2, SeededRunV2Client } from "./seeded-run-v2";
+export { normalizeRelativeBase, ownerApiV2BaseFromV1, encodeProfileIdSegment } from "./transport";
 export { validateTargetAdmissionBinding, validateTargetConfiguration } from "./targets";
 export { fixtureTargetCatalog, fixtureContextOwnerCatalog, fixtureInferenceProfileCatalog } from "./fixture-catalogs";
 export { createProjection, applyEventPage, parseSseDataChunk, buildSafeCommand } from "./projection";

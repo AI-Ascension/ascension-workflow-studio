@@ -21,6 +21,9 @@ import {
   ProviderSessionPolicyViewResponseSchema,
   ReplayResponseSchema,
   RunSubmissionResponseSchema,
+  SeedBindingReadbackV2Schema,
+  SeedRequestV2Schema,
+  SeededRunSubmissionResponseV2Schema,
   StatusResponseSchema,
   StudioOwnerDefinitionsResponseSchema,
   StudioOwnerDraftSchema,
@@ -32,6 +35,9 @@ import {
   RunTargetConfigurationSchema,
   ValidateResponseSchema,
   WorkflowDefinitionSchema,
+  WorkflowRunRequestV2Schema,
+  WORKFLOW_RUN_REQUEST_V2_SCHEMA_VERSION,
+  WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION,
   decodeWith,
   type CapabilityResponse,
   type ContextOwnerAssociation,
@@ -53,6 +59,8 @@ import {
   type ProviderSessionPolicyViewResponse,
   type ReplayResponse,
   type RunSubmissionResponse,
+  type SeedBindingReadbackV2,
+  type SeededRunSubmissionResponseV2,
   type StatusResponse,
   type TargetAdmissionBinding,
   type TargetAdmissionRequest,
@@ -65,11 +73,12 @@ import {
   type CommandResponse,
   adoptInferenceProfileRevision,
 } from "@studio/contracts";
-import { definitionIdentityDigest, validateNodeBindings } from "@studio/document";
+import { definitionIdentityDigest, parseBoundedJson, validateNodeBindings } from "@studio/document";
 import { readContextCatalogBody } from "./context-owner-catalog";
 import { CapabilityGateError, ClientError } from "./errors";
 import { assertPolicyCommandOperation, assertPolicyUpload, policyRevisionQuery } from "./provider-policy";
 import { ownerDefinitionToRecord, ownerDraftToRecord } from "./records";
+import type { SeededRunSubmissionOptionsV2, SeededRunV2Client } from "./seeded-run-v2";
 import { TARGET_CONFIGURATION_FIELDS, assertEqualBindingField, validateTargetAdmissionBinding } from "./targets";
 import {
   cloneJson,
@@ -77,6 +86,8 @@ import {
   encodeIdentifier,
   encodeProfileIdSegment,
   normalizeRelativeBase,
+  ownerApiV2BaseFromV1,
+  seedRunIdV2PathSegment,
 } from "./transport";
 import type {
   DraftWrite,
@@ -87,12 +98,109 @@ import type {
   StudioClient,
 } from "./types";
 
-export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient {
+const SEEDED_REQUEST_MAX_BYTES = 1024 * 1024;
+const SEEDED_RESPONSE_MAX_BYTES = 1024 * 1024;
+const SEEDED_JSON_MAX_DEPTH = 32;
+const SEEDED_JSON_MAX_ITEMS = 16 * 1024;
+const SEEDED_JSON_MAX_STRING_BYTES = 4 * 1024;
+const SEEDED_JSON_MAX_ENCODED_STRING_BYTES = SEEDED_JSON_MAX_STRING_BYTES * 6 + 2;
+const SEEDED_SUBMISSION_TIMEOUT_MS = 15_000;
+const MAX_UNRESOLVED_SEEDED_SUBMISSIONS = 32;
+
+function assertSeededJsonValueLimits(root: unknown): void {
+  const stack: Array<{ value: unknown; depth: number }> = [{ value: root, depth: 0 }];
+  let items = 0;
+  const encoder = new TextEncoder();
+  while (stack.length > 0) {
+    const current = stack.pop();
+    if (!current) break;
+    items += 1;
+    if (items > SEEDED_JSON_MAX_ITEMS || current.depth > SEEDED_JSON_MAX_DEPTH) {
+      throw new Error("JSON item or depth limit exceeded");
+    }
+    if (typeof current.value === "string") {
+      assertWellFormedUtf16(current.value);
+      if (encoder.encode(current.value).byteLength > SEEDED_JSON_MAX_STRING_BYTES) {
+        throw new Error("JSON string exceeds the owner contract limit");
+      }
+    } else if (Array.isArray(current.value)) {
+      for (const child of current.value) stack.push({ value: child, depth: current.depth + 1 });
+    } else if (current.value !== null && typeof current.value === "object") {
+      for (const [key, child] of Object.entries(current.value)) {
+        assertWellFormedUtf16(key);
+        if (encoder.encode(key).byteLength > SEEDED_JSON_MAX_STRING_BYTES) {
+          throw new Error("JSON object key exceeds the owner contract limit");
+        }
+        stack.push({ value: child, depth: current.depth + 1 });
+      }
+    }
+  }
+}
+
+function assertWellFormedUtf16(value: string): void {
+  for (let index = 0; index < value.length; index += 1) {
+    const unit = value.charCodeAt(index);
+    if (unit >= 0xd800 && unit <= 0xdbff) {
+      const next = value.charCodeAt(index + 1);
+      if (index + 1 >= value.length || next < 0xdc00 || next > 0xdfff) {
+        throw new Error("unpaired UTF-16 surrogate");
+      }
+      index += 1;
+    } else if (unit >= 0xdc00 && unit <= 0xdfff) {
+      throw new Error("unpaired UTF-16 surrogate");
+    }
+  }
+}
+
+async function readBoundedJson(response: Response, maxBytes: number, signal: AbortSignal): Promise<unknown> {
+  if (!response.body) throw new Error("response body unavailable");
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder("utf-8", { fatal: true });
+  const parts: string[] = [];
+  let bytes = 0;
+  if (signal.aborted) {
+    await reader.cancel().catch(() => {});
+    reader.releaseLock();
+    throw new Error("request was aborted before response decoding");
+  }
+  const cancelOnAbort = (): void => { void reader.cancel().catch(() => {}); };
+  signal.addEventListener("abort", cancelOnAbort, { once: true });
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      bytes += value.byteLength;
+      if (bytes > maxBytes) throw new Error("response body exceeds byte limit");
+      parts.push(decoder.decode(value, { stream: true }));
+    }
+    parts.push(decoder.decode());
+    const parsed = parseBoundedJson(parts.join(""), {
+      maxBytes,
+      maxDepth: SEEDED_JSON_MAX_DEPTH,
+      maxNodes: SEEDED_JSON_MAX_ITEMS,
+      maxStringBytes: SEEDED_JSON_MAX_ENCODED_STRING_BYTES,
+    });
+    assertSeededJsonValueLimits(parsed);
+    return parsed;
+  } catch (error) {
+    await reader.cancel().catch(() => {});
+    throw error;
+  } finally {
+    signal.removeEventListener("abort", cancelOnAbort);
+    reader.releaseLock();
+  }
+}
+
+export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient, SeededRunV2Client {
   public readonly mode = "live" as const;
   private readonly baseUrl: string;
   private readonly fetcher: typeof fetch;
   private token: string | undefined;
   private actorScope: string | undefined;
+  private authGeneration = 0;
+  private readonly targetAdmissionGenerations = new Map<string, number>();
+  private readonly targetAdmissionBindings = new Map<string, TargetAdmissionBinding>();
+  private readonly unresolvedSeededSubmissions = new Map<string, { body: string; generation: number }>();
   /** Requests are retained so a lost response can be retried verbatim. */
   private readonly targetAdmissionRequests = new Map<string, TargetAdmissionRequest>();
 
@@ -104,11 +212,15 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
   }
 
   public setToken(token: string | undefined): void {
-    this.token = token?.trim() || undefined;
+    const next = token?.trim() || undefined;
+    this.authGeneration += 1;
+    this.token = next;
   }
 
   public setActorScope(actorScope: string | undefined): void {
-    this.actorScope = actorScope?.trim() || undefined;
+    const next = actorScope?.trim() || undefined;
+    this.authGeneration += 1;
+    this.actorScope = next;
   }
 
   public principal(): string {
@@ -338,6 +450,7 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
   }
 
   public async preflightTarget(request: TargetAdmissionRequest): Promise<TargetPreflightResponse> {
+    const generation = this.authGeneration;
     const body = TargetAdmissionRequestSchema.parse(request);
     const response = await this.request("/workflow-targets/preflight", {
       method: "POST",
@@ -346,6 +459,8 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
     const result = decodeWith(TargetPreflightResponseSchema, response, "workflow target preflight");
     validateTargetAdmissionBinding(result.admission, body);
     this.targetAdmissionRequests.set(body.request_id, cloneJson(body));
+    this.targetAdmissionGenerations.set(body.request_id, generation);
+    this.targetAdmissionBindings.set(body.request_id, cloneJson(result.admission));
     return result;
   }
 
@@ -399,6 +514,223 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
       }),
     });
     return decodeWith(RunSubmissionResponseSchema, response, "run submission");
+  }
+
+  /** Submit one explicit or derive-once v2 operation. If the outcome is
+   * ambiguous, a caller may invoke this again only with the exact same ID and
+   * serialized request; the client never invents a replacement ID or retries. */
+  public async submitSeededRunV2(
+    definition: WorkflowDefinition,
+    instanceId: string,
+    profile: string,
+    options: SeededRunSubmissionOptionsV2,
+  ): Promise<SeededRunSubmissionResponseV2> {
+    const generation = this.authGeneration;
+    const admission = TargetAdmissionBindingSchema.parse(options.admission);
+    const requestId = options.requestId;
+    const parsedDefinition = WorkflowDefinitionSchema.parse(definition);
+    const seed = SeedRequestV2Schema.parse(options.seed);
+    if (!requestId || requestId !== admission.request_id) {
+      throw new ClientError("Seeded submission request ID must equal its owner admission", "target_binding_mismatch", 409);
+    }
+    const reviewedRequest = this.targetAdmissionRequests.get(requestId);
+    const reviewedBinding = this.targetAdmissionBindings.get(requestId);
+    const reviewedGeneration = this.targetAdmissionGenerations.get(requestId);
+    if (!reviewedRequest || !reviewedBinding || reviewedGeneration === undefined || reviewedGeneration !== generation) {
+      throw new ClientError("Seeded submission requires a current-session target preflight", "target_admission_missing", 409);
+    }
+    validateTargetAdmissionBinding(admission, reviewedRequest);
+    assertEqualBindingField("descriptor_digest", admission.descriptor_digest, reviewedBinding.descriptor_digest);
+    assertEqualBindingField("catalog_revision", admission.catalog_revision, reviewedBinding.catalog_revision);
+    assertEqualBindingField("request_id", requestId, admission.request_id);
+    assertEqualBindingField("target.instance_id", instanceId, admission.target.instance_id);
+    assertEqualBindingField("target.execution_profile", profile, admission.target.execution_profile);
+    if (options.target) {
+      const reviewedTarget = RunTargetConfigurationSchema.parse(options.target);
+      for (const field of TARGET_CONFIGURATION_FIELDS) {
+        assertEqualBindingField(`target.${field}`, admission.target[field], reviewedTarget[field]);
+      }
+    }
+    const canonicalSeed = seed.mode === "explicit"
+      ? { schema_version: WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION, mode: "explicit" as const, seed: seed.seed }
+      : { schema_version: WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION, mode: "derive_once" as const };
+    const request = WorkflowRunRequestV2Schema.parse({
+      schema_version: WORKFLOW_RUN_REQUEST_V2_SCHEMA_VERSION,
+      request_id: requestId,
+      definition: parsedDefinition,
+      artifact_id: null,
+      instance_id: instanceId,
+      profile,
+      admission,
+      seed: canonicalSeed,
+    });
+    const serializedBody = JSON.stringify(request);
+    if (new TextEncoder().encode(serializedBody).byteLength > SEEDED_REQUEST_MAX_BYTES) {
+      throw new ClientError("Seeded submission request exceeds the byte limit", "seeded_request_too_large", 413);
+    }
+    try {
+      const parsedRequest = parseBoundedJson(serializedBody, {
+        maxBytes: SEEDED_REQUEST_MAX_BYTES,
+        maxDepth: SEEDED_JSON_MAX_DEPTH,
+        maxNodes: SEEDED_JSON_MAX_ITEMS,
+        maxStringBytes: SEEDED_JSON_MAX_ENCODED_STRING_BYTES,
+      });
+      assertSeededJsonValueLimits(parsedRequest);
+    } catch (error) {
+      throw new ClientError(
+        `Seeded submission request exceeds owner contract limits: ${error instanceof Error ? error.message : "invalid JSON"}`,
+        "seeded_request_invalid",
+        400,
+      );
+    }
+    if (generation !== this.authGeneration) {
+      throw new ClientError("Owner session changed while checking seeded submission", "seeded_session_changed", 409);
+    }
+    const definitionDigest = await definitionIdentityDigest(parsedDefinition);
+    if (generation !== this.authGeneration) {
+      throw new ClientError("Owner session changed while checking seeded submission", "seeded_session_changed", 409);
+    }
+    assertEqualBindingField("workflow_definition_digest", admission.workflow_definition_digest, definitionDigest);
+    assertEqualBindingField("target.workflow_revision", admission.target.workflow_revision, parsedDefinition.version);
+    assertEqualBindingField("target.game_profile", admission.target.game_profile, parsedDefinition.game_profile);
+
+    const pending = this.unresolvedSeededSubmissions.get(requestId);
+    if (pending && (pending.body !== serializedBody || pending.generation !== generation)) {
+      throw new ClientError("An unresolved seeded request ID cannot be rebound", "seeded_request_id_conflict", 409);
+    }
+    if (!pending && this.unresolvedSeededSubmissions.size >= MAX_UNRESOLVED_SEEDED_SUBMISSIONS) {
+      throw new ClientError("Too many unresolved seeded submissions; resolve one before starting another", "seeded_pending_capacity", 409);
+    }
+    this.unresolvedSeededSubmissions.set(requestId, { body: serializedBody, generation });
+
+    let response: Response;
+    let body: unknown;
+    try {
+      ({ response, body } = await this.fetchBoundedV2(
+        `/workflow-runs`,
+        { method: "POST", body: serializedBody },
+        SEEDED_RESPONSE_MAX_BYTES,
+        SEEDED_SUBMISSION_TIMEOUT_MS,
+      ));
+    } catch (error) {
+      throw new ClientError(
+        `Seeded submission outcome is unknown: ${error instanceof Error ? error.message : "transport failure"}`,
+        "seeded_submission_outcome_unknown",
+      );
+    }
+    if (generation !== this.authGeneration) {
+      throw new ClientError("Owner session changed while seeded submission was in flight", "seeded_submission_outcome_unknown");
+    }
+    if (!response.ok) {
+      const decoded = ErrorResponseSchema.safeParse(body);
+      if (response.status >= 500) {
+        throw new ClientError("Seeded submission outcome is unknown after an owner server error", "seeded_submission_outcome_unknown", response.status);
+      }
+      throw new ClientError(
+        decoded.success ? decoded.data.error.message : `Owner API returned HTTP ${response.status}`,
+        decoded.success ? decoded.data.error.code : "http_error",
+        response.status,
+      );
+    }
+    let result: SeededRunSubmissionResponseV2;
+    try {
+      result = decodeWith(SeededRunSubmissionResponseV2Schema, body, "seeded run submission");
+    } catch (error) {
+      throw new ClientError(
+        `Seeded submission outcome is unknown because its response was invalid: ${error instanceof Error ? error.message : "invalid response"}`,
+        "seeded_submission_outcome_unknown",
+        response.status,
+      );
+    }
+    const binding = result.seed_binding;
+    if (binding.mode !== seed.mode
+      || (seed.mode === "explicit"
+        && (binding.requested_seed !== seed.seed || binding.effective_seed !== seed.seed))
+      || (seed.mode === "derive_once" && binding.requested_seed !== null)
+      || result.run.workflow_run_id !== binding.workflow_run_id) {
+      throw new ClientError("Seeded submission response does not match the submitted operation", "seeded_submission_outcome_unknown", response.status);
+    }
+    if (generation !== this.authGeneration) {
+      throw new ClientError("Owner session changed before seeded result acceptance", "seeded_submission_outcome_unknown");
+    }
+    this.unresolvedSeededSubmissions.delete(requestId);
+    return result;
+  }
+
+  public async readSeedBindingV2(workflowRunId: string): Promise<SeedBindingReadbackV2> {
+    const generation = this.authGeneration;
+    const runIdPathSegment = seedRunIdV2PathSegment(workflowRunId);
+    let response: { response: Response; body: unknown };
+    try {
+      response = await this.fetchBoundedV2(
+        `/workflow-runs/${runIdPathSegment}/seed-binding`,
+        { method: "GET" },
+        SEEDED_RESPONSE_MAX_BYTES,
+        5_000,
+      );
+    } catch (error) {
+      throw new ClientError(
+        `Seed binding read failed: ${error instanceof Error ? error.message : "transport failure"}`,
+        "seed_binding_read_failed",
+      );
+    }
+    if (generation !== this.authGeneration) {
+      throw new ClientError("Owner session changed while seed binding was being read", "seed_binding_read_session_changed");
+    }
+    if (!response.response.ok) {
+      const decoded = ErrorResponseSchema.safeParse(response.body);
+      throw new ClientError(
+        decoded.success ? decoded.data.error.message : `Owner API returned HTTP ${response.response.status}`,
+        decoded.success ? decoded.data.error.code : "http_error",
+        response.response.status,
+      );
+    }
+    const binding = decodeWith(SeedBindingReadbackV2Schema, response.body, "seed binding readback");
+    if (binding.workflow_run_id !== workflowRunId) {
+      throw new ClientError("Seed binding readback returned a different workflow run", "seed_binding_run_mismatch", 409);
+    }
+    if (generation !== this.authGeneration) {
+      throw new ClientError("Owner session changed before seed binding acceptance", "seed_binding_read_session_changed");
+    }
+    return binding;
+  }
+
+  private async fetchBoundedV2(
+    path: string,
+    init: RequestInit,
+    responseLimit: number,
+    timeoutMs: number,
+  ): Promise<{ response: Response; body: unknown }> {
+    const headers = new Headers(init.headers);
+    headers.set("accept", "application/json");
+    if (init.body !== undefined) headers.set("content-type", "application/json");
+    const token = this.token;
+    if (token) headers.set("authorization", `Bearer ${token}`);
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const operation = (async () => {
+      const response = await this.fetcher(`${ownerApiV2BaseFromV1(this.baseUrl)}${path}`, {
+        ...init,
+        headers,
+        credentials: "same-origin",
+        cache: "no-store",
+        redirect: "error",
+        signal: controller.signal,
+      });
+      const body = await readBoundedJson(response, responseLimit, controller.signal);
+      return { response, body };
+    })();
+    const timeout = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        reject(new Error("owner request exceeded its deadline"));
+      }, timeoutMs);
+    });
+    try {
+      return await Promise.race([operation, timeout]);
+    } finally {
+      if (timer !== undefined) clearTimeout(timer);
+    }
   }
 
   public async status(runId: string): Promise<StatusResponse> {
