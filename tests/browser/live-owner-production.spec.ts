@@ -448,10 +448,11 @@ async function exerciseContextOwner(page: Page, fixture: ProductionFixture): Pro
   const receipt = ContextControlReceiptSchema.parse(result.receipt);
   expect(association.binding.owner_id).toBe("served-context-owner");
   expect(association.binding.workflow_run_id).toBe(fixture.run_id);
+  // This fixture enables rendering; pinned Harness 3a641 couples it to the edit grant.
   expect(association.binding.grants).toEqual({
     metadata_read: true,
     content_read: true,
-    edit: false,
+    edit: true,
     control: true,
   });
   expect(association.binding.continuity).toEqual({
@@ -547,7 +548,7 @@ test("uses production served policy routes for import, approval, adoption, refre
   await expect(ownerPanel).toBeVisible();
   await expect(ownerPanel).toContainText("served-context-owner");
   await expect(ownerPanel).toContainText("control yes");
-  await expect(ownerPanel).toContainText("edit no");
+  await expect(ownerPanel).toContainText("edit yes");
   await expect(ownerPanel).toContainText("receipt recovery advertised");
   await expect(ownerPanel).toContainText("64 control events");
   const panel = page.getByRole("region", { name: "Saved provider-session policy" });
