@@ -22,11 +22,29 @@ export type IdentityField =
   | "actor_subject"
   | "workflow_run_id";
 
+export type BoundaryIdentifierField =
+  | "boundary_run_id"
+  | "boundary_episode_id"
+  | "boundary_agent_id"
+  | "boundary_state_id"
+  | "boundary_adapter_revision"
+  | "boundary_model_revision";
+
+export type BoundaryDigestField =
+  | "boundary_observation_sha256"
+  | "boundary_catalog_sha256"
+  | "boundary_configuration_sha256"
+  | "boundary_output_schema_sha256";
+
+export type BoundaryValueField = "boundary_epoch";
+export type BoundaryField = BoundaryIdentifierField | BoundaryDigestField | BoundaryValueField;
+
 export type CandidateRefusal =
   | Readonly<{ kind: "json_decoding" }>
   | Readonly<{ kind: "out_of_bounds"; field: "json_body" | "json_shape" }>
-  | Readonly<{ kind: "invalid_identifier"; field: IdentityField }>
-  | Readonly<{ kind: "invalid_value"; field: IdentityField }>
+  | Readonly<{ kind: "invalid_identifier"; field: IdentityField | BoundaryIdentifierField }>
+  | Readonly<{ kind: "invalid_digest"; field: BoundaryDigestField }>
+  | Readonly<{ kind: "invalid_value"; field: IdentityField | BoundaryValueField }>
   | Readonly<{ kind: "correlation_mismatch"; field: IdentityField }>;
 
 /** Fixed, value-free refusal categories for this untrusted candidate decoder. */
@@ -45,7 +63,7 @@ export function refuseJson(): never {
   throw new OwnerIdentityCandidateError({ kind: "json_decoding" });
 }
 
-export function validateIdentifier(field: IdentityField, value: string): void {
+export function validateIdentifier(field: IdentityField | BoundaryIdentifierField, value: string): void {
   if (value.length === 0 || value.length > 128) invalidIdentifier(field);
   const first = value.charCodeAt(0);
   if (!isAsciiAlphaNumeric(first)) invalidIdentifier(field);
@@ -73,11 +91,23 @@ export function validateCorrelationText(field: IdentityField, value: string): vo
   }
 }
 
-export function invalidIdentifier(field: IdentityField): never {
+export function invalidIdentifier(field: IdentityField | BoundaryIdentifierField): never {
   throw new OwnerIdentityCandidateError({ kind: "invalid_identifier", field });
 }
 
-export function invalidValue(field: IdentityField): never {
+export function validateDigest(field: BoundaryDigestField, value: string): void {
+  if (value.length !== 64) invalidDigest(field);
+  for (let index = 0; index < value.length; index += 1) {
+    const code = value.charCodeAt(index);
+    if (!((code >= 0x30 && code <= 0x39) || (code >= 0x61 && code <= 0x66))) invalidDigest(field);
+  }
+}
+
+export function invalidDigest(field: BoundaryDigestField): never {
+  throw new OwnerIdentityCandidateError({ kind: "invalid_digest", field });
+}
+
+export function invalidValue(field: IdentityField | BoundaryValueField): never {
   throw new OwnerIdentityCandidateError({ kind: "invalid_value", field });
 }
 

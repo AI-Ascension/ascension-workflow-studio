@@ -1,0 +1,13 @@
+{
+  "expected": {
+    "accepted": false,
+    "refusal": {
+      "kind": "json_decoding"
+    }
+  },
+  "id": "control_version-exponent",
+  "input_base64": "eyJydW5faWQiOiJydW4tMSIsImVwaXNvZGVfaWQiOiJlcGlzb2RlLTEiLCJhZ2VudF9pZCI6ImFnZW50LTEiLCJzdGF0ZV9pZCI6InN0YXRlLTEiLCJnZW5lcmF0aW9uIjoxLCJvYnNlcnZhdGlvbl9zaGEyNTYiOiJhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIiwiY2F0YWxvZ19zaGEyNTYiOiJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiIiwiYWRhcHRlcl9yZXZpc2lvbiI6ImFkYXB0ZXItMSIsIm1vZGVsX3JldmlzaW9uIjoibW9kZWwtMSIsImNvbmZpZ3VyYXRpb25fc2hhMjU2IjoiY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjYyIsIm91dHB1dF9zY2hlbWFfc2hhMjU2IjoiZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZCIsImNvbnRyb2xsZXJfZXBvY2giOjIsImdhdGVfZXBvY2giOjMsImNvbnRyb2xfdmVyc2lvbiI6MWUwfQ==",
+  "input_sha256": "7464cbbb313a3e145857537b5db4d686ed4bd45eb1e3879a344402ea1164e893",
+  "observation_sha256": "c1745802d448413f5c34fdb14f751dec80631fb4c03202df2e9517bf577775f8",
+  "observed_rust_debug_error": "JsonDecoding"
+}

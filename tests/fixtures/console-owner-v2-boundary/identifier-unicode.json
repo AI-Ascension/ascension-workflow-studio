@@ -1,0 +1,14 @@
+{
+  "expected": {
+    "accepted": false,
+    "refusal": {
+      "field": "boundary_run_id",
+      "kind": "invalid_identifier"
+    }
+  },
+  "id": "identifier-unicode",
+  "input_base64": "eyJydW5faWQiOiJyXHUwMGZhbi0xIiwiZXBpc29kZV9pZCI6ImVwaXNvZGUtMSIsImFnZW50X2lkIjoiYWdlbnQtMSIsInN0YXRlX2lkIjoic3RhdGUtMSIsImdlbmVyYXRpb24iOjEsIm9ic2VydmF0aW9uX3NoYTI1NiI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJjYXRhbG9nX3NoYTI1NiI6ImJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmIiLCJhZGFwdGVyX3JldmlzaW9uIjoiYWRhcHRlci0xIiwibW9kZWxfcmV2aXNpb24iOiJtb2RlbC0xIiwiY29uZmlndXJhdGlvbl9zaGEyNTYiOiJjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjIiwib3V0cHV0X3NjaGVtYV9zaGEyNTYiOiJkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkIiwiY29udHJvbGxlcl9lcG9jaCI6MiwiZ2F0ZV9lcG9jaCI6MywiY29udHJvbF92ZXJzaW9uIjo0fQ==",
+  "input_sha256": "23f0336f6b39858ba654bedfb6e4b68b950a0239abc4fe92d832f94ba02db864",
+  "observation_sha256": "a2057060d7ae41d9c545dc30a63fc68269c490c1a163f900434aa97e2fe6a363",
+  "observed_rust_debug_error": "InvalidIdentifier(\"boundary_run_id\")"
+}

@@ -1,0 +1,14 @@
+{
+  "expected": {
+    "accepted": false,
+    "refusal": {
+      "field": "boundary_observation_sha256",
+      "kind": "invalid_digest"
+    }
+  },
+  "id": "digest-order",
+  "input_base64": "eyJydW5faWQiOiJydW4tMSIsImVwaXNvZGVfaWQiOiJlcGlzb2RlLTEiLCJhZ2VudF9pZCI6ImFnZW50LTEiLCJzdGF0ZV9pZCI6InN0YXRlLTEiLCJnZW5lcmF0aW9uIjoxLCJvYnNlcnZhdGlvbl9zaGEyNTYiOiJiYWQiLCJjYXRhbG9nX3NoYTI1NiI6ImJhZCIsImFkYXB0ZXJfcmV2aXNpb24iOiJhZGFwdGVyLTEiLCJtb2RlbF9yZXZpc2lvbiI6Im1vZGVsLTEiLCJjb25maWd1cmF0aW9uX3NoYTI1NiI6ImNjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2MiLCJvdXRwdXRfc2NoZW1hX3NoYTI1NiI6ImRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQiLCJjb250cm9sbGVyX2Vwb2NoIjoyLCJnYXRlX2Vwb2NoIjozLCJjb250cm9sX3ZlcnNpb24iOjR9",
+  "input_sha256": "06aa9916b278f71c2cf8bdd48420eec1ed9ee9467f011df81210ba6cbb0bd790",
+  "observation_sha256": "b106219571945ce61fabb3978d6a4e17e550add60a69450c2fbe7875563310d2",
+  "observed_rust_debug_error": "InvalidDigest(\"boundary_observation_sha256\")"
+}

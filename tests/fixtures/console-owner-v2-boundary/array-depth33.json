@@ -1,0 +1,14 @@
+{
+  "expected": {
+    "accepted": false,
+    "refusal": {
+      "field": "json_shape",
+      "kind": "out_of_bounds"
+    }
+  },
+  "id": "array-depth33",
+  "input_base64": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1swXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV0=",
+  "input_sha256": "4e04cac422d9ecd4a5f6221653eeb4eaf29077cf3f588cd36bf6dc8ead76971f",
+  "observation_sha256": "62d110d2b14963b854bf8a0658b1b200a4b9eaf1c630749fe0801c938a6f8a56",
+  "observed_rust_debug_error": "OutOfBounds(\"json_shape\")"
+}

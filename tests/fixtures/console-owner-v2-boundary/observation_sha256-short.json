@@ -1,0 +1,14 @@
+{
+  "expected": {
+    "accepted": false,
+    "refusal": {
+      "field": "boundary_observation_sha256",
+      "kind": "invalid_digest"
+    }
+  },
+  "id": "observation_sha256-short",
+  "input_base64": "eyJydW5faWQiOiJydW4tMSIsImVwaXNvZGVfaWQiOiJlcGlzb2RlLTEiLCJhZ2VudF9pZCI6ImFnZW50LTEiLCJzdGF0ZV9pZCI6InN0YXRlLTEiLCJnZW5lcmF0aW9uIjoxLCJvYnNlcnZhdGlvbl9zaGEyNTYiOiJhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJjYXRhbG9nX3NoYTI1NiI6ImJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmIiLCJhZGFwdGVyX3JldmlzaW9uIjoiYWRhcHRlci0xIiwibW9kZWxfcmV2aXNpb24iOiJtb2RlbC0xIiwiY29uZmlndXJhdGlvbl9zaGEyNTYiOiJjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjIiwib3V0cHV0X3NjaGVtYV9zaGEyNTYiOiJkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkIiwiY29udHJvbGxlcl9lcG9jaCI6MiwiZ2F0ZV9lcG9jaCI6MywiY29udHJvbF92ZXJzaW9uIjo0fQ==",
+  "input_sha256": "aa548d7aede57d592b0c481992ced52c1b55e7ba9d445463e6f5fff6a7e12224",
+  "observation_sha256": "b106219571945ce61fabb3978d6a4e17e550add60a69450c2fbe7875563310d2",
+  "observed_rust_debug_error": "InvalidDigest(\"boundary_observation_sha256\")"
+}

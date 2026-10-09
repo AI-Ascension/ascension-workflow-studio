@@ -1,0 +1,14 @@
+{
+  "expected": {
+    "accepted": false,
+    "refusal": {
+      "field": "boundary_run_id",
+      "kind": "invalid_identifier"
+    }
+  },
+  "id": "identifier-empty",
+  "input_base64": "eyJydW5faWQiOiIiLCJlcGlzb2RlX2lkIjoiZXBpc29kZS0xIiwiYWdlbnRfaWQiOiJhZ2VudC0xIiwic3RhdGVfaWQiOiJzdGF0ZS0xIiwiZ2VuZXJhdGlvbiI6MSwib2JzZXJ2YXRpb25fc2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsImNhdGFsb2dfc2hhMjU2IjoiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYiIsImFkYXB0ZXJfcmV2aXNpb24iOiJhZGFwdGVyLTEiLCJtb2RlbF9yZXZpc2lvbiI6Im1vZGVsLTEiLCJjb25maWd1cmF0aW9uX3NoYTI1NiI6ImNjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2MiLCJvdXRwdXRfc2NoZW1hX3NoYTI1NiI6ImRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQiLCJjb250cm9sbGVyX2Vwb2NoIjoyLCJnYXRlX2Vwb2NoIjozLCJjb250cm9sX3ZlcnNpb24iOjR9",
+  "input_sha256": "2a41947df2b072fe4f3a54d64caa91c46f1dfaea1093b555e9d0de4bd167c7e6",
+  "observation_sha256": "a2057060d7ae41d9c545dc30a63fc68269c490c1a163f900434aa97e2fe6a363",
+  "observed_rust_debug_error": "InvalidIdentifier(\"boundary_run_id\")"
+}
