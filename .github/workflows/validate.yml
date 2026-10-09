@@ -60,6 +60,10 @@ jobs:
         run: node --test tools/live-owner-diagnostics.test.mjs
       - name: Verify PERF-08 bundle budget measurement
         run: npm run test:bundle-budget
+      - name: Verify fixed Console owner preparation boundary
+        run: |
+          npm run typecheck:fixed-owner-preparation
+          npm run test:fixed-owner-preparation
       - run: npm run lint
       - run: npm test -- --run --pool=threads --maxWorkers=1
       - run: npm run build
