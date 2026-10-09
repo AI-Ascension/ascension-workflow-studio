@@ -12,6 +12,8 @@
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit",
     "lint": "npm run typecheck",
     "test": "vitest run",
+    "test:fixed-owner-preparation": "node --test --test-concurrency=1 tests/fixed-owner-preparation/*.test.mjs",
+    "typecheck:fixed-owner-preparation": "tsc -p tsconfig.fixed-owner-preparation.json",
     "test:browser": "playwright test",
     "test:effective-limits-browser": "playwright test --config playwright.effective-limits.config.ts",
     "test:live-owner-browser": "npm run build && node --test tools/live-owner-test-server.test.mjs && playwright test --config playwright.live-owner.config.ts",
