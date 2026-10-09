@@ -1,0 +1,16 @@
+{
+  "label": "semantic-issuer-before-console-type",
+  "mode": "identity",
+  "input_sha256": "2a171408785e9f1805f6c3d42e0fd2d0b9d2530a3c92047a84031051817ee0bf",
+  "input_bytes": 419,
+  "producer_output_sha256": "c1745802d448413f5c34fdb14f751dec80631fb4c03202df2e9517bf577775f8",
+  "producer_binary_sha256": "c7b27ed1e123633be7919a85569bdf31c21fbf948e3257a7f5b531b511a953a9",
+  "oracle_receipt_sha256": "b8ea7c672f879ca244e26bdbc92ec3d306a2c249846e64ce8199904060d846d4",
+  "expected_accepted": false,
+  "evidence_class": "synthetic_pinned_production_identity_seam",
+  "input_base64": "eyJjb25zb2xlIjp7Imlzc3VlciI6IiIsInN1YmplY3QiOiJhY3Rvci0xIiwiYXVkaWVuY2UiOiJzdHVkaW8iLCJjcmVkZW50aWFsX2lkIjoiY3JlZGVudGlhbC0xIiwiZ3JhbnRfaWQiOiJncmFudC0xIiwiZ3JhbnRfZ2VuZXJhdGlvbiI6bnVsbCwiZ3JhbnRfZXhwaXJlc19hdCI6MX0sImNvbnNvbGVfc2NvcGUiOnsicHJvamVjdF9pZCI6InByb2plY3QtMSIsInJ1bl9pZCI6InJ1bi0xIiwiZXBpc29kZV9pZCI6ImVwaXNvZGUtMSIsImFnZW50X2lkIjoiYWdlbnQtMSJ9LCJoYXJuZXNzIjp7ImFjdG9yX3N1YmplY3QiOiJhY3Rvci0xIiwib3duZXJfaWQiOiJvd25lci0xIiwid29ya2Zsb3dfcnVuX2lkIjoicnVuLTEiLCJjcmVkZW50aWFsX3JlZmVyZW5jZV9pZCI6InJlZmVyZW5jZS0xIiwiY3JlZGVudGlhbF9leHBpcmVzX2F0IjoxfX0=",
+  "padding_spaces": 0,
+  "expected_refusal": {
+    "kind": "json_decoding"
+  }
+}

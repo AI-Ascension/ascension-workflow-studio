@@ -1,0 +1,16 @@
+{
+  "label": "console_scope-missing",
+  "mode": "identity",
+  "input_sha256": "e13b8441f4629a1aac8cd680f0f87e596373491c69f8130067734f0741ef911e",
+  "input_bytes": 413,
+  "producer_output_sha256": "c1745802d448413f5c34fdb14f751dec80631fb4c03202df2e9517bf577775f8",
+  "producer_binary_sha256": "c7b27ed1e123633be7919a85569bdf31c21fbf948e3257a7f5b531b511a953a9",
+  "oracle_receipt_sha256": "aeef34136e3999272d653f033efcab23e9b71fbef081821e360c06f14487af6d",
+  "expected_accepted": false,
+  "evidence_class": "synthetic_pinned_production_identity_seam",
+  "input_base64": "eyJjb25zb2xlIjp7Imlzc3VlciI6Imh0dHBzOi8vaXNzdWVyLmludmFsaWQiLCJzdWJqZWN0IjoiYWN0b3ItMSIsImF1ZGllbmNlIjoic3R1ZGlvIiwiY3JlZGVudGlhbF9pZCI6ImNyZWRlbnRpYWwtMSIsImdyYW50X2lkIjoiZ3JhbnQtMSIsImdyYW50X2dlbmVyYXRpb24iOjAsImdyYW50X2V4cGlyZXNfYXQiOjF9LCJjb25zb2xlX3Njb3BlIjp7InJ1bl9pZCI6InJ1bi0xIiwiZXBpc29kZV9pZCI6ImVwaXNvZGUtMSIsImFnZW50X2lkIjoiYWdlbnQtMSJ9LCJoYXJuZXNzIjp7ImFjdG9yX3N1YmplY3QiOiJhY3Rvci0xIiwib3duZXJfaWQiOiJvd25lci0xIiwid29ya2Zsb3dfcnVuX2lkIjoicnVuLTEiLCJjcmVkZW50aWFsX3JlZmVyZW5jZV9pZCI6InJlZmVyZW5jZS0xIiwiY3JlZGVudGlhbF9leHBpcmVzX2F0IjoxfX0=",
+  "padding_spaces": 0,
+  "expected_refusal": {
+    "kind": "json_decoding"
+  }
+}

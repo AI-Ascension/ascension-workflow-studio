@@ -1,0 +1,16 @@
+{
+  "label": "shape-overflow-float",
+  "mode": "shape",
+  "input_sha256": "56d7ed4682c898c2a28ab4f947a4f3dd9e041e9bb15094618920cdc60e22dc64",
+  "input_bytes": 5,
+  "producer_output_sha256": "c1745802d448413f5c34fdb14f751dec80631fb4c03202df2e9517bf577775f8",
+  "producer_binary_sha256": "c7b27ed1e123633be7919a85569bdf31c21fbf948e3257a7f5b531b511a953a9",
+  "oracle_receipt_sha256": "aeef34136e3999272d653f033efcab23e9b71fbef081821e360c06f14487af6d",
+  "expected_accepted": false,
+  "evidence_class": "synthetic_pinned_production_identity_seam",
+  "input_base64": "MWUzMDk=",
+  "padding_spaces": 0,
+  "expected_refusal": {
+    "kind": "json_decoding"
+  }
+}
