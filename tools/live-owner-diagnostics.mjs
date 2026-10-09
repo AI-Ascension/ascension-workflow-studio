@@ -52,6 +52,8 @@ export async function preserveDiagnosticLogs(targetDir, names = DIAGNOSTIC_LOG_N
   const destination = diagnosticDestination(targetDir);
   try {
     await mkdir(destination, { recursive: true, mode: 0o700 });
+    // mkdir's mode does not tighten an existing directory; secure it before copying.
+    await chmod(destination, 0o700);
     for (const name of names) {
       await copyDiagnosticFile(join(targetDir, name), join(destination, name));
     }
@@ -67,6 +69,8 @@ export function preserveDiagnosticLogsSync(targetDir, names = DIAGNOSTIC_LOG_NAM
   const destination = diagnosticDestination(targetDir);
   try {
     mkdirSync(destination, { recursive: true, mode: 0o700 });
+    // mkdir's mode does not tighten an existing directory; secure it before copying.
+    chmodSync(destination, 0o700);
     for (const name of names) {
       copyDiagnosticFileSync(join(targetDir, name), join(destination, name));
     }

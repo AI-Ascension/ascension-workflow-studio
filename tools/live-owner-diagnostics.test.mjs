@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
@@ -160,6 +160,38 @@ test("the diagnostic destination directory is not group- or world-traversable", 
       }
     });
   }
+});
+
+test("preserveDiagnosticLogs privatizes an existing 0755 destination before copying", async () => {
+  await withIsolatedDiagnosticsRoot(async ({ workspace }) => {
+    const targetDir = await makeFixtureDir(workspace, { "gateway.log": "pre-existing async diagnostics\n" });
+    const destination = diagnosticDestination(targetDir);
+    await mkdir(destination, { recursive: true, mode: 0o700 });
+    await chmod(destination, 0o755);
+    assert.equal((await stat(destination)).mode & 0o777, 0o755, "test precondition must be a permissive existing directory");
+
+    assert.equal(await preserveDiagnosticLogs(targetDir), destination);
+    assert.equal((await stat(destination)).mode & 0o777, 0o700);
+    const copied = join(destination, "gateway.log");
+    assert.equal(await readFile(copied, "utf8"), "pre-existing async diagnostics\n");
+    assert.equal((await stat(copied)).mode & 0o777, 0o600);
+  });
+});
+
+test("preserveDiagnosticLogsSync privatizes an existing 0755 destination before copying", async () => {
+  await withIsolatedDiagnosticsRoot(async ({ workspace }) => {
+    const targetDir = await makeFixtureDir(workspace, { "gateway.log": "pre-existing sync diagnostics\n" });
+    const destination = diagnosticDestination(targetDir);
+    await mkdir(destination, { recursive: true, mode: 0o700 });
+    await chmod(destination, 0o755);
+    assert.equal((await stat(destination)).mode & 0o777, 0o755, "test precondition must be a permissive existing directory");
+
+    assert.equal(preserveDiagnosticLogsSync(targetDir), destination);
+    assert.equal((await stat(destination)).mode & 0o777, 0o700);
+    const copied = join(destination, "gateway.log");
+    assert.equal(await readFile(copied, "utf8"), "pre-existing sync diagnostics\n");
+    assert.equal((await stat(copied)).mode & 0o777, 0o600);
+  });
 });
 
 test("DIAGNOSTIC_LOG_NAMES covers the evidence AC1 requires", () => {
