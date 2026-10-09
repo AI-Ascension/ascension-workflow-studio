@@ -1,0 +1,17 @@
+{
+  "label": "body-over-cap",
+  "mode": "identity",
+  "input_sha256": "3fe2f41d8a1c5d5120d53443bf8c393c5eed42a96adc238d039d24cfa57c7618",
+  "input_bytes": 1048577,
+  "producer_output_sha256": "995d7d57d5bcf7787cc0f060c3628d50013ae38438b3cd00e0faa1bdae50b915",
+  "producer_binary_sha256": "c7b27ed1e123633be7919a85569bdf31c21fbf948e3257a7f5b531b511a953a9",
+  "oracle_receipt_sha256": "aeef34136e3999272d653f033efcab23e9b71fbef081821e360c06f14487af6d",
+  "expected_accepted": false,
+  "evidence_class": "synthetic_pinned_production_identity_seam",
+  "input_base64": "eyJjb25zb2xlIjp7Imlzc3VlciI6Imh0dHBzOi8vaXNzdWVyLmludmFsaWQiLCJzdWJqZWN0IjoiYWN0b3ItMSIsImF1ZGllbmNlIjoic3R1ZGlvIiwiY3JlZGVudGlhbF9pZCI6ImNyZWRlbnRpYWwtMSIsImdyYW50X2lkIjoiZ3JhbnQtMSIsImdyYW50X2dlbmVyYXRpb24iOjAsImdyYW50X2V4cGlyZXNfYXQiOjF9LCJjb25zb2xlX3Njb3BlIjp7InByb2plY3RfaWQiOiJwcm9qZWN0LTEiLCJydW5faWQiOiJydW4tMSIsImVwaXNvZGVfaWQiOiJlcGlzb2RlLTEiLCJhZ2VudF9pZCI6ImFnZW50LTEifSwiaGFybmVzcyI6eyJhY3Rvcl9zdWJqZWN0IjoiYWN0b3ItMSIsIm93bmVyX2lkIjoib3duZXItMSIsIndvcmtmbG93X3J1bl9pZCI6InJ1bi0xIiwiY3JlZGVudGlhbF9yZWZlcmVuY2VfaWQiOiJyZWZlcmVuY2UtMSIsImNyZWRlbnRpYWxfZXhwaXJlc19hdCI6MX19",
+  "padding_spaces": 1048139,
+  "expected_refusal": {
+    "kind": "out_of_bounds",
+    "field": "json_body"
+  }
+}

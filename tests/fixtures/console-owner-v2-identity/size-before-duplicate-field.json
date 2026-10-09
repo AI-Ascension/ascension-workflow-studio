@@ -1,0 +1,17 @@
+{
+  "label": "size-before-duplicate-field",
+  "mode": "identity",
+  "input_sha256": "e874042b932f229c3f721f988d98aa844ca12cf32cdf42533fff8f9c4c8088d5",
+  "input_bytes": 1048577,
+  "producer_output_sha256": "995d7d57d5bcf7787cc0f060c3628d50013ae38438b3cd00e0faa1bdae50b915",
+  "producer_binary_sha256": "c7b27ed1e123633be7919a85569bdf31c21fbf948e3257a7f5b531b511a953a9",
+  "oracle_receipt_sha256": "b8ea7c672f879ca244e26bdbc92ec3d306a2c249846e64ce8199904060d846d4",
+  "expected_accepted": false,
+  "evidence_class": "synthetic_pinned_production_identity_seam",
+  "input_base64": "eyJjb25zb2xlIjp7Imlzc3VlciI6Imh0dHBzOi8vaXNzdWVyLmludmFsaWQiLCJzdWJqZWN0IjoiYWN0b3ItMSIsImF1ZGllbmNlIjoic3R1ZGlvIiwiY3JlZGVudGlhbF9pZCI6ImNyZWRlbnRpYWwtMSIsImdyYW50X2lkIjoiZ3JhbnQtMSIsImdyYW50X2dlbmVyYXRpb24iOjAsImdyYW50X2dlbmVyYXRpb24iOjEsImdyYW50X2V4cGlyZXNfYXQiOjF9LCJjb25zb2xlX3Njb3BlIjp7InByb2plY3RfaWQiOiJwcm9qZWN0LTEiLCJydW5faWQiOiJydW4tMSIsImVwaXNvZGVfaWQiOiJlcGlzb2RlLTEiLCJhZ2VudF9pZCI6ImFnZW50LTEifSwiaGFybmVzcyI6eyJhY3Rvcl9zdWJqZWN0IjoiYWN0b3ItMSIsIm93bmVyX2lkIjoib3duZXItMSIsIndvcmtmbG93X3J1bl9pZCI6InJ1bi0xIiwiY3JlZGVudGlhbF9yZWZlcmVuY2VfaWQiOiJyZWZlcmVuY2UtMSIsImNyZWRlbnRpYWxfZXhwaXJlc19hdCI6MX19",
+  "padding_spaces": 1048118,
+  "expected_refusal": {
+    "kind": "out_of_bounds",
+    "field": "json_body"
+  }
+}

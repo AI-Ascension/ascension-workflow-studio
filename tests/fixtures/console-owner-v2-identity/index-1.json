@@ -1,0 +1,152 @@
+[
+  {
+    "label": "valid-generation-zero",
+    "file": "valid-generation-zero.json",
+    "mode": "identity",
+    "sha256": "6a405d8eb6a3e3b654a35f799c49b73e87836a6e4ae93c7d4633c5a33edb0832"
+  },
+  {
+    "label": "valid-u64-9007199254740992",
+    "file": "valid-u64-9007199254740992.json",
+    "mode": "identity",
+    "sha256": "9cbd9dbe9c83e778b7757588f30ecb218860e1ffe7996ca888826f96e28c87c6"
+  },
+  {
+    "label": "valid-u64-9007199254740993",
+    "file": "valid-u64-9007199254740993.json",
+    "mode": "identity",
+    "sha256": "2f3ea598a6805bf4514ffd1ec73f0184de926790bd725e8de08575425d226492"
+  },
+  {
+    "label": "valid-u64-18446744073709551614",
+    "file": "valid-u64-18446744073709551614.json",
+    "mode": "identity",
+    "sha256": "fd8667b7db731e71fdf227a56342eb0b774c5aa39d0a4a63792716561468d622"
+  },
+  {
+    "label": "valid-u64-18446744073709551615",
+    "file": "valid-u64-18446744073709551615.json",
+    "mode": "identity",
+    "sha256": "f73fe4e11a7658cf8a7ae0bf47570edeb1c7d22e387e854f243b357e3c5d99d8"
+  },
+  {
+    "label": "generation-minus-zero",
+    "file": "generation-minus-zero.json",
+    "mode": "identity",
+    "sha256": "98ff836c288d1f11b2a37837210e4ec27ba7b951bd6ce81b4b520788f6e2d6ce"
+  },
+  {
+    "label": "generation-negative",
+    "file": "generation-negative.json",
+    "mode": "identity",
+    "sha256": "3157086d7867c3499255900fcac6e5ba8ba8ac2191300a4d2933446806282586"
+  },
+  {
+    "label": "generation-fraction",
+    "file": "generation-fraction.json",
+    "mode": "identity",
+    "sha256": "5e321fb09ebde99ed846af0b24fd91319a89e20ea1c17ac98ad9809607326533"
+  },
+  {
+    "label": "generation-exponent",
+    "file": "generation-exponent.json",
+    "mode": "identity",
+    "sha256": "dda63187a5048886733afb718e9c8152d4683b99863a9596ee74cce08d2e3fb4"
+  },
+  {
+    "label": "generation-overflow",
+    "file": "generation-overflow.json",
+    "mode": "identity",
+    "sha256": "ab8ee51a427bcf138c94231658e9b936626f10e307e55c089385e41cc3ceded5"
+  },
+  {
+    "label": "generation-string",
+    "file": "generation-string.json",
+    "mode": "identity",
+    "sha256": "231aa15c4ba6719c96bbc8367499cffdd0f109499152064a130911b3060348db"
+  },
+  {
+    "label": "generation-null",
+    "file": "generation-null.json",
+    "mode": "identity",
+    "sha256": "bfecf694360f743dade6e858f1308b958b3caf727136f87ac8ed3b51b0779934"
+  },
+  {
+    "label": "generation-boolean",
+    "file": "generation-boolean.json",
+    "mode": "identity",
+    "sha256": "8de5f473f26c5db8bdbf54fd014111f6da9ce156274bed27046f063a6f618ad5"
+  },
+  {
+    "label": "grant_expires_at-zero",
+    "file": "grant_expires_at-zero.json",
+    "mode": "identity",
+    "sha256": "9bfa489e9bcbdc257807ca885cd541a69a3f505e7e5a37059fb3e1d609e0af53"
+  },
+  {
+    "label": "credential_expires_at-zero",
+    "file": "credential_expires_at-zero.json",
+    "mode": "identity",
+    "sha256": "ce0fb45874447d10bb7b0c196f4d9ee1271a21bcdd6b53c61c41f1388b27fc60"
+  },
+  {
+    "label": "console-unknown",
+    "file": "console-unknown.json",
+    "mode": "identity",
+    "sha256": "bf5fb9bb2b3478889b115271aec0ee4b73176c55a1ddf91a7f4157d5ec250dc3"
+  },
+  {
+    "label": "console-missing",
+    "file": "console-missing.json",
+    "mode": "identity",
+    "sha256": "f9f0a6fc6cf5d06413450299cd529f22b4b91e57f39553fe182c59ad7fc22bab"
+  },
+  {
+    "label": "console-wrong-type",
+    "file": "console-wrong-type.json",
+    "mode": "identity",
+    "sha256": "93a78e45e96d6a79116489b9895c83a216e28ad0d3a9d6a2473020118e08f5aa"
+  },
+  {
+    "label": "console_scope-unknown",
+    "file": "console_scope-unknown.json",
+    "mode": "identity",
+    "sha256": "d917a796bd003266985aacba0465b347a6dd5ef76c86c83d6e72a9037db246cb"
+  },
+  {
+    "label": "console_scope-missing",
+    "file": "console_scope-missing.json",
+    "mode": "identity",
+    "sha256": "69c10212d19254f41779b156611fc24bc7cd28333c1e48d6136e070e0c0b8654"
+  },
+  {
+    "label": "console_scope-wrong-type",
+    "file": "console_scope-wrong-type.json",
+    "mode": "identity",
+    "sha256": "3ab0e9f414355f7186c78072f524e11f49aa0e16260c339a5f72043fb030d353"
+  },
+  {
+    "label": "harness-unknown",
+    "file": "harness-unknown.json",
+    "mode": "identity",
+    "sha256": "c7b51d1709dcfdd655d12e3592ccb76d760b787b9358a4a836ac521ca64b98c1"
+  },
+  {
+    "label": "harness-missing",
+    "file": "harness-missing.json",
+    "mode": "identity",
+    "sha256": "3a54f92811427c3b5bc43bbcd007cba55ea20668ee450ebaf37d8ffbb5ea937f"
+  },
+  {
+    "label": "harness-wrong-type",
+    "file": "harness-wrong-type.json",
+    "mode": "identity",
+    "sha256": "fe3cdb17e3188ea27a6adddbb7d9d9eed726ce8d6863d8882c91b12ccd15f71b"
+  },
+  {
+    "label": "actor_subject-mismatch",
+    "file": "actor_subject-mismatch.json",
+    "mode": "identity",
+    "sha256": "6b21227f951e98285816df7ce33e57203ab2be3482a41dee1ccced6e19da522b"
+  }
+]

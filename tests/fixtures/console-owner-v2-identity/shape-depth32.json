@@ -1,0 +1,13 @@
+{
+  "label": "shape-depth32",
+  "mode": "shape",
+  "input_sha256": "aa6b4827b4b9b0503263d3a0f1b0cc38801d46f505e7899a109d8210c34fd537",
+  "input_bytes": 63,
+  "producer_output_sha256": "11a49f853eb8befe94fef278d487125cd20930b9e41c4c0934394443e7f00878",
+  "producer_binary_sha256": "c7b27ed1e123633be7919a85569bdf31c21fbf948e3257a7f5b531b511a953a9",
+  "oracle_receipt_sha256": "aeef34136e3999272d653f033efcab23e9b71fbef081821e360c06f14487af6d",
+  "expected_accepted": true,
+  "evidence_class": "synthetic_pinned_production_identity_seam",
+  "input_base64": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbWzBdXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1d",
+  "padding_spaces": 0
+}

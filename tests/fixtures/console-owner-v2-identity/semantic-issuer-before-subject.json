@@ -1,0 +1,17 @@
+{
+  "label": "semantic-issuer-before-subject",
+  "mode": "identity",
+  "input_sha256": "9a5b417fd1322d30d24944a84a6cfe928157b254a61d740174aca32e95ddd860",
+  "input_bytes": 416,
+  "producer_output_sha256": "0b6a452d055f76d591db577997c853dedc759ffcefa89a5745c7d343f784a3db",
+  "producer_binary_sha256": "c7b27ed1e123633be7919a85569bdf31c21fbf948e3257a7f5b531b511a953a9",
+  "oracle_receipt_sha256": "b8ea7c672f879ca244e26bdbc92ec3d306a2c249846e64ce8199904060d846d4",
+  "expected_accepted": false,
+  "evidence_class": "synthetic_pinned_production_identity_seam",
+  "input_base64": "eyJjb25zb2xlIjp7Imlzc3VlciI6Ilx1MDA4NSIsInN1YmplY3QiOiI/IiwiYXVkaWVuY2UiOiJzdHVkaW8iLCJjcmVkZW50aWFsX2lkIjoiY3JlZGVudGlhbC0xIiwiZ3JhbnRfaWQiOiJncmFudC0xIiwiZ3JhbnRfZ2VuZXJhdGlvbiI6MCwiZ3JhbnRfZXhwaXJlc19hdCI6MX0sImNvbnNvbGVfc2NvcGUiOnsicHJvamVjdF9pZCI6InByb2plY3QtMSIsInJ1bl9pZCI6InJ1bi0xIiwiZXBpc29kZV9pZCI6ImVwaXNvZGUtMSIsImFnZW50X2lkIjoiYWdlbnQtMSJ9LCJoYXJuZXNzIjp7ImFjdG9yX3N1YmplY3QiOiJhY3Rvci0xIiwib3duZXJfaWQiOiJvd25lci0xIiwid29ya2Zsb3dfcnVuX2lkIjoicnVuLTEiLCJjcmVkZW50aWFsX3JlZmVyZW5jZV9pZCI6InJlZmVyZW5jZS0xIiwiY3JlZGVudGlhbF9leHBpcmVzX2F0IjoxfX0=",
+  "padding_spaces": 0,
+  "expected_refusal": {
+    "kind": "invalid_identifier",
+    "field": "console_issuer"
+  }
+}

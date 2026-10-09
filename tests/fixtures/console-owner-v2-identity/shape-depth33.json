@@ -1,0 +1,17 @@
+{
+  "label": "shape-depth33",
+  "mode": "shape",
+  "input_sha256": "4e04cac422d9ecd4a5f6221653eeb4eaf29077cf3f588cd36bf6dc8ead76971f",
+  "input_bytes": 65,
+  "producer_output_sha256": "62d110d2b14963b854bf8a0658b1b200a4b9eaf1c630749fe0801c938a6f8a56",
+  "producer_binary_sha256": "c7b27ed1e123633be7919a85569bdf31c21fbf948e3257a7f5b531b511a953a9",
+  "oracle_receipt_sha256": "aeef34136e3999272d653f033efcab23e9b71fbef081821e360c06f14487af6d",
+  "expected_accepted": false,
+  "evidence_class": "synthetic_pinned_production_identity_seam",
+  "input_base64": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1swXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV0=",
+  "padding_spaces": 0,
+  "expected_refusal": {
+    "kind": "out_of_bounds",
+    "field": "json_shape"
+  }
+}
