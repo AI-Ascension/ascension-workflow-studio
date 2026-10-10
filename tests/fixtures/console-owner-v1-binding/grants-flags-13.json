@@ -1,0 +1,60 @@
+{
+  "expected": {
+    "accepted": true,
+    "binding": {
+      "approved_revision_id": "revision-1",
+      "binding_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "binding_id": "binding-1",
+      "binding_version": "1",
+      "boundary": {
+        "adapter_revision": "adapter-1",
+        "agent_id": "agent-1",
+        "catalog_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "configuration_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "control_version": "4",
+        "controller_epoch": "2",
+        "episode_id": "episode-1",
+        "gate_epoch": "3",
+        "generation": "1",
+        "model_revision": "model-1",
+        "observation_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "output_schema_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "run_id": "run-1",
+        "state_id": "state-1"
+      },
+      "context_ref": "context-1",
+      "continuity": {
+        "provider_session_continuity": false,
+        "receipt_recovery": false,
+        "survives_controller_restart": false
+      },
+      "definition_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "grants": {
+        "content_read": true,
+        "control": true,
+        "edit": false,
+        "metadata_read": true
+      },
+      "graph_id": "graph-1",
+      "instance_id": "instance-1",
+      "invocation_id": "invocation-1",
+      "lease_epoch": "2",
+      "node_execution_id": "execution-1",
+      "node_id": "node-1",
+      "node_kind": "decision",
+      "owner_id": "owner-1",
+      "owner_version": "owner-v1",
+      "plan_epoch": "3",
+      "schema_version": "ascension.context-control.owner-binding.v1",
+      "snapshot_id": "snapshot-1",
+      "state": "available",
+      "workflow_run_id": "run-1"
+    }
+  },
+  "id": "grants-flags-13",
+  "input_base64": "eyJzY2hlbWFfdmVyc2lvbiI6ImFzY2Vuc2lvbi5jb250ZXh0LWNvbnRyb2wub3duZXItYmluZGluZy52MSIsIm93bmVyX2lkIjoib3duZXItMSIsIm93bmVyX3ZlcnNpb24iOiJvd25lci12MSIsImludm9jYXRpb25faWQiOiJpbnZvY2F0aW9uLTEiLCJiaW5kaW5nX2lkIjoiYmluZGluZy0xIiwiYmluZGluZ192ZXJzaW9uIjoxLCJiaW5kaW5nX2RpZ2VzdCI6ImVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWUiLCJjb250ZXh0X3JlZiI6ImNvbnRleHQtMSIsImluc3RhbmNlX2lkIjoiaW5zdGFuY2UtMSIsIm5vZGVfa2luZCI6ImRlY2lzaW9uIiwic3RhdGUiOiJhdmFpbGFibGUiLCJ3b3JrZmxvd19ydW5faWQiOiJydW4tMSIsImRlZmluaXRpb25fZGlnZXN0IjoiZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZiIsImdyYXBoX2lkIjoiZ3JhcGgtMSIsIm5vZGVfaWQiOiJub2RlLTEiLCJub2RlX2V4ZWN1dGlvbl9pZCI6ImV4ZWN1dGlvbi0xIiwiYm91bmRhcnkiOnsicnVuX2lkIjoicnVuLTEiLCJlcGlzb2RlX2lkIjoiZXBpc29kZS0xIiwiYWdlbnRfaWQiOiJhZ2VudC0xIiwic3RhdGVfaWQiOiJzdGF0ZS0xIiwiZ2VuZXJhdGlvbiI6MSwib2JzZXJ2YXRpb25fc2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsImNhdGFsb2dfc2hhMjU2IjoiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYiIsImFkYXB0ZXJfcmV2aXNpb24iOiJhZGFwdGVyLTEiLCJtb2RlbF9yZXZpc2lvbiI6Im1vZGVsLTEiLCJjb25maWd1cmF0aW9uX3NoYTI1NiI6ImNjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2MiLCJvdXRwdXRfc2NoZW1hX3NoYTI1NiI6ImRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQiLCJjb250cm9sbGVyX2Vwb2NoIjoyLCJnYXRlX2Vwb2NoIjozLCJjb250cm9sX3ZlcnNpb24iOjR9LCJsZWFzZV9lcG9jaCI6Miwic25hcHNob3RfaWQiOiJzbmFwc2hvdC0xIiwiYXBwcm92ZWRfcmV2aXNpb25faWQiOiJyZXZpc2lvbi0xIiwicGxhbl9lcG9jaCI6MywiZ3JhbnRzIjp7Im1ldGFkYXRhX3JlYWQiOnRydWUsImNvbnRlbnRfcmVhZCI6dHJ1ZSwiZWRpdCI6ZmFsc2UsImNvbnRyb2wiOnRydWV9LCJjb250aW51aXR5Ijp7InN1cnZpdmVzX2NvbnRyb2xsZXJfcmVzdGFydCI6ZmFsc2UsInJlY2VpcHRfcmVjb3ZlcnkiOmZhbHNlLCJwcm92aWRlcl9zZXNzaW9uX2NvbnRpbnVpdHkiOmZhbHNlfX0=",
+  "input_sha256": "ced1d7d4fd4bdc6b6ef1e0ee3146e49dd970451c2e4ceabd37e3e250b9c52512",
+  "observation_sha256": "74d1834367deb25f24aa4991cb8921759c49256cd17d6101ca01b743c7d2997b",
+  "producer_wire_base64": "eyJzY2hlbWFfdmVyc2lvbiI6ImFzY2Vuc2lvbi5jb250ZXh0LWNvbnRyb2wub3duZXItYmluZGluZy52MSIsIm93bmVyX2lkIjoib3duZXItMSIsIm93bmVyX3ZlcnNpb24iOiJvd25lci12MSIsImludm9jYXRpb25faWQiOiJpbnZvY2F0aW9uLTEiLCJiaW5kaW5nX2lkIjoiYmluZGluZy0xIiwiYmluZGluZ192ZXJzaW9uIjoxLCJiaW5kaW5nX2RpZ2VzdCI6ImVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWUiLCJjb250ZXh0X3JlZiI6ImNvbnRleHQtMSIsImluc3RhbmNlX2lkIjoiaW5zdGFuY2UtMSIsIm5vZGVfa2luZCI6ImRlY2lzaW9uIiwic3RhdGUiOiJhdmFpbGFibGUiLCJ3b3JrZmxvd19ydW5faWQiOiJydW4tMSIsImRlZmluaXRpb25fZGlnZXN0IjoiZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZiIsImdyYXBoX2lkIjoiZ3JhcGgtMSIsIm5vZGVfaWQiOiJub2RlLTEiLCJub2RlX2V4ZWN1dGlvbl9pZCI6ImV4ZWN1dGlvbi0xIiwiYm91bmRhcnkiOnsicnVuX2lkIjoicnVuLTEiLCJlcGlzb2RlX2lkIjoiZXBpc29kZS0xIiwiYWdlbnRfaWQiOiJhZ2VudC0xIiwic3RhdGVfaWQiOiJzdGF0ZS0xIiwiZ2VuZXJhdGlvbiI6MSwib2JzZXJ2YXRpb25fc2hhMjU2IjoiYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYSIsImNhdGFsb2dfc2hhMjU2IjoiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYiIsImFkYXB0ZXJfcmV2aXNpb24iOiJhZGFwdGVyLTEiLCJtb2RlbF9yZXZpc2lvbiI6Im1vZGVsLTEiLCJjb25maWd1cmF0aW9uX3NoYTI1NiI6ImNjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2MiLCJvdXRwdXRfc2NoZW1hX3NoYTI1NiI6ImRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGQiLCJjb250cm9sbGVyX2Vwb2NoIjoyLCJnYXRlX2Vwb2NoIjozLCJjb250cm9sX3ZlcnNpb24iOjR9LCJsZWFzZV9lcG9jaCI6Miwic25hcHNob3RfaWQiOiJzbmFwc2hvdC0xIiwiYXBwcm92ZWRfcmV2aXNpb25faWQiOiJyZXZpc2lvbi0xIiwicGxhbl9lcG9jaCI6MywiZ3JhbnRzIjp7Im1ldGFkYXRhX3JlYWQiOnRydWUsImNvbnRlbnRfcmVhZCI6dHJ1ZSwiZWRpdCI6ZmFsc2UsImNvbnRyb2wiOnRydWV9LCJjb250aW51aXR5Ijp7InN1cnZpdmVzX2NvbnRyb2xsZXJfcmVzdGFydCI6ZmFsc2UsInJlY2VpcHRfcmVjb3ZlcnkiOmZhbHNlLCJwcm92aWRlcl9zZXNzaW9uX2NvbnRpbnVpdHkiOmZhbHNlfX0=",
+  "producer_wire_sha256": "ced1d7d4fd4bdc6b6ef1e0ee3146e49dd970451c2e4ceabd37e3e250b9c52512"
+}
