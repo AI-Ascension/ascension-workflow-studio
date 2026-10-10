@@ -1,0 +1,60 @@
+{
+  "expected": {
+    "accepted": true,
+    "binding": {
+      "approved_revision_id": "revision-1",
+      "binding_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "binding_id": "binding-1",
+      "binding_version": "1",
+      "boundary": {
+        "adapter_revision": "adapter-1",
+        "agent_id": "agent-1",
+        "catalog_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "configuration_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "control_version": "4",
+        "controller_epoch": "2",
+        "episode_id": "episode-1",
+        "gate_epoch": "3",
+        "generation": "1",
+        "model_revision": "model-1",
+        "observation_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "output_schema_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "run_id": "run-1",
+        "state_id": "state-1"
+      },
+      "context_ref": "context-1",
+      "continuity": {
+        "provider_session_continuity": false,
+        "receipt_recovery": false,
+        "survives_controller_restart": false
+      },
+      "definition_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "grants": {
+        "content_read": false,
+        "control": false,
+        "edit": false,
+        "metadata_read": false
+      },
+      "graph_id": "graph-1",
+      "instance_id": "instance-1",
+      "invocation_id": "invocation-1",
+      "lease_epoch": "2",
+      "node_execution_id": "execution-1",
+      "node_id": "node-1",
+      "node_kind": "decision",
+      "owner_id": "owner-1",
+      "owner_version": "owner-v1",
+      "plan_epoch": "3",
+      "schema_version": "ascension.context-control.owner-binding.v1",
+      "snapshot_id": "snapshot-1",
+      "state": "disabled",
+      "workflow_run_id": "run-1"
+    }
+  },
+  "id": "disabled-with-no-grants",
+  "input_base64": "eyJzY2hlbWFfdmVyc2lvbiI6ImFzY2Vuc2lvbi5jb250ZXh0LWNvbnRyb2wub3duZXItYmluZGluZy52MSIsIm93bmVyX2lkIjoib3duZXItMSIsIm93bmVyX3ZlcnNpb24iOiJvd25lci12MSIsImludm9jYXRpb25faWQiOiJpbnZvY2F0aW9uLTEiLCJiaW5kaW5nX2lkIjoiYmluZGluZy0xIiwiYmluZGluZ192ZXJzaW9uIjoxLCJiaW5kaW5nX2RpZ2VzdCI6ImVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWUiLCJjb250ZXh0X3JlZiI6ImNvbnRleHQtMSIsImluc3RhbmNlX2lkIjoiaW5zdGFuY2UtMSIsIm5vZGVfa2luZCI6ImRlY2lzaW9uIiwic3RhdGUiOiJkaXNhYmxlZCIsIndvcmtmbG93X3J1bl9pZCI6InJ1bi0xIiwiZGVmaW5pdGlvbl9kaWdlc3QiOiJmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmIiwiZ3JhcGhfaWQiOiJncmFwaC0xIiwibm9kZV9pZCI6Im5vZGUtMSIsIm5vZGVfZXhlY3V0aW9uX2lkIjoiZXhlY3V0aW9uLTEiLCJib3VuZGFyeSI6eyJydW5faWQiOiJydW4tMSIsImVwaXNvZGVfaWQiOiJlcGlzb2RlLTEiLCJhZ2VudF9pZCI6ImFnZW50LTEiLCJzdGF0ZV9pZCI6InN0YXRlLTEiLCJnZW5lcmF0aW9uIjoxLCJvYnNlcnZhdGlvbl9zaGEyNTYiOiJhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIiwiY2F0YWxvZ19zaGEyNTYiOiJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiIiwiYWRhcHRlcl9yZXZpc2lvbiI6ImFkYXB0ZXItMSIsIm1vZGVsX3JldmlzaW9uIjoibW9kZWwtMSIsImNvbmZpZ3VyYXRpb25fc2hhMjU2IjoiY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjYyIsIm91dHB1dF9zY2hlbWFfc2hhMjU2IjoiZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZCIsImNvbnRyb2xsZXJfZXBvY2giOjIsImdhdGVfZXBvY2giOjMsImNvbnRyb2xfdmVyc2lvbiI6NH0sImxlYXNlX2Vwb2NoIjoyLCJzbmFwc2hvdF9pZCI6InNuYXBzaG90LTEiLCJhcHByb3ZlZF9yZXZpc2lvbl9pZCI6InJldmlzaW9uLTEiLCJwbGFuX2Vwb2NoIjozLCJncmFudHMiOnsibWV0YWRhdGFfcmVhZCI6ZmFsc2UsImNvbnRlbnRfcmVhZCI6ZmFsc2UsImVkaXQiOmZhbHNlLCJjb250cm9sIjpmYWxzZX0sImNvbnRpbnVpdHkiOnsic3Vydml2ZXNfY29udHJvbGxlcl9yZXN0YXJ0IjpmYWxzZSwicmVjZWlwdF9yZWNvdmVyeSI6ZmFsc2UsInByb3ZpZGVyX3Nlc3Npb25fY29udGludWl0eSI6ZmFsc2V9fQ==",
+  "input_sha256": "37cb230db44c2b394aa12be3ea6bd6524ff10bc44b3d76da69d0aa60bb82ad7c",
+  "observation_sha256": "b2a99ee15056661ab7056af15bec640be0f94f8941a237da55942ac6e46fda06",
+  "producer_wire_base64": "eyJzY2hlbWFfdmVyc2lvbiI6ImFzY2Vuc2lvbi5jb250ZXh0LWNvbnRyb2wub3duZXItYmluZGluZy52MSIsIm93bmVyX2lkIjoib3duZXItMSIsIm93bmVyX3ZlcnNpb24iOiJvd25lci12MSIsImludm9jYXRpb25faWQiOiJpbnZvY2F0aW9uLTEiLCJiaW5kaW5nX2lkIjoiYmluZGluZy0xIiwiYmluZGluZ192ZXJzaW9uIjoxLCJiaW5kaW5nX2RpZ2VzdCI6ImVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWUiLCJjb250ZXh0X3JlZiI6ImNvbnRleHQtMSIsImluc3RhbmNlX2lkIjoiaW5zdGFuY2UtMSIsIm5vZGVfa2luZCI6ImRlY2lzaW9uIiwic3RhdGUiOiJkaXNhYmxlZCIsIndvcmtmbG93X3J1bl9pZCI6InJ1bi0xIiwiZGVmaW5pdGlvbl9kaWdlc3QiOiJmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmIiwiZ3JhcGhfaWQiOiJncmFwaC0xIiwibm9kZV9pZCI6Im5vZGUtMSIsIm5vZGVfZXhlY3V0aW9uX2lkIjoiZXhlY3V0aW9uLTEiLCJib3VuZGFyeSI6eyJydW5faWQiOiJydW4tMSIsImVwaXNvZGVfaWQiOiJlcGlzb2RlLTEiLCJhZ2VudF9pZCI6ImFnZW50LTEiLCJzdGF0ZV9pZCI6InN0YXRlLTEiLCJnZW5lcmF0aW9uIjoxLCJvYnNlcnZhdGlvbl9zaGEyNTYiOiJhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhIiwiY2F0YWxvZ19zaGEyNTYiOiJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiIiwiYWRhcHRlcl9yZXZpc2lvbiI6ImFkYXB0ZXItMSIsIm1vZGVsX3JldmlzaW9uIjoibW9kZWwtMSIsImNvbmZpZ3VyYXRpb25fc2hhMjU2IjoiY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjYyIsIm91dHB1dF9zY2hlbWFfc2hhMjU2IjoiZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZCIsImNvbnRyb2xsZXJfZXBvY2giOjIsImdhdGVfZXBvY2giOjMsImNvbnRyb2xfdmVyc2lvbiI6NH0sImxlYXNlX2Vwb2NoIjoyLCJzbmFwc2hvdF9pZCI6InNuYXBzaG90LTEiLCJhcHByb3ZlZF9yZXZpc2lvbl9pZCI6InJldmlzaW9uLTEiLCJwbGFuX2Vwb2NoIjozLCJncmFudHMiOnsibWV0YWRhdGFfcmVhZCI6ZmFsc2UsImNvbnRlbnRfcmVhZCI6ZmFsc2UsImVkaXQiOmZhbHNlLCJjb250cm9sIjpmYWxzZX0sImNvbnRpbnVpdHkiOnsic3Vydml2ZXNfY29udHJvbGxlcl9yZXN0YXJ0IjpmYWxzZSwicmVjZWlwdF9yZWNvdmVyeSI6ZmFsc2UsInByb3ZpZGVyX3Nlc3Npb25fY29udGludWl0eSI6ZmFsc2V9fQ==",
+  "producer_wire_sha256": "37cb230db44c2b394aa12be3ea6bd6524ff10bc44b3d76da69d0aa60bb82ad7c"
+}

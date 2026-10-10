@@ -17,6 +17,11 @@ export function expectString(value: BoundedJsonValue): string {
   return value;
 }
 
+export function expectBoolean(value: BoundedJsonValue): boolean {
+  if (typeof value !== "boolean") refuseJson();
+  return value;
+}
+
 export function expectU64(value: BoundedJsonValue): bigint {
   if (value === null || typeof value !== "object" || Array.isArray(value) || !isNumber(value)) refuseJson();
   const token = (value as RawJsonNumber).token;

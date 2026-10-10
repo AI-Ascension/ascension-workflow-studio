@@ -1,0 +1,13 @@
+{
+  "expected": {
+    "accepted": false,
+    "refusal": {
+      "kind": "json_decoding"
+    }
+  },
+  "id": "array-depth32-not-binding",
+  "input_base64": "W1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbW1tbWzBdXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1d",
+  "input_sha256": "aa6b4827b4b9b0503263d3a0f1b0cc38801d46f505e7899a109d8210c34fd537",
+  "observation_sha256": "c1745802d448413f5c34fdb14f751dec80631fb4c03202df2e9517bf577775f8",
+  "observed_rust_debug_error": "JsonDecoding"
+}
