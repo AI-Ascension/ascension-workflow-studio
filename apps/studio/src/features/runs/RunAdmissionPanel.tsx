@@ -1,5 +1,6 @@
 import type {
   RunTargetConfiguration,
+  SubmissionRecoveryResponse,
   TargetAdmissionBinding,
   TargetCatalogResponse,
   TargetDescriptor,
@@ -16,6 +17,8 @@ export type RunAdmissionPhase =
   | "admitted"
   | "submitting"
   | "unknown"
+  | "recovering"
+  | "retryable"
   | "error";
 
 export interface RunTargetSelection {
@@ -29,6 +32,7 @@ export interface RunTargetSelection {
 }
 
 export interface PendingRun {
+  mode: "fixture" | "live";
   document: WorkflowDefinition;
   digest?: string;
   requestId: string;
@@ -38,6 +42,8 @@ export interface PendingRun {
   phase: RunAdmissionPhase;
   message?: string;
   liveConfirmed: boolean;
+  submissionAttempted?: boolean;
+  recovery?: SubmissionRecoveryResponse;
 }
 
 export type RunSelectionField = Exclude<keyof RunTargetSelection, "targetId">;
@@ -87,6 +93,8 @@ export interface RunAdmissionPanelProps {
   onRetryCatalog: () => void;
   onPreflight: () => void;
   onRetry: () => void;
+  onRecover: () => void;
+  onInspect: () => void;
   onSubmit: () => void;
   onTargetChange: (targetId: string) => void;
   onProfileChange: (field: RunSelectionField, value: string | null) => void;
@@ -102,6 +110,8 @@ function phaseLabel(phase: RunAdmissionPhase): string {
     case "admitted": return "Admission reviewed";
     case "submitting": return "Submitting run";
     case "unknown": return "Run outcome unknown";
+    case "recovering": return "Checking original submission";
+    case "retryable": return "Original request not recorded";
     case "error": return "Admission rejected";
   }
 }
@@ -142,14 +152,14 @@ function AdmissionSummary({ admission, digest, requestId }: { admission: TargetA
 }
 
 export function RunAdmissionPanel(props: RunAdmissionPanelProps): JSX.Element {
-  const { pending, onCancel, onRetryCatalog, onPreflight, onRetry, onSubmit, onTargetChange, onProfileChange, onLiveConfirmation } = props;
+  const { pending, onCancel, onRetryCatalog, onPreflight, onRetry, onRecover, onInspect, onSubmit, onTargetChange, onProfileChange, onLiveConfirmation } = props;
   const catalog = pending.catalog;
   const selection = pending.selection;
   const descriptor = selection ? catalog?.targets.find((target) => target.instance_id === selection.targetId) : undefined;
   const admitted = pending.phase === "admitted" && pending.admission ? pending.admission : undefined;
   const isLive = admitted?.target.execution_mode === "live";
-  const busy = pending.phase === "loading" || pending.phase === "preflighting" || pending.phase === "submitting";
-  const canChangeSelection = pending.phase !== "submitting" && pending.phase !== "unknown";
+  const busy = pending.phase === "loading" || pending.phase === "preflighting" || pending.phase === "submitting" || pending.phase === "recovering";
+  const canChangeSelection = !pending.submissionAttempted;
 
   return <section className="panel-card run-admission" aria-label="Run admission" aria-live="polite">
     <div className="panel-title">
@@ -166,7 +176,7 @@ export function RunAdmissionPanel(props: RunAdmissionPanelProps): JSX.Element {
       <button className="button button-quiet" onClick={onCancel}>Cancel run setup</button>
     </div> : null}
 
-    {pending.phase === "error" && !selection ? <div className="control-grid">
+    {pending.phase === "error" && !pending.submissionAttempted ? <div className="control-grid">
       <button className="button button-secondary" onClick={onRetryCatalog}>Refresh targets</button>
       <button className="button button-quiet" onClick={onCancel}>Cancel run setup</button>
     </div> : null}
@@ -242,9 +252,14 @@ export function RunAdmissionPanel(props: RunAdmissionPanelProps): JSX.Element {
 
     {pending.phase === "submitting" ? <p className="muted">Submitting the exact reviewed admission to the owner…</p> : null}
 
-    {pending.phase === "unknown" ? <div className="control-grid">
-      <button className="button button-secondary" onClick={onRetry}>Retry the same request</button>
-      <button className="button button-quiet" onClick={onCancel}>Cancel run setup</button>
-    </div> : null}
+    {pending.submissionAttempted && pending.phase !== "submitting" ? <>
+      <p>Retained request: <code>{pending.requestId}</code>. Keep this tab open until the owner outcome is reconciled.</p>
+      {pending.admission ? <AdmissionSummary admission={pending.admission} digest={pending.digest} requestId={pending.requestId} /> : null}
+      <div className="control-grid">
+        <button className="button button-secondary" onClick={onRecover} disabled={busy}>Check original submission</button>
+        {pending.phase === "retryable" ? <button className="button button-primary" onClick={onRetry}>Retry the same request</button> : null}
+        {pending.recovery?.workflow_run_id ? <button className="button button-secondary" onClick={onInspect}>Inspect retained run</button> : null}
+      </div>
+    </> : null}
   </section>;
 }
