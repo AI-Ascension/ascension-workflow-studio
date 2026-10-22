@@ -32,6 +32,7 @@ import {
   type RunEvent,
   type RunSnapshot,
   type RunSubmissionResponse,
+  type SubmissionRecoveryResponse,
   type StatusResponse,
   type TargetAdmissionBinding,
   type TargetAdmissionRequest,
@@ -373,6 +374,19 @@ export class FixtureClient implements StudioClient {
     const response = { schema_version: "ascension.workflow-run/v1", workflow_run_id: runId, run_revision: 1, status: "running" as const };
     this.submittedRuns.set(requestId, { fingerprint, response });
     return cloneJson(response);
+  }
+
+  /** Synthetic readback of this fixture's own in-memory submissions only. */
+  public async recoverRunSubmission(requestId: string): Promise<SubmissionRecoveryResponse> {
+    const submission = this.submittedRuns.get(requestId);
+    return submission ? {
+      schema_version: "ascension.workflow-submission/v1", request_id: requestId, state: "submitted",
+      workflow_run_id: submission.response.workflow_run_id,
+      response: { ...cloneJson(submission.response), schema_version: "ascension.management/v1" }, error: null,
+    } : {
+      schema_version: "ascension.workflow-submission/v1", request_id: requestId, state: "missing",
+      workflow_run_id: null, response: null, error: null,
+    };
   }
 
   public async status(runId: string): Promise<StatusResponse> {
