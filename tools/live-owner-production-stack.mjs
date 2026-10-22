@@ -2,11 +2,13 @@ import { createServer } from "node:http";
 import { createHash, randomBytes } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { connect as connectTcp } from "node:net";
+import { finished } from "node:stream/promises";
 import { chmod, rm, stat, writeFile } from "node:fs/promises";
 import {
   appendFileSync,
   chmodSync,
   createWriteStream,
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
@@ -102,6 +104,7 @@ const children = new Map();
 const spawnFailures = [];
 let fixtureServer;
 let closing = false;
+let cleanupStartedAt;
 let serviceEnvironment;
 let fixtureInfo;
 let modServer;
@@ -227,7 +230,7 @@ async function startFixtureStack() {
     }
     if (request.method === "POST" && request.url === "/restart") {
       try {
-        await stopChild(workflowService);
+        await stopChild(workflowService, "restart");
         workflowService = undefined;
         const evidence = verifyFixture();
         workflowService = startWorkflowService();
@@ -325,6 +328,10 @@ function startWorkflowService() {
 }
 
 function startGateway() {
+  appendDiagnosticLine(
+    gatewayErrorPath,
+    `== studio-live fixture: starting gateway at ${new Date().toISOString()} ==`,
+  );
   return startChild(gatewayBinary, [], {
     PATH: "/usr/bin:/bin",
     STS2_GATEWAY_ADDR: `127.0.0.1:${gatewayPort}`,
@@ -347,6 +354,7 @@ function startGateway() {
 // before anyone can read it.
 function startChild(command, args, env, logPath, capture) {
   assertActive();
+  const startedAt = new Date().toISOString();
   const output = createWriteStream(logPath, { flags: "a", mode: 0o600 });
   const child = spawn(command, args, {
     cwd: harnessRoot,
@@ -370,7 +378,14 @@ function startChild(command, args, env, logPath, capture) {
   // owned process from data this function was actually given. Only the
   // executable and its argv are recorded -- never the environment, which
   // carries the provider and context keys.
-  const entry = { child, output, logPath, command, args, spawnError: undefined };
+  const entry = { child, output, logPath, command, args, startedAt, spawnError: undefined };
+  // Attach error handlers before any asynchronous open/write can fail. A
+  // completed child is not a flushed capture: shutdown must wait for both.
+  const flushed = Promise.all([output, stdoutCapture, stderrCapture]
+    .filter(Boolean)
+    .map((stream) => finished(stream, { cleanup: true }).then(() => true, () => false)));
+  let finishClose;
+  entry.closed = new Promise((resolveClose) => { finishClose = resolveClose; });
   if (Number.isInteger(child.pid)) children.set(child.pid, entry);
   recordOwnedChildren();
   child.on("error", (error) => {
@@ -384,20 +399,32 @@ function startChild(command, args, env, logPath, capture) {
       spawnFailures.push({
         command,
         args: [...args],
+        started_at: startedAt,
+        spawn_error_at: new Date().toISOString(),
         spawn_error: String(error.code ?? error.message),
         exit: null,
       });
     }
     recordOwnedChildren();
   });
-  child.on("close", (code, signal) => {
-    // A child that stops answering is the observable fact #214 needs and that
-    // the captured stdout/stderr logs cannot supply: both are empty for a
-    // process that died mid-request, so the exit status is the only remaining
-    // evidence of whether the owner crashed, was signalled, or exited cleanly.
-    entry.exit = { code: code ?? null, signal: signal ?? null };
+  child.on("exit", (code, signal) => {
+    // Observe process exit independently of pipe closure. A descendant can
+    // keep a pipe open after the owner exits; using the later close timestamp
+    // could incorrectly attribute an in-window crash to final cleanup.
+    entry.exit = {
+      code: code ?? null,
+      signal: signal ?? null,
+      observed_at: new Date().toISOString(),
+      phase: closing ? "cleanup" : "running",
+      stop_reason: entry.stopRequested?.reason ?? null,
+    };
+    recordOwnedChildren();
+  });
+  child.on("close", async (code, signal) => {
+    entry.closedAt = new Date().toISOString();
     recordOwnedChildren();
     output.end();
+    stdoutCapture?.end();
     // The marker goes through the same stream as the child's own output, and
     // `end()` is deferred until that stream flushes. `appendFileSync` here
     // would open the file independently and could land *before* output still
@@ -405,9 +432,13 @@ function startChild(command, args, env, logPath, capture) {
     // precede output the owner actually emitted last.
     appendDiagnosticLine(
       stderrCapture ? capture.stderr : undefined,
-      `== studio-live fixture: child pid ${child.pid ?? "unknown"} exited code=${code ?? "null"} signal=${signal ?? "null"} ==`,
+      `== studio-live fixture: child pid ${child.pid ?? "unknown"} exited at ${entry.exit?.observed_at ?? entry.closedAt} code=${code ?? "null"} signal=${signal ?? "null"} phase=${entry.exit?.phase ?? "spawn-failure"} stop_reason=${entry.exit?.stop_reason ?? "none"} cleanup_started_at=${cleanupStartedAt ?? "none"} ==`,
       stderrCapture,
     );
+    entry.diagnosticsFlushed = (await flushed).every(Boolean)
+      && (!capture || Boolean(stdoutCapture && stderrCapture));
+    recordOwnedChildren();
+    finishClose();
   });
   return entry;
 }
@@ -446,6 +477,10 @@ function appendDiagnosticLine(path, line, stream) {
 // captured stdout/stderr logs cannot tell those apart, so the exit status is
 // recorded next to them.
 function recordOwnedChildren() {
+  // An emergency exit or a bounded teardown may remove the private directory
+  // before a late pipe-close notification. Never recreate it or mask the
+  // original failure; the previously preserved report remains the evidence.
+  if (!existsSync(targetDir)) return;
   writeFileSync(ownedChildrenPath, JSON.stringify([...children.keys()]), { mode: 0o600 });
   writeFileSync(
     ownedChildrenReportPath,
@@ -455,10 +490,15 @@ function recordOwnedChildren() {
           pid,
           command: entry.command,
           args: [...entry.args],
+          started_at: entry.startedAt,
+          stop_requested: entry.stopRequested ?? null,
+          cleanup_started_at: cleanupStartedAt ?? null,
           spawn_error: entry.spawnError
             ? String(entry.spawnError.code ?? entry.spawnError.message)
             : null,
           exit: entry.exit ?? null,
+          closed_at: entry.closedAt ?? null,
+          diagnostics_flushed: entry.diagnosticsFlushed ?? null,
         })),
         ...spawnFailures,
       ],
@@ -630,20 +670,27 @@ function v3Response(template, kind, headers) {
   return value;
 }
 
-async function stopChild(entry) {
+async function stopChild(entry, reason = "cleanup") {
   if (!entry?.child) return;
   const child = entry.child;
   if (!Number.isInteger(child.pid)) {
-    entry.output.end();
+    await waitForChild(entry, 1_000);
     return;
   }
   const exited = childHasExited(child);
-  if (!exited) signalOwnedGroup(child.pid, "SIGTERM");
-  await waitForChild(child, 3_000);
+  if (!exited) {
+    entry.stopRequested ??= { at: new Date().toISOString(), reason };
+    recordOwnedChildren();
+    signalOwnedGroup(child.pid, "SIGTERM");
+  }
+  await waitForChild(entry, 3_000);
   // A child may leave workers in its private process group after exiting.
   signalOwnedGroup(child.pid, "SIGKILL");
-  await waitForChild(child, 1_000);
-  entry.output.end();
+  if (!(await waitForChild(entry, 1_000))) {
+    // Retain the existing teardown deadlines. An unfinished capture is
+    // explicitly incomplete, never silently presented as flushed evidence.
+    entry.diagnosticsFlushed = false;
+  }
   // The entry is deliberately KEPT in `children` after teardown. Deleting it
   // here dropped the owner's terminal status from the report that CI actually
   // uploads: `recordOwnedChildren()` serialises whatever the map holds at the
@@ -666,12 +713,12 @@ function signalOwnedGroup(pid, signal) {
   try { process.kill(-pid, signal); } catch {}
 }
 
-function waitForChild(child, timeoutMillis) {
-  if (childHasExited(child)) return Promise.resolve();
+function waitForChild(entry, timeoutMillis) {
+  let timer;
   return Promise.race([
-    new Promise((done) => child.once("close", done)),
-    new Promise((done) => setTimeout(done, timeoutMillis)),
-  ]);
+    entry.closed.then(() => true),
+    new Promise((done) => { timer = setTimeout(() => done(false), timeoutMillis); }),
+  ]).finally(() => clearTimeout(timer));
 }
 
 function childHasExited(child) {
@@ -688,9 +735,11 @@ async function closeServer(server) {
 function shutdown(signal) {
   if (shutdownPromise) return shutdownPromise;
   closing = true;
+  cleanupStartedAt = new Date().toISOString();
+  recordOwnedChildren();
   shutdownPromise = (async () => {
     await Promise.all([closeServer(fixtureServer), closeServer(modServer)]);
-    await Promise.all([...children.values()].map(stopChild));
+    await Promise.all([...children.values()].map((entry) => stopChild(entry, "cleanup")));
     // Preserve the gateway/runtime diagnostics BEFORE the recursive removal
     // below destroys them; without this the evidence for a
     // submission_refused_502 transport failure is gone before anyone reads it
