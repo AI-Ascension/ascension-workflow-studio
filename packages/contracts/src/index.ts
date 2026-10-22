@@ -1,4 +1,6 @@
 import { z } from "zod";
+export { RecoveredRunSubmissionSchema, SubmissionErrorResponseSchema, SubmissionRecoveryResponseSchema } from "./submission-recovery";
+export type { SubmissionRecoveryResponse } from "./submission-recovery";
 
 import { OwnerInferenceProfileDecisionSchema } from "./owner-inference-profile-decision";
 
