@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { chmod, mkdtemp, mkdir, readFile, readdir, rm, stat } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
@@ -94,35 +94,34 @@ test("terminating the production fixture reaps only its owned process groups and
   }
 });
 
-test("the preserved owned children report carries a terminal status on disk, not only in memory", async () => {
-  // The test above asserts the same property, but it can only do so where the
-  // four Rust fixture binaries have been built. That is why the M7 mutant --
-  // `if (closing) return;` at the top of `recordOwnedChildren()` -- survived:
-  // this file runs in CI only through `production-policy-browser.mjs`, and the
-  // behavioural assertion is the one that fails first when the binaries are
-  // absent, so the guard above was the only assertion left standing.
-  //
-  // The fixture resolves every binary through a STUDIO_*_BINARY environment
-  // variable, so stub executables bring the real fixture to readiness without
-  // a Rust build. That makes this assertion available to every checkout,
-  // including the source-only job, and it drives the real teardown path and
-  // then reads the preserved artifact -- the only evidence a red run uploads.
-  const harnessRoot = harnessCheckoutRoot();
+test("stubbed production capture preserves exact bytes and separates in-window exits from cleanup", async () => {
+  // Synthetic child executables exercise the real capture and cleanup code.
+  // This test makes no claim about Harness, game, or provider behavior.
   const target = join(root, "target");
   await mkdir(target, { recursive: true, mode: 0o700 });
   const fixtureRoot = await mkdtemp(join(target, "studio-stack-report-"));
-  await chmod(fixtureRoot, 0o700);
   const stubDirectory = await mkdtemp(join(target, "studio-stack-stubs-"));
-  await chmod(stubDirectory, 0o700);
-  const stubs = join(root, "tools", "test-fixtures", "live-owner-stubs");
+  const diagnosticRoot = join(stubDirectory, "diagnostics");
+  const harnessRoot = join(stubDirectory, "harness");
+  // The idle gateway stub never queries the mod server. These parsed inputs
+  // deliberately carry no owner contract claim and require no owner checkout.
+  for (const path of [
+    "runtime-v3-gameplay/golden/state-response.json",
+    "runtime-v4-expert/golden/observation.json",
+    "runtime-v4-expert-action/golden/action-settled.json",
+  ]) {
+    const destination = join(harnessRoot, "protocol-artifact", path);
+    await mkdir(dirname(destination), { recursive: true, mode: 0o700 });
+    await writeFile(destination, '{"evidence":"synthetic-unqueried-capture-fixture"}\n', { mode: 0o600 });
+  }
+  const stubs = join(root, "tools/test-fixtures/live-owner-stubs");
   const [ownerPort, gatewayPort, modPort, controlPort] = await allocateLoopbackPorts(4);
   const stack = spawn(process.execPath, [stackScript], {
-    cwd: root,
-    detached: true,
-    stdio: "ignore",
+    cwd: root, detached: true, stdio: "ignore",
     env: {
       ...process.env,
       STUDIO_LIVE_FIXTURE_ROOT: fixtureRoot,
+      STUDIO_LIVE_DIAGNOSTIC_ROOT: diagnosticRoot,
       STUDIO_LIVE_OWNER_PORT: String(ownerPort),
       STUDIO_LIVE_GATEWAY_PORT: String(gatewayPort),
       STUDIO_LIVE_MOD_PORT: String(modPort),
@@ -134,52 +133,111 @@ test("the preserved owned children report carries a terminal status on disk, not
       STUDIO_PROVIDER_POLICY_FIXTURE_BINARY: stubExecutable(stubs, stubDirectory, "policy-fixture-stub"),
     },
   });
-  let stackClosed;
   const closed = new Promise((resolveClose, rejectClose) => {
     stack.once("error", rejectClose);
-    stack.once("close", (code, signal) => {
-      stackClosed = { code, signal };
-      resolveClose();
-    });
+    stack.once("close", (code, signal) => resolveClose({ code, signal }));
   });
-
-  let fixtureDirectory;
   let ownedPids = [];
   try {
     await waitForReady(`http://127.0.0.1:${controlPort}/ready`, stack);
-    fixtureDirectory = (await readdir(fixtureRoot)).map((name) => join(fixtureRoot, name))[0];
-    assert.ok(fixtureDirectory, "fixture created its private data directory");
-    ownedPids = JSON.parse(await readFile(join(fixtureDirectory, "owned-child-pids.json"), "utf8"));
+    const fixtureDirectory = join(fixtureRoot, (await readdir(fixtureRoot))[0]);
+    const report = () => readFile(join(fixtureDirectory, "owned-children-report.json"), "utf8").then(JSON.parse);
+    let entries = await report();
+    ownedPids = entries.map((entry) => entry.pid);
+    assert.equal(entries.length, 2);
+    const owners = (records) => records.filter((entry) => entry.command.endsWith("/owner-stub"));
+    const secret = "SECRET-CAPTURE-REGRESSION";
+    for (const name of ["provider-policy.sqlite3", "context-key.txt"]) {
+      await writeFile(join(fixtureDirectory, name), secret, { mode: 0o600 });
+    }
+    const restart = async () => {
+      const response = await fetch(`http://127.0.0.1:${controlPort}/restart`, { method: "POST" });
+      assert.equal(response.status, 200);
+      assert.equal((await response.json()).restarted, true);
+      entries = await report();
+      ownedPids = entries.map((entry) => entry.pid);
+    };
+    await restart();
+    const second = owners(entries)[1];
+    assert.equal(owners(entries)[0].exit.stop_reason, "restart");
+    process.kill(second.pid, "SIGKILL");
+    await waitForReport(report, (rows) => rows.some((entry) =>
+      entry.pid === second.pid && entry.exit?.signal === "SIGKILL"));
+    await restart();
+    assert.equal(ownedPids.length, 4, "retain gateway and all three owner lifetimes");
 
     stack.kill("SIGTERM");
-    await withTimeout(closed, 15_000, "fixture did not exit after SIGTERM");
-    assert.equal(stackClosed?.signal, null);
-    assert.equal(stackClosed?.code, 143);
+    assert.deepEqual(await withTimeout(closed, 15_000, "fixture did not exit"),
+      { code: 143, signal: null });
     await assertGroupsGone(ownedPids);
-
-    const preserved = JSON.parse(await readFile(
-      join(await preservedReportDirectory(fixtureDirectory), "owned-children-report.json"),
-      "utf8",
-    ));
-    // Every spawned child must survive teardown in the preserved artifact.
-    assert.equal(
-      preserved.length,
-      ownedPids.length,
-      `the preserved report must carry all ${ownedPids.length} owned children`,
-    );
+    await assertPathMissing(fixtureDirectory);
+    const destination = join(diagnosticRoot, basename(fixtureDirectory));
+    assert.ok(!destination.startsWith(`${fixtureDirectory}/`));
+    const preserved = JSON.parse(await readFile(join(destination, "owned-children-report.json"), "utf8"));
+    assert.equal(preserved.length, ownedPids.length);
+    const [restarted, crashed, cleanedUp] = owners(preserved);
+    const gateway = preserved.find((entry) => entry.command.endsWith("/gateway-stub"));
     for (const entry of preserved) {
-      // The discriminating assertion. `recordOwnedChildren()` no-ops while
-      // `closing` is true, so a report that reaches disk with a stale entry
-      // set is exactly the `exit: null` blindness #214 exists to prevent.
-      assert.ok(
-        entry.exit,
-        `owned child ${entry.pid} reached the preserved report with no exit status; `
-          + "teardown did not re-record the report before the fixture directory was removed",
-      );
-      assert.ok(
-        Number.isInteger(entry.exit.code) || typeof entry.exit.signal === "string",
-        `owned child ${entry.pid} recorded neither exit code nor signal`,
-      );
+      assert.equal(entry.diagnostics_flushed, true);
+      assert.ok(Number.isInteger(entry.exit.code) || typeof entry.exit.signal === "string");
+      assert.equal(typeof entry.command, "string");
+      assert.ok(Array.isArray(entry.args));
+      assert.ok(!Object.hasOwn(entry, "env"));
+      assert.ok(eventTime(entry.started_at) <= eventTime(entry.exit.observed_at));
+      assert.ok(eventTime(entry.exit.observed_at) <= eventTime(entry.closed_at));
+      assert.ok(eventTime(entry.started_at) <= eventTime(entry.cleanup_started_at));
+    }
+    assert.equal(restarted.exit.phase, "running");
+    assert.equal(restarted.exit.stop_reason, "restart");
+    assert.equal(restarted.stop_requested.reason, "restart");
+    assert.ok(eventTime(restarted.stop_requested.at) <= eventTime(restarted.exit.observed_at));
+    assert.ok(eventTime(restarted.closed_at) <= eventTime(crashed.started_at));
+    assert.equal(crashed.exit.signal, "SIGKILL");
+    assert.equal(crashed.exit.phase, "running");
+    assert.equal(crashed.exit.stop_reason, null);
+    assert.equal(crashed.stop_requested, null, "cleanup must not relabel an earlier crash");
+    assert.ok(eventTime(crashed.closed_at) <= eventTime(cleanedUp.started_at));
+    for (const entry of [cleanedUp, gateway]) {
+      assert.equal(entry.exit.phase, "cleanup");
+      assert.equal(entry.exit.stop_reason, "cleanup");
+      assert.ok(eventTime(entry.cleanup_started_at) <= eventTime(entry.stop_requested.at));
+      assert.ok(eventTime(entry.stop_requested.at) <= eventTime(entry.exit.observed_at));
+    }
+
+    // Large final writes exceed stream highWaterMarks. Compare exact bytes
+    // after real fixture deletion; the abruptly killed owner has no tail.
+    const ownerStart = `owner stub listening on ${ownerPort}\n`;
+    const ownerTail = `owner stub final stdout:\r\n${"O".repeat(262_144)}\u2603\n`;
+    const ownerError = "owner stub ready stderr\r\n";
+    const ownerErrorTail = `owner stub final stderr:\r\n${"E".repeat(131_072)}\n`;
+    assert.deepEqual(await readFile(join(destination, "owner-stdout.log")),
+      Buffer.from(ownerStart + ownerTail + ownerStart + ownerStart + ownerTail));
+    assert.deepEqual(await readFile(join(destination, "gateway-stdout.log")),
+      Buffer.from(`gateway stub listening on ${gatewayPort}\ngateway stub final stdout:\r\n${"G".repeat(65_536)}\n`));
+    const ownerStderr = await readFile(join(destination, "owner-stderr.log"), "utf8");
+    const gatewayStderr = await readFile(join(destination, "gateway-stderr.log"), "utf8");
+    const withoutMarkers = (value) => value.replace(/^== studio-live fixture: [^\n]* ==\n/gm, "");
+    assert.deepEqual(Buffer.from(withoutMarkers(ownerStderr)),
+      Buffer.from(ownerError + ownerErrorTail + ownerError + ownerError + ownerErrorTail));
+    assert.deepEqual(Buffer.from(withoutMarkers(gatewayStderr)),
+      Buffer.from(`gateway stub ready stderr\r\ngateway stub final stderr:\r\n${"D".repeat(65_536)}\n`));
+    for (const entry of preserved) {
+      const log = entry === gateway ? gatewayStderr : ownerStderr;
+      assert.ok(log.includes(`child pid ${entry.pid} exited at ${entry.exit.observed_at}`));
+      assert.ok(log.includes(`phase=${entry.exit.phase} stop_reason=${entry.exit.stop_reason ?? "none"}`));
+    }
+    assert.equal((ownerStderr.match(/starting serve-workflow owner at/g) ?? []).length, 3);
+    assert.equal((gatewayStderr.match(/starting gateway at/g) ?? []).length, 1);
+    assert.ok(ownerStderr.includes(`cleanup_started_at=${cleanedUp.cleanup_started_at}`));
+    const files = await readdir(destination);
+    assert.deepEqual(files.sort(), [
+      "gateway-stderr.log", "gateway-stdout.log", "gateway.log",
+      "owned-child-pids.json", "owned-children-report.json",
+      "owner-stderr.log", "owner-stdout.log", "serve-workflow.log",
+    ]);
+    for (const name of files) {
+      assert.ok(!(await readFile(join(destination, name))).includes(Buffer.from(secret)));
+      assert.equal((await stat(join(destination, name))).mode & 0o077, 0);
     }
   } finally {
     if (stack.exitCode === null && stack.signalCode === null) {
@@ -195,19 +253,21 @@ test("the preserved owned children report carries a terminal status on disk, not
   }
 });
 
-// The fixture reads its golden protocol artifacts from the harness checkout.
-// STUDIO_HARNESS_ROOT is already set by every job that builds the harness, so
-// prefer it and fall back to the sibling checkout the monorepo uses.
-function harnessCheckoutRoot() {
-  const configured = process.env.STUDIO_HARNESS_ROOT;
-  if (configured && existsSync(join(configured, "protocol-artifact"))) return resolve(configured);
-  const sibling = resolve(root, "..", "sts2-harness");
-  assert.ok(
-    existsSync(join(sibling, "protocol-artifact")),
-    "the live-owner stub run needs a harness checkout with protocol-artifact; "
-      + "set STUDIO_HARNESS_ROOT to one",
-  );
-  return sibling;
+function eventTime(value) {
+  assert.equal(typeof value, "string", "lifecycle observation must carry a UTC timestamp");
+  const milliseconds = Date.parse(value);
+  assert.ok(Number.isFinite(milliseconds));
+  assert.equal(new Date(milliseconds).toISOString(), value);
+  return milliseconds;
+}
+
+async function waitForReport(read, predicate) {
+  const deadline = Date.now() + 5_000;
+  while (Date.now() < deadline) {
+    try { if (predicate(await read())) return; } catch {}
+    await delay(10);
+  }
+  throw new Error("owned child lifecycle was not recorded");
 }
 
 // The fixture spawns its children with a sanitised PATH and execs the binary
@@ -228,20 +288,19 @@ test("the owned children report names each process without leaking its environme
 
   // The exit status is the whole point of this file (#214): the captured
   // stdout/stderr logs are empty for a child that stopped answering, so
-  // `exit: null` is precisely the unattributable state. If the `close`
+  // `exit: null` is precisely the unattributable state. If the `exit`
   // handler stops recording it, this report can no longer distinguish a
   // crash from a clean exit and AC3 regresses silently.
-  assert.match(source, /child\.on\("close", \(code, signal\) =>/);
-  assert.match(source, /entry\.exit = \{ code: code \?\? null, signal: signal \?\? null }/);
+  assert.match(source, /child\.on\("exit", \(code, signal\) =>/);
+  assert.match(source, /entry\.exit = \{\s*code: code \?\? null,\s*signal: signal \?\? null,/);
   // The status must be flushed to the report, not merely held in memory,
   // because the fixture directory is deleted during shutdown.
-  const closeHandler = source.slice(source.indexOf('child.on("close"'));
-  const closeHandlerEnd = closeHandler.indexOf('child.on("error"');
-  const closeBody = closeHandler.slice(0, closeHandlerEnd === -1 ? closeHandler.indexOf("return entry") : closeHandlerEnd);
+  const exitHandler = source.slice(source.indexOf('child.on("exit"'));
+  const exitBody = exitHandler.slice(0, exitHandler.indexOf('child.on("close"'));
   assert.match(
-    closeBody,
+    exitBody,
     /entry\.exit = \{[^}]*\}[^]*recordOwnedChildren\(\)/,
-    "the close handler must persist the exit status before ending captured output",
+    "the exit handler must persist its observation independently of pipe closure",
   );
 
   // The report is the only per-child evidence uploaded for #214, so it must
@@ -331,67 +390,7 @@ test("teardown keeps every owned child in the report it preserves", () => {
   assert.match(source, /const exited = childHasExited\(child\);\s*\n\s*if \(!exited\)/);
 });
 
-test("owner output is captured outside the fixture directory cleanup removes", async () => {
-  const source = readFileSync(join(root, "tools/live-owner-production-stack.mjs"), "utf8");
-
-  // #227 AC2 asks for proof by test, not by inspection. The capture paths are
-  // derived from `diagnosticDestination(targetDir)`, which is rooted at the
-  // diagnostics root and keyed by the fixture directory's basename -- never
-  // inside `targetDir`. Assert the construction, so moving a capture back into
-  // the fixture directory fails here.
-  assert.match(
-    source,
-    /const ownerOutputPath = join\(diagnosticDestination\(targetDir\), "owner-stdout\.log"\)/,
-    "owner stdout must be captured under the diagnostics destination, not targetDir",
-  );
-  assert.match(
-    source,
-    /const ownerErrorPath = join\(diagnosticDestination\(targetDir\), "owner-stderr\.log"\)/,
-    "owner stderr must be captured under the diagnostics destination, not targetDir",
-  );
-  assert.doesNotMatch(
-    source,
-    /join\(targetDir, "owner-std(out|err)\.log"\)/,
-    "no owner capture may be written inside the directory cleanup removes",
-  );
-
-  // Both `serve-workflow` and the runtime path must be captured (#227 AC4):
-  // it is not established which process the reset occurs in.
-  assert.match(source, /startWorkflowService\(\)[\s\S]*?owner-stderr\.log|owner-stdout\.log[\s\S]*?return startChild\(\s*harnessBinary/);
-  assert.match(source, /ownerOutputPath, stderr: ownerErrorPath/);
-  assert.match(source, /stdout: gatewayOutputPath, stderr: gatewayErrorPath/);
-
-  // The captured streams must be created outside the in-fixture log path, and
-  // the lifecycle markers must be written with appendFileSync so they survive a
-  // capture stream that could not be opened.
-  assert.match(source, /function createDiagnosticCapture\(path\)/);
-  assert.match(source, /function appendDiagnosticLine\(path, line, stream\)/);
-  assert.match(
-    source,
-    /starting serve-workflow owner at/,
-    "each owner start is marked so a restart is visible in the captured output",
-  );
-  assert.match(
-    source,
-    /exited code=\$\{code \?\? "null"\} signal=\$\{signal \?\? "null"\}/,
-    "each owner exit is marked so a crash is not inferred from silence",
-  );
-  // The exit marker must go through the same stream as the owner's output.
-  // Writing it with `appendFileSync` after `stream.end()` would open the file
-  // independently and could land ahead of output still buffered in the stream,
-  // making the marker appear to precede the owner's last words.
-  assert.match(
-    source,
-    /appendDiagnosticLine\(\s*stderrCapture \? capture\.stderr : undefined,[\s\S]*?stderrCapture,?\s*\);/,
-    "the exit marker must be written through the capture stream, not appended independently",
-  );
-  assert.match(
-    source,
-    /function appendDiagnosticLine\(path, line, stream\)[\s\S]*?stream\.end\(`\$\{line\}\\n`\);/,
-    "appendDiagnosticLine must write through the stream when one is supplied",
-  );
-
-  // The CI job must print the captures, not only upload them (#227 AC1).
+test("CI prints and uploads the live owner captures", () => {
   const workflow = readFileSync(join(root, ".github/workflows/validate.yml"), "utf8");
   assert.match(workflow, /Show live owner diagnostics/);
   assert.match(workflow, /owner-std\*\.log/);
