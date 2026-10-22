@@ -2,6 +2,122 @@ import { readFileSync } from "node:fs";
 
 import { expect, test } from "@playwright/test";
 
+for (const state of ["submitted", "missing", "failed", "not_started"] as const) {
+  test(`synthetic original submission recovery: ${state}`, async ({ page }) => {
+    const posts: string[] = [];
+    let reads = 0;
+    const submitted = { schema_version: "ascension.management/v1", workflow_run_id: "run.original", run_revision: 1, status: "running" };
+    await page.route("**/v1/**", async (route) => {
+      const request = route.request();
+      const path = new URL(request.url()).pathname;
+      if (path === "/v1/health") return route.fulfill({ json: { schema_version: "ascension.management/v1", status: "ok" } });
+      if (path === "/v1/workflow-targets") return route.fulfill({ json: {
+        schema_version: "ascension.workflow-targets/v1", catalog_revision: "synthetic.recovery.v1",
+        targets: [{
+          instance_id: "synthetic.recovery", execution_profiles: ["synthetic"], execution_mode: "synthetic",
+          compatibility_revision: "synthetic.compatibility.v1", capability_revision: "synthetic.capabilities.v1",
+          availability: "available", supported_operations: ["workflow:run"], capabilities: [],
+          game_profiles: ["sts2-synthetic-v1"], save_profiles: [], inference_profiles: [],
+        }],
+      } });
+      if (path === "/v1/workflow-targets/preflight") {
+        const body = request.postDataJSON();
+        return route.fulfill({ json: {
+          schema_version: "ascension.workflow-admission/v1",
+          admission: { ...body, descriptor_digest: "a".repeat(64), catalog_revision: "synthetic.recovery.v1" },
+        } });
+      }
+      if (path === "/v1/workflow-runs") {
+        expect(request.method()).toBe("POST");
+        expect(request.headers().authorization).toBe("Bearer synthetic-recovery-token");
+        posts.push(request.postData()!);
+        if (posts.length === 1) return route.fulfill({ status: 409, json: {
+          schema_version: "ascension.management/v1",
+          error: { class: "unresolved", code: "live_launch_fence_failed", message: "Synthetic post-launch failure" },
+        } });
+        return route.fulfill({ json: submitted });
+      }
+      if (path.startsWith("/v1/workflow-submissions/")) {
+        expect(request.method()).toBe("GET");
+        expect(request.headers().authorization).toBe("Bearer synthetic-recovery-token");
+        expect(new URL(request.url()).search).toBe("");
+        const requestId = decodeURIComponent(path.slice("/v1/workflow-submissions/".length));
+        expect(requestId).toBe(JSON.parse(posts[0]).request_id);
+        reads += 1;
+        return route.fulfill({ json: {
+          schema_version: "ascension.workflow-submission/v1", request_id: requestId, state,
+          workflow_run_id: state === "missing" ? null : "run.original",
+          response: state === "submitted" ? submitted : null,
+          error: state === "failed" ? { class: "unresolved", code: "live_launch_failed", message: "Inspect retained run" } : null,
+        } });
+      }
+      return route.fulfill({ status: path.includes("/drafts/") ? 404 : 503,
+        json: { error: { code: "unavailable", message: "Unrelated synthetic owner route unavailable" } } });
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "Open settings" }).click();
+    await page.getByLabel("Bearer token").fill("synthetic-recovery-token");
+    await page.getByLabel("Authenticated actor subject").fill("profile:synthetic-recovery");
+    await page.getByRole("button", { name: "Check owner connection" }).click();
+    await expect(page.locator(".connection-message")).toContainText("Owner reports ok.");
+    await page.getByRole("button", { name: /Live owner API/ }).click();
+    await page.getByRole("button", { name: "Library", exact: true }).click();
+    await page.getByRole("button", { name: "Open designer" }).first().click();
+    await page.getByRole("button", { name: "Run inspection" }).click();
+    const panel = page.getByRole("region", { name: "Run admission" });
+    await panel.getByLabel("Target instance").selectOption("synthetic.recovery");
+    await panel.getByLabel("Execution profile").selectOption("synthetic");
+    await panel.getByLabel("Game profile").selectOption("sts2-synthetic-v1");
+    await panel.getByRole("button", { name: "Run preflight" }).click();
+    await expect(panel.getByLabel("Exact admission binding")).toBeVisible();
+    if (state === "not_started") {
+      await page.getByRole("button", { name: "Open settings" }).click();
+      await page.getByRole("button", { name: "Clear session" }).click();
+      await panel.getByRole("button", { name: "Start run" }).click();
+      await expect(panel).toContainText("No run request was sent.");
+      await expect(panel.getByRole("button", { name: "Check original submission" })).toHaveCount(0);
+      await panel.getByRole("button", { name: "Cancel run setup" }).click();
+      await expect(panel).toHaveCount(0);
+      expect(posts).toHaveLength(0);
+      expect(reads).toBe(0);
+      return;
+    }
+    await panel.getByRole("button", { name: "Start run" }).click();
+    await expect(panel).toContainText("Run outcome unknown");
+    await expect(panel.getByRole("button", { name: "Cancel run setup" })).toHaveCount(0);
+    await expect(panel.getByRole("button", { name: "Retry the same request" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Run inspection" }).click();
+    expect(posts).toHaveLength(1);
+    if (state === "submitted") {
+      // Re-entering the same memory-only credentials after navigation must not
+      // invalidate this identity or its recovery generation.
+      await page.getByRole("button", { name: "Open settings" }).click();
+      await page.getByLabel("Bearer token").fill(" synthetic-recovery-token ");
+      await page.getByLabel("Authenticated actor subject").fill(" profile:synthetic-recovery ");
+      await page.getByRole("button", { name: "Check owner connection" }).click();
+      await expect(page.locator(".connection-message")).toContainText("Owner reports ok.");
+    }
+    await panel.getByRole("button", { name: "Check original submission" }).click();
+    if (state === "submitted") {
+      await expect(page.getByText("Owner recovered run.original at revision 1.")).toBeVisible();
+      await expect(panel).toHaveCount(0);
+    } else if (state === "missing") {
+      await expect(panel.getByRole("button", { name: "Retry the same request" })).toBeVisible();
+      expect(posts).toHaveLength(1);
+      await panel.getByRole("button", { name: "Retry the same request" }).click();
+      await expect(page.getByText("Owner accepted run.original at revision 1.")).toBeVisible();
+      expect(posts[1]).toBe(posts[0]);
+    } else {
+      await expect(panel.getByRole("button", { name: "Retry the same request" })).toHaveCount(0);
+      await panel.getByRole("button", { name: "Inspect retained run" }).click();
+      await expect(page.getByRole("heading", { name: "Run inspector" })).toBeVisible();
+      await expect(panel).toContainText(JSON.parse(posts[0]).request_id);
+    }
+    expect(reads).toBe(1);
+    expect(posts).toHaveLength(state === "missing" ? 2 : 1);
+  });
+}
+
 const contextCatalogVectors = JSON.parse(readFileSync("contracts/accepted/context-control/catalog-conformance.json", "utf8"));
 for (const variant of ["restricted", "zero_notes", "disabled", "tampered", "duplicate", "refresh_failure"] as const) {
   test(`synthetic management catalog route: ${variant}`, async ({ page }) => {
