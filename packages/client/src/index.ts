@@ -21,7 +21,7 @@
  * Existing v1 and fixture APIs keep their behavior; versioned owner APIs are
  * additive and remain optional for fixture consumers.
  */
-export { ClientError, CapabilityGateError } from "./errors";
+export { ClientError, CapabilityGateError, RunSubmissionNotStartedError } from "./errors";
 export type {
   ClientMode,
   DraftWrite,

@@ -1,0 +1,20 @@
+{
+  "repository": "AI-Ascension/sts2-harness",
+  "revision": "8ba0c73d55107583a5b21fcae5a5454797ba8110",
+  "evidence": "synthetic_contract_vectors_only",
+  "scope": "Consumer decoding and explicit original-request recovery; no live-owner CI repin, native/provider or persisted browser recovery claim.",
+  "consumed_artifacts": [
+    {
+      "path": "contracts/management-recovery/error-v2.schema.json",
+      "sha256": "712e97ea61cefc0537698a9f349345f3fdc7599eaf54011d0be2b58e75426a34"
+    },
+    {
+      "path": "contracts/management-recovery/submission-v1.schema.json",
+      "sha256": "4ed3cde7817b4c0b9b5f09ec7305d881955daecbb3df5fe46dd821962714da0b"
+    },
+    {
+      "path": "contracts/management-recovery/vectors.json",
+      "sha256": "a9ac40754055e5fde9b6dfa85e373dcc62190a6fc907a28f05741922e1844f7a"
+    }
+  ]
+}

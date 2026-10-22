@@ -35,6 +35,14 @@ still reports those routes as unavailable.
 The exact evidence boundary is recorded in `docs/evidence/PHASE2_EVIDENCE.md`;
 fixture behavior does not stand in for a live harness process.
 
+After an uncertain run submission, Studio retains the original request in the
+current tab. **Check original submission** reads the owner's retained result;
+only an explicit `missing` result enables **Retry the same request**. Pending or
+failed results keep the original identity and allow inspection of a reserved run.
+See [submission recovery](docs/architecture/submission-recovery.md) for the
+supported owner contract, authentication changes, reload limitations and exact
+evidence boundary.
+
 To reproduce the local checks, run `npm ci`, `npm run typecheck`, `npm run lint`,
 `npm test`, and `npm run build`. This repository does not deploy or auto-merge
 future changes.

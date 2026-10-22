@@ -23,6 +23,7 @@ import type {
   ReplayResponse,
   RunEvent,
   RunSubmissionResponse,
+  SubmissionRecoveryResponse,
   RunTargetConfiguration,
   StatusResponse,
   TargetAdmissionBinding,
@@ -94,6 +95,9 @@ export interface StudioClient {
   listTargets(): Promise<TargetCatalogResponse>;
   preflightTarget(request: TargetAdmissionRequest): Promise<TargetPreflightResponse>;
   submitRun(definition: WorkflowDefinition, instanceId: string, profile: string, options?: RunSubmissionOptions): Promise<RunSubmissionResponse>;
+  /** Optional read-only lookup of this session's original v1 request. An absent
+   * implementation never authorizes a replacement submission. */
+  recoverRunSubmission?(requestId: string): Promise<SubmissionRecoveryResponse>;
   status(runId: string): Promise<StatusResponse>;
   events(runId: string, afterSequence: number, limit?: number): Promise<EventPage>;
   contextAssociation(runId: string): Promise<ContextAssociation>;

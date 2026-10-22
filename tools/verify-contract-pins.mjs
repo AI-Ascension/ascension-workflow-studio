@@ -175,6 +175,11 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   const phase1Count = verifyEntries(root, phase1.consumed_artifacts);
   const effective = JSON.parse(readFileSync(resolve(root, 'contracts/effective-limits.lock.json')));
   const effectiveCount = verifyEntries(root, effective.consumed_artifacts);
+  const recovery = JSON.parse(readFileSync(resolve(root, 'contracts/management-recovery.lock.json')));
+  assert.equal(recovery.repository, 'AI-Ascension/sts2-harness');
+  assert(/^[a-f0-9]{40}$/.test(recovery.revision), 'Invalid recovery producer revision');
+  assert.equal(recovery.evidence, 'synthetic_contract_vectors_only');
+  const recoveryCount = verifyEntries(root, recovery.consumed_artifacts);
   const contextCatalog = JSON.parse(readFileSync(resolve(root, 'contracts/context-control-catalog.lock.json')));
   const contextCatalogCount = verifyContextCatalogPin(root, contextCatalog);
   const inferenceCatalog = JSON.parse(readFileSync(resolve(root, 'contracts/inference-profile-catalog.lock.json')));
@@ -184,5 +189,5 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   assert(recorded.checksums && typeof recorded.checksums === 'object', 'Missing recorded-run pins');
   const recordedCount = verifyEntries(recordedRoot,
     Object.entries(recorded.checksums).map(([path, sha256]) => ({ path, sha256 })));
-  console.log(`Verified ${phase1Count} Phase 1, ${effectiveCount} effective-limit, ${contextCatalogCount} context catalog, ${inferenceCatalogCount} inference-profile catalog and ${recordedCount} recorded-run contract pins`);
+  console.log(`Verified ${phase1Count} Phase 1, ${effectiveCount} effective-limit, ${recoveryCount} submission recovery, ${contextCatalogCount} context catalog, ${inferenceCatalogCount} inference-profile catalog and ${recordedCount} recorded-run contract pins`);
 }

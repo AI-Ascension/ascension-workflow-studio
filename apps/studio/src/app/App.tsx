@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type { ClientMode, OwnerApiClient, RunSubmissionOptions } from "@studio/client";
-import { CapabilityGateError, ClientError, ContextServiceClient, FixtureClient, validateTargetConfiguration } from "@studio/client";
+import { CapabilityGateError, ClientError, ContextServiceClient, FixtureClient, RunSubmissionNotStartedError, validateTargetConfiguration } from "@studio/client";
 import { OwnerApiClient as LiveOwnerApiClient } from "@studio/client";
 import { cloneDocument, definitionIdentityDigest, type ApprovedLinkMapping } from "@studio/document";
 import type { DefinitionRecord, WorkflowDefinition } from "@studio/contracts";
@@ -59,6 +59,20 @@ export function App(): JSX.Element {
     setPendingRun(undefined);
   }, []);
 
+  const cancelPendingRun = (): void => {
+    if (!pendingRunRef.current?.submissionAttempted) clearPendingRun();
+  };
+
+  const changeMode = (next: ClientMode): void => {
+    if (next === mode) return;
+    if (pendingRunRef.current?.submissionAttempted) {
+      setAppMessage("Reconcile the retained submission before switching its owner adapter.");
+      return;
+    }
+    clearPendingRun();
+    setMode(next);
+  };
+
   const rememberRawCandidate = useCallback((definitionId: string, value: string): void => {
     setRawCandidateTexts((current) => current[definitionId] === value ? current : { ...current, [definitionId]: value });
   }, []);
@@ -114,9 +128,10 @@ export function App(): JSX.Element {
     // A pending request owns its identity from target selection through
     // preflight and submit. A second click cannot create another request.
     const current = pendingRunRef.current;
-    if (current && !["error", "preflight_unknown"].includes(current.phase)) return;
+    if (current && (current.submissionAttempted || !["error", "preflight_unknown"].includes(current.phase))) return;
     const requestId = createRunRequestId();
     const initial: PendingRun = {
+      mode,
       document: cloneDocument(document),
       requestId,
       phase: "loading",
@@ -192,7 +207,7 @@ export function App(): JSX.Element {
 
   const submitPendingRun = async (): Promise<void> => {
     const current = pendingRunRef.current;
-    if (!current || !current.selection || !current.admission || current.phase !== "admitted") return;
+    if (!current || current.mode !== mode || !current.selection || !current.admission || !["admitted", "retryable"].includes(current.phase)) return;
     if (current.admission.target.execution_mode === "live" && !current.liveConfirmed) {
       updatePendingRun((candidate) => ({ ...candidate, message: "Explicit live confirmation is required before starting this run." }));
       return;
@@ -205,7 +220,7 @@ export function App(): JSX.Element {
     const target = targetConfigurationForSelection(descriptor, current.selection, current.document);
     try {
       validateTargetConfiguration(descriptor, target);
-      updatePendingRun((candidate) => ({ ...candidate, phase: "submitting", message: "Submitting the exact owner admission…" }));
+      updatePendingRun((candidate) => ({ ...candidate, phase: "submitting", submissionAttempted: true, recovery: undefined, message: "Submitting the exact owner admission…" }));
       const options: RunSubmissionOptions = {
         requestId: current.requestId,
         admission: current.admission,
@@ -219,14 +234,18 @@ export function App(): JSX.Element {
       setAppMessage(`Owner accepted ${result.workflow_run_id} at revision ${result.run_revision}.`);
     } catch (error: unknown) {
       if (pendingRunRef.current?.requestId !== current.requestId) return;
-      const unknown = !(error instanceof ClientError && typeof error.status === "number" && error.status < 500)
-        && !(error instanceof CapabilityGateError);
+      // Only a trusted refusal before this first transport attempt releases
+      // setup. A local refusal during a later retry cannot discharge an earlier
+      // ambiguous request, regardless of its HTTP-looking status or code.
+      const notStarted = error instanceof RunSubmissionNotStartedError && !current.submissionAttempted;
+      const unknown = Boolean(pendingRunRef.current.submissionAttempted) && !notStarted;
       updatePendingRun((candidate) => ({
         ...candidate,
+        submissionAttempted: unknown,
         phase: unknown ? "unknown" : "error",
         message: unknown
-          ? `${error instanceof Error ? error.message : "No response from the owner."} The run may have been admitted; retrying keeps request ${candidate.requestId}.`
-          : error instanceof Error ? error.message : "Run submission failed.",
+          ? `${error instanceof Error ? error.message : "No response from the owner."} The run may have been admitted. Check original submission ${candidate.requestId} before retrying.`
+          : `${error instanceof Error ? error.message : "Run submission was refused."} No run request was sent. Review this setup before trying again.`,
       }));
     }
   };
@@ -241,17 +260,55 @@ export function App(): JSX.Element {
       await preflightPendingRun();
       return;
     }
-    if (current.phase === "unknown") {
-      updatePendingRun((candidate) => ({ ...candidate, phase: "admitted", message: "Retrying the same run request; the owner will deduplicate it." }));
-      await submitPendingRun();
+    if (current.phase === "retryable") await submitPendingRun();
+  };
+
+  const recoverPendingRun = async (): Promise<void> => {
+    const current = pendingRunRef.current;
+    if (!current?.submissionAttempted || current.mode !== mode || !["unknown", "retryable"].includes(current.phase)) return;
+    updatePendingRun((candidate) => ({ ...candidate, phase: "recovering", message: "Checking the original request with its owner…" }));
+    try {
+      if (!client.recoverRunSubmission) throw new Error("This adapter does not support original submission recovery.");
+      const recovery = await client.recoverRunSubmission(current.requestId);
+      if (pendingRunRef.current?.requestId !== current.requestId) return;
+      if (recovery.state === "submitted") {
+        clearPendingRun();
+        setRunId(recovery.response.workflow_run_id);
+        setView("runs");
+        setAppMessage(`Owner recovered ${recovery.response.workflow_run_id} at revision ${recovery.response.run_revision}.`);
+        return;
+      }
+      updatePendingRun((candidate) => ({
+        ...candidate,
+        recovery,
+        phase: recovery.state === "missing" ? "retryable" : "unknown",
+        message: recovery.state === "missing"
+          ? "The owner has no record of this original request. You may explicitly retry its exact bytes and identity."
+          : recovery.state === "pending"
+            ? "The owner is still processing this request. Check again or inspect its retained run; no new run will be submitted."
+            : `The owner retained a failed submission: ${recovery.error.message} Failure does not prove rollback. Keep this identity for reconciliation.`,
+      }));
+    } catch (error: unknown) {
+      if (pendingRunRef.current?.requestId !== current.requestId) return;
+      updatePendingRun((candidate) => ({
+        ...candidate, phase: "unknown",
+        message: `${error instanceof Error ? error.message : "Recovery is unavailable."} Retaining the original request; no new run was submitted.`,
+      }));
     }
+  };
+
+  const inspectRetainedRun = (): void => {
+    const retainedRunId = pendingRunRef.current?.recovery?.workflow_run_id;
+    if (!retainedRunId) return;
+    setRunId(retainedRunId);
+    setView("runs");
   };
 
   /** Changing any exact target/profile field refreshes the request identity so a
    * previously issued admission can never be silently reused. */
   const resetPendingSelection = (mutate: (selection: RunTargetSelection | undefined) => RunTargetSelection | undefined): void => {
     const current = pendingRunRef.current;
-    if (!current || ["submitting", "unknown"].includes(current.phase)) return;
+    if (!current || current.submissionAttempted) return;
     // Any change after an owner admission abandons that binding and must bind a
     // fresh request identity, never reuse the admitted request id.
     const identity = current.admission ? createRunRequestId() : current.requestId;
@@ -280,7 +337,7 @@ export function App(): JSX.Element {
 
   const retryTargetCatalog = (): void => {
     const current = pendingRunRef.current;
-    if (!current) return;
+    if (!current || current.submissionAttempted) return;
     // Abandoning an admitted selection must not reuse its request id.
     const requestId = current.admission ? createRunRequestId() : current.requestId;
     updatePendingRun((candidate) => ({ ...candidate, requestId, phase: "loading", message: "Refreshing target catalog…" }));
@@ -323,13 +380,13 @@ export function App(): JSX.Element {
       <header className="topbar"><div className="breadcrumbs"><span>AI-Ascension</span><span aria-hidden="true">/</span><strong>{view === "recordings" ? "Recorded runs" : view === "compatibility" ? "Compatibility" : view === "designer" ? selectedDefinition.title : view === "runs" ? "Runs" : view === "replay" ? "Replay" : "Library"}</strong></div><div className="topbar-actions"><span className="secure-label"><span aria-hidden="true">⌁</span> {view === "recordings" ? "Read-only inspection" : "Owner-authoritative"}</span><button className="avatar-button" aria-label="Open settings" onClick={() => setView("compatibility")}>TW</button></div></header>
       {appMessage ? <div className="app-message" role="status"><span>{appMessage}</span><button aria-label="Dismiss message" onClick={() => setAppMessage(undefined)}>×</button></div> : null}
       <div className="content-shell">
-        {pendingRun ? <RunAdmissionPanel pending={pendingRun} onCancel={clearPendingRun} onRetryCatalog={retryTargetCatalog} onPreflight={() => void preflightPendingRun()} onRetry={() => void retryPendingRun()} onSubmit={() => void submitPendingRun()} onTargetChange={changePendingTarget} onProfileChange={changePendingProfile} onLiveConfirmation={(confirmed) => updatePendingRun((current) => ({ ...current, liveConfirmed: confirmed }))} /> : null}
+        {pendingRun ? <RunAdmissionPanel pending={pendingRun} onCancel={cancelPendingRun} onRetryCatalog={retryTargetCatalog} onPreflight={() => void preflightPendingRun()} onRetry={() => void retryPendingRun()} onRecover={() => void recoverPendingRun()} onInspect={inspectRetainedRun} onSubmit={() => void submitPendingRun()} onTargetChange={changePendingTarget} onProfileChange={changePendingProfile} onLiveConfirmation={(confirmed) => updatePendingRun((current) => ({ ...current, liveConfirmed: confirmed }))} /> : null}
         {view === "recordings" ? <RecordingsView {...recording} /> : null}
         {view === "library" ? <LibraryView definitions={definitions} loading={loadingDefinitions} catalogNotice={catalogNotice} onOpen={openDefinition} onCreate={createDraft} onRefresh={() => setCatalogRefresh((current) => current + 1)} /> : null}
         {view === "designer" ? <DesignerView client={client} catalog={definitions} definition={selectedDefinition} initialDocument={activeDocument} initialRawText={rawCandidateTexts[selectedDefinition.id]} mode={mode} onBack={() => setView("library")} onRun={(document) => void runDocument(document)} onRawTextChange={rememberRawCandidate} /> : null}
         {view === "runs" ? <RunsView client={client} policyClient={mode === "live" ? liveClient : undefined} contextClient={contextClient} mode={mode} initialRunId={runId} onRunIdChange={setRunId} linkMappings={linkMappings} /> : null}
         {view === "replay" ? <ReplayView client={client} contextClient={contextClient} mode={mode} definition={replayDocument} definitions={definitions} /> : null}
-        {view === "compatibility" ? <CompatibilityView mode={mode} onModeChange={setMode} liveClient={liveClient} linkMappings={linkMappings} onAddMapping={(mapping) => setLinkMappings((current) => [...current.filter((candidate) => candidate.id !== mapping.id), mapping])} onRemoveMapping={(id) => setLinkMappings((current) => current.filter((candidate) => candidate.id !== id))} /> : null}
+        {view === "compatibility" ? <CompatibilityView mode={mode} onModeChange={changeMode} liveClient={liveClient} linkMappings={linkMappings} onAddMapping={(mapping) => setLinkMappings((current) => [...current.filter((candidate) => candidate.id !== mapping.id), mapping])} onRemoveMapping={(id) => setLinkMappings((current) => current.filter((candidate) => candidate.id !== id))} /> : null}
       </div>
     </main>
   </div>;
