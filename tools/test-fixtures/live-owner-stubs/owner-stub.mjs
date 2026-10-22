@@ -34,12 +34,20 @@ const server = createServer((request, response) => {
 
 server.listen(port, "127.0.0.1", () => {
   process.stdout.write(`owner stub listening on ${port}\n`);
+  process.stderr.write("owner stub ready stderr\r\n");
 });
 server.on("error", (error) => {
   process.stderr.write(`owner stub failed: ${error.message}\n`);
   process.exit(1);
 });
+let stopping = false;
 process.on("SIGTERM", () => {
+  if (stopping) return;
+  stopping = true;
   server.close();
-  process.exit(0);
+  // A bounded final burst exceeds the parent's stream buffers. The test
+  // checks these exact bytes only after production cleanup has finished.
+  process.stdout.write(`owner stub final stdout:\r\n${"O".repeat(262_144)}\u2603\n`, () => {
+    process.stderr.write(`owner stub final stderr:\r\n${"E".repeat(131_072)}\n`, () => process.exit(0));
+  });
 });
