@@ -4,6 +4,10 @@ export default defineConfig({
   testDir: "./tests/browser",
   testMatch: "studio.spec.ts",
   fullyParallel: true,
+  // The production latency benchmark measures one editor. Another browser
+  // worker doing imports or layout work on the same runner contaminates that
+  // measurement. Keep all cases and budgets, with one active browser worker.
+  workers: 1,
   forbidOnly: true,
   retries: 0,
   reporter: [["list"], ["html", { outputFolder: "playwright-report", open: "never" }]],
