@@ -1,5 +1,6 @@
 import { parseBoundedJson } from "./lossless-json";
 import { expectClosedObject, expectString, expectU64 } from "./json-token";
+import type { BoundedJsonValue } from "./lossless-json";
 import {
   invalidValue,
   validateDigest,
@@ -52,8 +53,20 @@ const boundaryFields = [
 /** Decode only the claimed top-level ContextBoundary; this frozen candidate is not trusted. */
 export function decodeContextBoundaryV2Candidate(input: Uint8Array): UntrustedContextBoundaryCandidateV2 {
   const document = parseBoundedJson(input);
-  const object = expectClosedObject(document.value, boundaryFields);
-  const boundary = Object.freeze({
+  const boundary = decodeContextBoundaryCandidateShape(document.value);
+  validateContextBoundaryCandidate(boundary);
+  return Object.freeze({
+    kind: "untrusted_context_boundary_v2",
+    trust: "untrusted",
+    authority: "none",
+    boundary,
+  });
+}
+
+/** @internal Shape-only decode used by the enclosing binding decoder after parsing bytes. */
+export function decodeContextBoundaryCandidateShape(value: BoundedJsonValue): ContextBoundaryCandidateV2 {
+  const object = expectClosedObject(value, boundaryFields);
+  return Object.freeze({
     run_id: expectString(object.run_id),
     episode_id: expectString(object.episode_id),
     agent_id: expectString(object.agent_id),
@@ -69,16 +82,10 @@ export function decodeContextBoundaryV2Candidate(input: Uint8Array): UntrustedCo
     gate_epoch: expectU64(object.gate_epoch),
     control_version: expectU64(object.control_version),
   });
-  validateBoundary(boundary);
-  return Object.freeze({
-    kind: "untrusted_context_boundary_v2",
-    trust: "untrusted",
-    authority: "none",
-    boundary,
-  });
 }
 
-function validateBoundary(value: ContextBoundaryCandidateV2): void {
+/** @internal Semantic checks run only after the enclosing DTO has completed typed decoding. */
+export function validateContextBoundaryCandidate(value: ContextBoundaryCandidateV2): void {
   const identifiers: readonly (readonly [BoundaryIdentifierField, string])[] = [
     ["boundary_run_id", value.run_id],
     ["boundary_episode_id", value.episode_id],

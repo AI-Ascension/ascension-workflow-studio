@@ -1,0 +1,60 @@
+{
+  "expected": {
+    "accepted": true,
+    "binding": {
+      "approved_revision_id": "revision-1",
+      "binding_digest": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "binding_id": "binding-1",
+      "binding_version": "1",
+      "boundary": {
+        "adapter_revision": "adapter-1",
+        "agent_id": "agent-1",
+        "catalog_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "configuration_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "control_version": "4",
+        "controller_epoch": "2",
+        "episode_id": "episode-1",
+        "gate_epoch": "3",
+        "generation": "18446744073709551615",
+        "model_revision": "model-1",
+        "observation_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "output_schema_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "run_id": "run-1",
+        "state_id": "state-1"
+      },
+      "context_ref": "context-1",
+      "continuity": {
+        "provider_session_continuity": false,
+        "receipt_recovery": false,
+        "survives_controller_restart": false
+      },
+      "definition_digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "grants": {
+        "content_read": false,
+        "control": false,
+        "edit": false,
+        "metadata_read": true
+      },
+      "graph_id": "graph-1",
+      "instance_id": "instance-1",
+      "invocation_id": "invocation-1",
+      "lease_epoch": "2",
+      "node_execution_id": "execution-1",
+      "node_id": "node-1",
+      "node_kind": "decision",
+      "owner_id": "owner-1",
+      "owner_version": "owner-v1",
+      "plan_epoch": "3",
+      "schema_version": "ascension.context-control.owner-binding.v1",
+      "snapshot_id": "snapshot-1",
+      "state": "available",
+      "workflow_run_id": "run-1"
+    }
+  },
+  "id": "boundary-generation-18446744073709551615",
+  "input_base64": "eyJzY2hlbWFfdmVyc2lvbiI6ImFzY2Vuc2lvbi5jb250ZXh0LWNvbnRyb2wub3duZXItYmluZGluZy52MSIsIm93bmVyX2lkIjoib3duZXItMSIsIm93bmVyX3ZlcnNpb24iOiJvd25lci12MSIsImludm9jYXRpb25faWQiOiJpbnZvY2F0aW9uLTEiLCJiaW5kaW5nX2lkIjoiYmluZGluZy0xIiwiYmluZGluZ192ZXJzaW9uIjoxLCJiaW5kaW5nX2RpZ2VzdCI6ImVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWUiLCJjb250ZXh0X3JlZiI6ImNvbnRleHQtMSIsImluc3RhbmNlX2lkIjoiaW5zdGFuY2UtMSIsIm5vZGVfa2luZCI6ImRlY2lzaW9uIiwic3RhdGUiOiJhdmFpbGFibGUiLCJ3b3JrZmxvd19ydW5faWQiOiJydW4tMSIsImRlZmluaXRpb25fZGlnZXN0IjoiZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZiIsImdyYXBoX2lkIjoiZ3JhcGgtMSIsIm5vZGVfaWQiOiJub2RlLTEiLCJub2RlX2V4ZWN1dGlvbl9pZCI6ImV4ZWN1dGlvbi0xIiwiYm91bmRhcnkiOnsicnVuX2lkIjoicnVuLTEiLCJlcGlzb2RlX2lkIjoiZXBpc29kZS0xIiwiYWdlbnRfaWQiOiJhZ2VudC0xIiwic3RhdGVfaWQiOiJzdGF0ZS0xIiwiZ2VuZXJhdGlvbiI6MTg0NDY3NDQwNzM3MDk1NTE2MTUsIm9ic2VydmF0aW9uX3NoYTI1NiI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJjYXRhbG9nX3NoYTI1NiI6ImJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmIiLCJhZGFwdGVyX3JldmlzaW9uIjoiYWRhcHRlci0xIiwibW9kZWxfcmV2aXNpb24iOiJtb2RlbC0xIiwiY29uZmlndXJhdGlvbl9zaGEyNTYiOiJjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjIiwib3V0cHV0X3NjaGVtYV9zaGEyNTYiOiJkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkIiwiY29udHJvbGxlcl9lcG9jaCI6MiwiZ2F0ZV9lcG9jaCI6MywiY29udHJvbF92ZXJzaW9uIjo0fSwibGVhc2VfZXBvY2giOjIsInNuYXBzaG90X2lkIjoic25hcHNob3QtMSIsImFwcHJvdmVkX3JldmlzaW9uX2lkIjoicmV2aXNpb24tMSIsInBsYW5fZXBvY2giOjMsImdyYW50cyI6eyJtZXRhZGF0YV9yZWFkIjp0cnVlLCJjb250ZW50X3JlYWQiOmZhbHNlLCJlZGl0IjpmYWxzZSwiY29udHJvbCI6ZmFsc2V9LCJjb250aW51aXR5Ijp7InN1cnZpdmVzX2NvbnRyb2xsZXJfcmVzdGFydCI6ZmFsc2UsInJlY2VpcHRfcmVjb3ZlcnkiOmZhbHNlLCJwcm92aWRlcl9zZXNzaW9uX2NvbnRpbnVpdHkiOmZhbHNlfX0=",
+  "input_sha256": "984c75e3d62bcf92a8efdcb720cd813920b7906d7afc24095e6ac4555dddd46d",
+  "observation_sha256": "61d7a99ac9c9bbb2b680de9a63edba8e9111d914f0b0090e11d7647758da9dee",
+  "producer_wire_base64": "eyJzY2hlbWFfdmVyc2lvbiI6ImFzY2Vuc2lvbi5jb250ZXh0LWNvbnRyb2wub3duZXItYmluZGluZy52MSIsIm93bmVyX2lkIjoib3duZXItMSIsIm93bmVyX3ZlcnNpb24iOiJvd25lci12MSIsImludm9jYXRpb25faWQiOiJpbnZvY2F0aW9uLTEiLCJiaW5kaW5nX2lkIjoiYmluZGluZy0xIiwiYmluZGluZ192ZXJzaW9uIjoxLCJiaW5kaW5nX2RpZ2VzdCI6ImVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWVlZWUiLCJjb250ZXh0X3JlZiI6ImNvbnRleHQtMSIsImluc3RhbmNlX2lkIjoiaW5zdGFuY2UtMSIsIm5vZGVfa2luZCI6ImRlY2lzaW9uIiwic3RhdGUiOiJhdmFpbGFibGUiLCJ3b3JrZmxvd19ydW5faWQiOiJydW4tMSIsImRlZmluaXRpb25fZGlnZXN0IjoiZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZiIsImdyYXBoX2lkIjoiZ3JhcGgtMSIsIm5vZGVfaWQiOiJub2RlLTEiLCJub2RlX2V4ZWN1dGlvbl9pZCI6ImV4ZWN1dGlvbi0xIiwiYm91bmRhcnkiOnsicnVuX2lkIjoicnVuLTEiLCJlcGlzb2RlX2lkIjoiZXBpc29kZS0xIiwiYWdlbnRfaWQiOiJhZ2VudC0xIiwic3RhdGVfaWQiOiJzdGF0ZS0xIiwiZ2VuZXJhdGlvbiI6MTg0NDY3NDQwNzM3MDk1NTE2MTUsIm9ic2VydmF0aW9uX3NoYTI1NiI6ImFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWFhYWEiLCJjYXRhbG9nX3NoYTI1NiI6ImJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmJiYmIiLCJhZGFwdGVyX3JldmlzaW9uIjoiYWRhcHRlci0xIiwibW9kZWxfcmV2aXNpb24iOiJtb2RlbC0xIiwiY29uZmlndXJhdGlvbl9zaGEyNTYiOiJjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjIiwib3V0cHV0X3NjaGVtYV9zaGEyNTYiOiJkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkZGRkIiwiY29udHJvbGxlcl9lcG9jaCI6MiwiZ2F0ZV9lcG9jaCI6MywiY29udHJvbF92ZXJzaW9uIjo0fSwibGVhc2VfZXBvY2giOjIsInNuYXBzaG90X2lkIjoic25hcHNob3QtMSIsImFwcHJvdmVkX3JldmlzaW9uX2lkIjoicmV2aXNpb24tMSIsInBsYW5fZXBvY2giOjMsImdyYW50cyI6eyJtZXRhZGF0YV9yZWFkIjp0cnVlLCJjb250ZW50X3JlYWQiOmZhbHNlLCJlZGl0IjpmYWxzZSwiY29udHJvbCI6ZmFsc2V9LCJjb250aW51aXR5Ijp7InN1cnZpdmVzX2NvbnRyb2xsZXJfcmVzdGFydCI6ZmFsc2UsInJlY2VpcHRfcmVjb3ZlcnkiOmZhbHNlLCJwcm92aWRlcl9zZXNzaW9uX2NvbnRpbnVpdHkiOmZhbHNlfX0=",
+  "producer_wire_sha256": "984c75e3d62bcf92a8efdcb720cd813920b7906d7afc24095e6ac4555dddd46d"
+}

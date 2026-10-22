@@ -2,6 +2,7 @@ export const MAX_OWNER_JSON_BODY_BYTES = 1024 * 1024;
 export const MAX_OWNER_JSON_DEPTH = 32;
 export const MAX_U64_DECIMAL_DIGITS = 20;
 export const MAX_U64 = 18_446_744_073_709_551_615n;
+export const CONTEXT_OWNER_BINDING_SCHEMA_V1 = "ascension.context-control.owner-binding.v1";
 
 export type IdentityField =
   | "console_issuer"
@@ -39,12 +40,32 @@ export type BoundaryDigestField =
 export type BoundaryValueField = "boundary_epoch";
 export type BoundaryField = BoundaryIdentifierField | BoundaryDigestField | BoundaryValueField;
 
+export type BindingIdentifierField =
+  | "binding_owner_id"
+  | "binding_owner_version"
+  | "binding_invocation_id"
+  | "binding_id"
+  | "binding_context_ref"
+  | "binding_instance_id"
+  | "binding_node_kind"
+  | "binding_run_id"
+  | "binding_graph_id"
+  | "binding_node_id"
+  | "binding_node_execution_id"
+  | "binding_snapshot_id"
+  | "binding_approved_revision_id";
+
+export type BindingDigestField = "binding_digest" | "binding_definition_digest";
+export type BindingValueField = "binding_grants" | "owner_binding";
+export type BindingField = BindingIdentifierField | BindingDigestField | BindingValueField;
+
 export type CandidateRefusal =
   | Readonly<{ kind: "json_decoding" }>
   | Readonly<{ kind: "out_of_bounds"; field: "json_body" | "json_shape" }>
-  | Readonly<{ kind: "invalid_identifier"; field: IdentityField | BoundaryIdentifierField }>
-  | Readonly<{ kind: "invalid_digest"; field: BoundaryDigestField }>
-  | Readonly<{ kind: "invalid_value"; field: IdentityField | BoundaryValueField }>
+  | Readonly<{ kind: "unsupported_schema"; expected: typeof CONTEXT_OWNER_BINDING_SCHEMA_V1 }>
+  | Readonly<{ kind: "invalid_identifier"; field: IdentityField | BoundaryIdentifierField | BindingIdentifierField }>
+  | Readonly<{ kind: "invalid_digest"; field: BoundaryDigestField | BindingDigestField }>
+  | Readonly<{ kind: "invalid_value"; field: IdentityField | BoundaryValueField | BindingValueField }>
   | Readonly<{ kind: "correlation_mismatch"; field: IdentityField }>;
 
 /** Fixed, value-free refusal categories for this untrusted candidate decoder. */
@@ -63,7 +84,10 @@ export function refuseJson(): never {
   throw new OwnerIdentityCandidateError({ kind: "json_decoding" });
 }
 
-export function validateIdentifier(field: IdentityField | BoundaryIdentifierField, value: string): void {
+export function validateIdentifier(
+  field: IdentityField | BoundaryIdentifierField | BindingIdentifierField,
+  value: string,
+): void {
   if (value.length === 0 || value.length > 128) invalidIdentifier(field);
   const first = value.charCodeAt(0);
   if (!isAsciiAlphaNumeric(first)) invalidIdentifier(field);
@@ -91,11 +115,13 @@ export function validateCorrelationText(field: IdentityField, value: string): vo
   }
 }
 
-export function invalidIdentifier(field: IdentityField | BoundaryIdentifierField): never {
+export function invalidIdentifier(
+  field: IdentityField | BoundaryIdentifierField | BindingIdentifierField,
+): never {
   throw new OwnerIdentityCandidateError({ kind: "invalid_identifier", field });
 }
 
-export function validateDigest(field: BoundaryDigestField, value: string): void {
+export function validateDigest(field: BoundaryDigestField | BindingDigestField, value: string): void {
   if (value.length !== 64) invalidDigest(field);
   for (let index = 0; index < value.length; index += 1) {
     const code = value.charCodeAt(index);
@@ -103,12 +129,19 @@ export function validateDigest(field: BoundaryDigestField, value: string): void 
   }
 }
 
-export function invalidDigest(field: BoundaryDigestField): never {
+export function invalidDigest(field: BoundaryDigestField | BindingDigestField): never {
   throw new OwnerIdentityCandidateError({ kind: "invalid_digest", field });
 }
 
-export function invalidValue(field: IdentityField | BoundaryValueField): never {
+export function invalidValue(field: IdentityField | BoundaryValueField | BindingValueField): never {
   throw new OwnerIdentityCandidateError({ kind: "invalid_value", field });
+}
+
+export function unsupportedBindingSchema(): never {
+  throw new OwnerIdentityCandidateError({
+    kind: "unsupported_schema",
+    expected: CONTEXT_OWNER_BINDING_SCHEMA_V1,
+  });
 }
 
 export function correlationMismatch(field: IdentityField): never {
