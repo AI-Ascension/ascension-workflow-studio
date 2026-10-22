@@ -20,7 +20,9 @@ import {
   ProviderSessionPolicyCommandResponseSchema,
   ProviderSessionPolicyViewResponseSchema,
   ReplayResponseSchema,
-  RunSubmissionResponseSchema,
+  RecoveredRunSubmissionSchema,
+  SubmissionErrorResponseSchema,
+  SubmissionRecoveryResponseSchema,
   SeedBindingReadbackV2Schema,
   SeedRequestV2Schema,
   SeededRunSubmissionResponseV2Schema,
@@ -59,6 +61,7 @@ import {
   type ProviderSessionPolicyViewResponse,
   type ReplayResponse,
   type RunSubmissionResponse,
+  type SubmissionRecoveryResponse,
   type SeedBindingReadbackV2,
   type SeededRunSubmissionResponseV2,
   type StatusResponse,
@@ -75,7 +78,7 @@ import {
 } from "@studio/contracts";
 import { definitionIdentityDigest, parseBoundedJson, validateNodeBindings } from "@studio/document";
 import { readContextCatalogBody } from "./context-owner-catalog";
-import { CapabilityGateError, ClientError } from "./errors";
+import { CapabilityGateError, ClientError, RunSubmissionNotStartedError } from "./errors";
 import { assertPolicyCommandOperation, assertPolicyUpload, policyRevisionQuery } from "./provider-policy";
 import { ownerDefinitionToRecord, ownerDraftToRecord } from "./records";
 import type { SeededRunSubmissionOptionsV2, SeededRunV2Client } from "./seeded-run-v2";
@@ -106,6 +109,9 @@ const SEEDED_JSON_MAX_STRING_BYTES = 4 * 1024;
 const SEEDED_JSON_MAX_ENCODED_STRING_BYTES = SEEDED_JSON_MAX_STRING_BYTES * 6 + 2;
 const SEEDED_SUBMISSION_TIMEOUT_MS = 15_000;
 const MAX_UNRESOLVED_SEEDED_SUBMISSIONS = 32;
+const SUBMISSION_TIMEOUT_MS = 45_000;
+const SUBMISSION_RESPONSE_MAX_BYTES = 64 * 1024;
+const MAX_UNRESOLVED_SUBMISSIONS = 32;
 
 function assertSeededJsonValueLimits(root: unknown): void {
   const stack: Array<{ value: unknown; depth: number }> = [{ value: root, depth: 0 }];
@@ -201,25 +207,28 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
   private readonly targetAdmissionGenerations = new Map<string, number>();
   private readonly targetAdmissionBindings = new Map<string, TargetAdmissionBinding>();
   private readonly unresolvedSeededSubmissions = new Map<string, { body: string; generation: number }>();
+  private readonly unresolvedSubmissions = new Map<string, {
+    body: string; generation: number; inFlight: boolean; canRetry: boolean;
+  }>();
   /** Requests are retained so a lost response can be retried verbatim. */
   private readonly targetAdmissionRequests = new Map<string, TargetAdmissionRequest>();
 
   public constructor(options: OwnerApiClientOptions = {}) {
     this.baseUrl = normalizeRelativeBase(options.baseUrl ?? "/v1");
     this.fetcher = options.fetcher ?? fetch.bind(globalThis);
-    this.token = options.token;
+    this.token = options.token?.trim() || undefined;
     this.actorScope = options.actorScope?.trim() || undefined;
   }
 
   public setToken(token: string | undefined): void {
     const next = token?.trim() || undefined;
-    this.authGeneration += 1;
+    if (next !== this.token) this.authGeneration += 1;
     this.token = next;
   }
 
   public setActorScope(actorScope: string | undefined): void {
     const next = actorScope?.trim() || undefined;
-    this.authGeneration += 1;
+    if (next !== this.actorScope) this.authGeneration += 1;
     this.actorScope = next;
   }
 
@@ -457,6 +466,7 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
       body: JSON.stringify(body),
     });
     const result = decodeWith(TargetPreflightResponseSchema, response, "workflow target preflight");
+    this.assertSubmissionGeneration(generation);
     validateTargetAdmissionBinding(result.admission, body);
     this.targetAdmissionRequests.set(body.request_id, cloneJson(body));
     this.targetAdmissionGenerations.set(body.request_id, generation);
@@ -470,6 +480,25 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
     profile: string,
     options: RunSubmissionOptions = {},
   ): Promise<RunSubmissionResponse> {
+    // Only this invocation's actual fetch boundary establishes uncertainty.
+    // Map absence cannot prove that a request was never sent.
+    const attempt = { started: false };
+    try {
+      return await this.submitRunAttempt(definition, instanceId, profile, options, attempt);
+    } catch (error: unknown) {
+      if (!attempt.started) throw new RunSubmissionNotStartedError(error);
+      throw error;
+    }
+  }
+
+  private async submitRunAttempt(
+    definition: WorkflowDefinition,
+    instanceId: string,
+    profile: string,
+    options: RunSubmissionOptions,
+    attempt: { started: boolean },
+  ): Promise<RunSubmissionResponse> {
+    const generation = this.authGeneration;
     const admission = options.admission ? TargetAdmissionBindingSchema.parse(options.admission) : undefined;
     const requestId = options.requestId ?? admission?.request_id ?? `studio.${cryptoRandomId()}`;
     const parsedDefinition = WorkflowDefinitionSchema.parse(definition);
@@ -487,6 +516,9 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
         409,
       );
     }
+    if (this.targetAdmissionGenerations.get(requestId) !== generation) {
+      throw new ClientError("The authenticated submission session changed after preflight", "submission_session_changed", 409);
+    }
     validateTargetAdmissionBinding(admission, reviewedRequest);
     assertEqualBindingField("request_id", requestId, admission.request_id);
     assertEqualBindingField("target.instance_id", instanceId, admission.target.instance_id);
@@ -498,22 +530,126 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
       }
     }
     const definitionDigest = await definitionIdentityDigest(parsedDefinition);
+    this.assertSubmissionGeneration(generation);
     assertEqualBindingField("workflow_definition_digest", admission.workflow_definition_digest, definitionDigest);
     assertEqualBindingField("target.workflow_revision", admission.target.workflow_revision, parsedDefinition.version);
     assertEqualBindingField("target.game_profile", admission.target.game_profile, parsedDefinition.game_profile);
-    const response = await this.request("/workflow-runs", {
-      method: "POST",
-      body: JSON.stringify({
-        schema_version: "ascension.management/v1",
-        request_id: requestId,
-        definition: parsedDefinition,
-        artifact_id: null,
-        instance_id: instanceId,
-        profile,
-        admission,
-      }),
+    const body = JSON.stringify({
+      schema_version: "ascension.management/v1",
+      request_id: requestId,
+      definition: parsedDefinition,
+      artifact_id: null,
+      instance_id: instanceId,
+      profile,
+      admission,
     });
-    return decodeWith(RunSubmissionResponseSchema, response, "run submission");
+    if (new TextEncoder().encode(body).byteLength > SEEDED_REQUEST_MAX_BYTES) {
+      throw new ClientError("Run submission exceeds the request byte limit", "submission_request_too_large", 413);
+    }
+    const existing = this.unresolvedSubmissions.get(requestId);
+    if (existing && (existing.body !== body || existing.generation !== generation)) {
+      throw new ClientError("The retained submission identity has different request bytes or credentials", "submission_request_conflict", 409);
+    }
+    if (existing && (existing.inFlight || !existing.canRetry)) {
+      throw new ClientError("Check the original submission before retrying it", "submission_recovery_required", 409);
+    }
+    if (!existing && this.unresolvedSubmissions.size >= MAX_UNRESOLVED_SUBMISSIONS) {
+      throw new ClientError("Reconcile retained submissions before starting another", "submission_pending_capacity", 409);
+    }
+    const pending = existing ?? { body, generation, inFlight: false, canRetry: false };
+    pending.inFlight = true;
+    pending.canRetry = false;
+    this.unresolvedSubmissions.set(requestId, pending);
+    try {
+      const response = await this.requestSubmission("/workflow-runs", { method: "POST", body }, generation,
+        () => { attempt.started = true; });
+      // Cleanup and injected fetcher callbacks may have changed the session
+      // after the transport's final check and before this continuation.
+      this.assertSubmissionGeneration(generation);
+      const result = decodeWith(RecoveredRunSubmissionSchema, response, "run submission");
+      this.unresolvedSubmissions.delete(requestId);
+      return result;
+    } finally {
+      pending.inFlight = false;
+      if (!existing && !attempt.started && this.unresolvedSubmissions.get(requestId) === pending) {
+        this.unresolvedSubmissions.delete(requestId);
+      }
+    }
+  }
+
+  public async recoverRunSubmission(requestId: string): Promise<SubmissionRecoveryResponse> {
+    const segment = seedRunIdV2PathSegment(requestId);
+    const pending = this.unresolvedSubmissions.get(requestId);
+    if (!pending) {
+      throw new ClientError("No retained submission has this identity", "submission_not_retained", 409);
+    }
+    this.assertSubmissionGeneration(pending.generation);
+    if (pending.inFlight) {
+      throw new ClientError("An operation for this identity is still in flight", "submission_in_flight", 409);
+    }
+    pending.inFlight = true;
+    pending.canRetry = false;
+    try {
+      const body = await this.requestSubmission(`/workflow-submissions/${segment}`, { method: "GET" }, pending.generation);
+      this.assertSubmissionGeneration(pending.generation);
+      const result = decodeWith(SubmissionRecoveryResponseSchema, body, "submission recovery");
+      if (result.request_id !== requestId) {
+        throw new ClientError("Recovery returned a different request identity", "submission_recovery_mismatch", 409);
+      }
+      pending.canRetry = result.state === "missing";
+      if (result.state === "submitted") this.unresolvedSubmissions.delete(requestId);
+      return result;
+    } finally {
+      pending.inFlight = false;
+    }
+  }
+
+  private assertSubmissionGeneration(generation: number): void {
+    if (generation !== this.authGeneration) {
+      throw new ClientError("The authenticated submission session changed; retain the original request identity", "submission_session_changed", 409);
+    }
+  }
+
+  private async requestSubmission(
+    path: string,
+    init: RequestInit,
+    generation: number,
+    onStart?: () => void,
+  ): Promise<unknown> {
+    this.assertSubmissionGeneration(generation);
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => {
+        reject(new ClientError("Submission outcome is unknown after the transport deadline", "submission_timeout"));
+        controller.abort();
+      }, SUBMISSION_TIMEOUT_MS);
+    });
+    try {
+      const headers = new Headers(init.headers);
+      headers.set("Accept", "application/json");
+      if (init.body !== undefined) headers.set("Content-Type", "application/json");
+      if (this.token) headers.set("Authorization", `Bearer ${this.token}`);
+      return await Promise.race([deadline, (async () => {
+        onStart?.();
+        const response = await this.fetcher(`${this.baseUrl}${path}`, {
+          ...init, headers, credentials: "same-origin", redirect: "error", cache: "no-store", signal: controller.signal,
+        });
+        const body = await readBoundedJson(response, SUBMISSION_RESPONSE_MAX_BYTES, controller.signal);
+        this.assertSubmissionGeneration(generation);
+        if (!response.ok) {
+          const error = SubmissionErrorResponseSchema.safeParse(body);
+          if (error.success) {
+            throw new ClientError(error.data.error.message, error.data.error.code, response.status, error.data.error.class);
+          }
+          throw new ClientError("The owner returned an invalid submission error", "submission_http_error", response.status);
+        }
+        return body;
+      })()]);
+    } finally {
+      clearTimeout(timer);
+      controller.abort();
+    }
   }
 
   /** Submit one explicit or derive-once v2 operation. If the outcome is
