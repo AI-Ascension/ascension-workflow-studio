@@ -63,6 +63,7 @@ import {
   type RunSubmissionResponse,
   type SubmissionRecoveryResponse,
   type SeedBindingReadbackV2,
+  type SeedRequestV2,
   type SeededRunSubmissionResponseV2,
   type StatusResponse,
   type TargetAdmissionBinding,
@@ -201,6 +202,7 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
   public readonly mode = "live" as const;
   private readonly baseUrl: string;
   private readonly fetcher: typeof fetch;
+  private readonly seededRecoveryStorage: OwnerApiClientOptions["seededRecoveryStorage"];
   private token: string | undefined;
   private actorScope: string | undefined;
   private authGeneration = 0;
@@ -216,6 +218,7 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
   public constructor(options: OwnerApiClientOptions = {}) {
     this.baseUrl = normalizeRelativeBase(options.baseUrl ?? "/v1");
     this.fetcher = options.fetcher ?? fetch.bind(globalThis);
+    this.seededRecoveryStorage = options.seededRecoveryStorage;
     this.token = options.token?.trim() || undefined;
     this.actorScope = options.actorScope?.trim() || undefined;
   }
@@ -737,8 +740,86 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
     if (!pending && this.unresolvedSeededSubmissions.size >= MAX_UNRESOLVED_SEEDED_SUBMISSIONS) {
       throw new ClientError("Too many unresolved seeded submissions; resolve one before starting another", "seeded_pending_capacity", 409);
     }
+    this.persistSeededRecovery(requestId, serializedBody);
     this.unresolvedSeededSubmissions.set(requestId, { body: serializedBody, generation });
+    return this.sendSeededRequest(requestId, serializedBody, seed, generation);
+  }
 
+  /** Explicit recovery only: authenticate again as the original owner principal,
+   * then replay the original bytes. A fresh preflight would replace historical
+   * admission and change the operation digest. The owner remains responsible for
+   * authentication, durable deduplication and admission of an unreceived request.
+   * Storage is untrusted and never grants local or downstream authority. */
+  public async recoverSeededRunV2(requestId: string): Promise<SeededRunSubmissionResponseV2> {
+    const generation = this.authGeneration;
+    const key = this.seededRecoveryKey(requestId);
+    let serializedBody: string | null;
+    try {
+      serializedBody = this.seededRecoveryStorage!.getItem(key);
+    } catch {
+      throw new ClientError("Seeded recovery storage is unavailable", "seeded_recovery_unavailable");
+    }
+    if (serializedBody === null) {
+      throw new ClientError("No exact seeded request is stored for this owner and request ID", "seeded_recovery_missing", 409);
+    }
+    const value = parseBoundedJson(serializedBody, {
+      maxBytes: SEEDED_REQUEST_MAX_BYTES,
+      maxDepth: SEEDED_JSON_MAX_DEPTH,
+      maxNodes: SEEDED_JSON_MAX_ITEMS,
+      maxStringBytes: SEEDED_JSON_MAX_ENCODED_STRING_BYTES,
+    });
+    assertSeededJsonValueLimits(value);
+    const request = WorkflowRunRequestV2Schema.parse(value);
+    if (request.request_id !== requestId || !request.admission || !request.definition || request.artifact_id !== null) {
+      throw new ClientError("Stored seeded request identity is invalid", "seeded_recovery_invalid", 409);
+    }
+    const definition = WorkflowDefinitionSchema.parse(request.definition);
+    const admission = request.admission;
+    assertEqualBindingField("request_id", requestId, admission.request_id);
+    assertEqualBindingField("target.instance_id", request.instance_id, admission.target.instance_id);
+    assertEqualBindingField("target.execution_profile", request.profile, admission.target.execution_profile);
+    assertEqualBindingField("target.workflow_revision", definition.version, admission.target.workflow_revision);
+    assertEqualBindingField("target.game_profile", definition.game_profile, admission.target.game_profile);
+    assertEqualBindingField("workflow_definition_digest", await definitionIdentityDigest(definition), admission.workflow_definition_digest);
+    if (generation !== this.authGeneration) {
+      throw new ClientError("Owner session changed during recovery validation", "seeded_session_changed", 409);
+    }
+    // No new ID, new admission, reserialization or client-side random seed.
+    return this.sendSeededRequest(requestId, serializedBody, request.seed, generation);
+  }
+
+  private seededRecoveryKey(requestId: string): string {
+    if (!this.seededRecoveryStorage || !this.token || !this.actorScope) {
+      throw new ClientError("Seeded recovery requires configured private storage and an authenticated owner subject", "seeded_recovery_unavailable", 409);
+    }
+    return `ascension.seeded-recovery.v1:${JSON.stringify([this.baseUrl, this.actorScope, requestId])}`;
+  }
+
+  private persistSeededRecovery(requestId: string, body: string): void {
+    if (!this.seededRecoveryStorage) return;
+    const key = this.seededRecoveryKey(requestId);
+    try {
+      const previous = this.seededRecoveryStorage.getItem(key);
+      if (previous !== null && previous !== body) {
+        throw new ClientError("An unresolved stored seeded request ID cannot be rebound", "seeded_request_id_conflict", 409);
+      }
+      this.seededRecoveryStorage.setItem(key, body);
+      if (this.seededRecoveryStorage.getItem(key) !== body) throw new Error("Storage did not retain the request");
+    } catch (error) {
+      if (error instanceof ClientError) throw error;
+      throw new ClientError("Cannot durably retain the seeded request; this attempt was not submitted and any prior outcome is unchanged", "seeded_recovery_unavailable", 409);
+    }
+  }
+
+  private async sendSeededRequest(
+    requestId: string,
+    serializedBody: string,
+    seed: SeedRequestV2,
+    generation: number,
+  ): Promise<SeededRunSubmissionResponseV2> {
+    if (generation !== this.authGeneration) {
+      throw new ClientError("Owner session changed before seeded dispatch", "seeded_session_changed", 409);
+    }
     let response: Response;
     let body: unknown;
     try {
@@ -790,6 +871,10 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
       throw new ClientError("Owner session changed before seeded result acceptance", "seeded_submission_outcome_unknown");
     }
     this.unresolvedSeededSubmissions.delete(requestId);
+    // Even a resolved network response is not a durable application receipt.
+    // Retain the exact request across a crash before the caller records the
+    // result. Only the integrating application's explicit retention/acknowledgement
+    // policy may remove it; this client cannot make that decision safely.
     return result;
   }
 

@@ -113,6 +113,12 @@ export interface OwnerApiClientOptions {
   token?: string;
   actorScope?: string;
   fetcher?: typeof fetch;
+  /** Opt-in private, origin-local recovery storage. Stores exact workflow bodies,
+   * never tokens. The application owns retention and explicit recovery UI and
+   * must serialize writers for each scoped request across clients/tabs. Plain
+   * shared localStorage is not atomic compare-and-set or concurrency-safe here;
+   * session-scoped single-writer storage can support the reload-only use case. */
+  seededRecoveryStorage?: Pick<Storage, "getItem" | "setItem">;
 }
 
 export interface ProviderSessionPolicyClient {

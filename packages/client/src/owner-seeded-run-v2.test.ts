@@ -398,3 +398,193 @@ describe("owner seeded workflow v2 client", () => {
     expect(posts).toBe(0);
   });
 });
+
+
+function recoveryStorage(): Pick<Storage, "getItem" | "setItem" | "removeItem"> & { records: Map<string, string> } {
+  const records = new Map<string, string>();
+  return {
+    records,
+    getItem: (key) => records.get(key) ?? null,
+    setItem: (key, value) => { records.set(key, value); },
+    removeItem: (key) => { records.delete(key); },
+  };
+}
+
+describe("opt-in durable exact seeded request recovery", () => {
+  it.each(["explicit", "derive_once"] as const)("recovers %s after client replacement with the exact bytes and no new preflight", async (mode) => {
+    const storage = recoveryStorage();
+    const bodies: string[] = [];
+    const first = new OwnerApiClient({ token: "private-token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher: async (input, init) => {
+      if (String(input).endsWith("/preflight")) return preflightResponse(String(init?.body));
+      bodies.push(String(init?.body));
+      expect([...storage.records.values()]).toEqual(bodies);
+      throw new Error("reply lost");
+    } });
+    const options = await preflightBody(first, "studio.recover.1");
+    options.seed = mode === "explicit"
+      ? { schema_version: "ascension.workflow-seed-request/v2", mode, seed: "é".repeat(32) }
+      : { schema_version: "ascension.workflow-seed-request/v2", mode };
+    await expect(first.submitSeededRunV2(definition(), "instance.1", "live", options)).rejects.toMatchObject({ code: "seeded_submission_outcome_unknown" });
+    expect(JSON.stringify([...storage.records])).not.toContain("private-token");
+    const fetcher = vi.fn(async (input, init) => {
+      expect(String(input)).toBe("/v2/workflow-runs");
+      expect(new Headers(init?.headers).get("authorization")).toBe("Bearer replacement-token");
+      bodies.push(String(init?.body));
+      return new Response(JSON.stringify(responseFor("studio.recover.1", mode, "é".repeat(32))));
+    }) as unknown as typeof fetch;
+    const replacement = new OwnerApiClient({ token: " replacement-token ", actorScope: " owner.1 ", seededRecoveryStorage: storage, fetcher });
+    expect(fetcher).not.toHaveBeenCalled(); // Loading/authentication is never automatic replay.
+    const recovery = replacement.recoverSeededRunV2("studio.recover.1");
+    // Preserve #264 normalized no-op authentication updates during validation.
+    replacement.setToken("replacement-token");
+    replacement.setActorScope("owner.1");
+    const result = await recovery;
+    expect(result.seed_binding.mode).toBe(mode);
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1]).toBe(bodies[0]);
+    expect(storage.records.size).toBe(1); // Candidate persistence is not settlement.
+  });
+
+  it("does not submit when durable storage is unavailable or fails readback", async () => {
+    for (const storage of [
+      { getItem: () => null, setItem: () => { throw new Error("quota exceeded"); }, removeItem: () => {} },
+      { getItem: () => null, setItem: () => {}, removeItem: () => {} },
+    ]) {
+      const fetcher = vi.fn(async (_input, init) => preflightResponse(String(init?.body))) as unknown as typeof fetch;
+      const client = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher });
+      const options = await preflightBody(client, "studio.recover.2");
+      await expect(client.submitSeededRunV2(definition(), "instance.1", "live", options)).rejects.toMatchObject({ code: "seeded_recovery_unavailable" });
+      expect(fetcher).toHaveBeenCalledTimes(1); // preflight only
+    }
+  });
+
+  it("isolates owner subject, relative API base and request ID, and refuses rebinding after reload", async () => {
+    const storage = recoveryStorage();
+    const fetcher = vi.fn(async (input, init) => {
+      if (String(input).endsWith("/preflight")) return preflightResponse(String(init?.body));
+      throw new Error("reply lost");
+    }) as unknown as typeof fetch;
+    const first = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher });
+    const options = await preflightBody(first, "studio.recover.3");
+    await expect(first.submitSeededRunV2(definition(), "instance.1", "live", options)).rejects.toThrow();
+    const original = [...storage.records];
+    for (const override of [{ actorScope: "owner.2" }, { baseUrl: "/another/v1" }, { token: undefined }]) {
+      const client = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher, ...override });
+      await expect(client.recoverSeededRunV2("studio.recover.3")).rejects.toThrow();
+    }
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    const replacement = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher });
+    const changed = await preflightBody(replacement, "studio.recover.3");
+    changed.seed = { schema_version: "ascension.workflow-seed-request/v2", mode: "explicit", seed: "different" };
+    await expect(replacement.submitSeededRunV2(definition(), "instance.1", "live", changed)).rejects.toMatchObject({ code: "seeded_request_id_conflict" });
+    expect([...storage.records]).toEqual(original);
+    expect(fetcher).toHaveBeenCalledTimes(3); // second preflight, no second start
+  });
+
+  it("rejects corrupted or mismatched stored bodies before network activity and retains evidence", async () => {
+    const storage = recoveryStorage();
+    const first = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher: async (input, init) => {
+      if (String(input).endsWith("/preflight")) return preflightResponse(String(init?.body));
+      throw new Error("reply lost");
+    } });
+    const options = await preflightBody(first, "studio.recover.4");
+    await expect(first.submitSeededRunV2(definition(), "instance.1", "live", options)).rejects.toThrow();
+    const [key, original] = [...storage.records][0];
+    const fetcher = vi.fn() as unknown as typeof fetch;
+    const replacement = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher });
+    for (const body of ["{", "x".repeat(1_048_577), JSON.stringify({ ...JSON.parse(original), request_id: "other" }),
+      JSON.stringify({ ...JSON.parse(original), instance_id: "other" }),
+      JSON.stringify({ ...JSON.parse(original), definition: { ...definition(), version: "2.0.0" } }),
+      JSON.stringify({ ...JSON.parse(original), seed: { schema_version: "ascension.workflow-seed-request/v2", mode: "explicit", seed: "é".repeat(33) } }),
+    ]) {
+      storage.setItem(key, body);
+      await expect(replacement.recoverSeededRunV2("studio.recover.4")).rejects.toThrow();
+      expect(storage.getItem(key)).toBe(body);
+    }
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("retains original bytes on repeated reply loss, owner rejection and session replacement", async () => {
+    const storage = recoveryStorage();
+    const first = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher: async (input, init) => {
+      if (String(input).endsWith("/preflight")) return preflightResponse(String(init?.body));
+      throw new Error("reply lost");
+    } });
+    const options = await preflightBody(first, "studio.recover.5");
+    await expect(first.submitSeededRunV2(definition(), "instance.1", "live", options)).rejects.toThrow();
+    const original = [...storage.records];
+    for (const status of [401, 409, 500]) {
+      const client = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher: async () => new Response("{}", { status }) });
+      await expect(client.recoverSeededRunV2("studio.recover.5")).rejects.toThrow();
+      expect([...storage.records]).toEqual(original);
+    }
+    const fetcher = vi.fn() as unknown as typeof fetch;
+    const client = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher });
+    const recovery = client.recoverSeededRunV2("studio.recover.5");
+    client.setToken("changed");
+    client.setToken("token"); // A-to-B-to-A still fences the original generation.
+    await expect(recovery).rejects.toMatchObject({ code: "seeded_session_changed" });
+    expect(fetcher).not.toHaveBeenCalled();
+    expect([...storage.records]).toEqual(original);
+  });
+});
+
+
+describe("seeded recovery retention lifecycle", () => {
+  it.each(["candidate_persisted", "awaiting_host_context", "resolved"])("retains recovery even after owner response: %s", async (state) => {
+    const storage = recoveryStorage();
+    const client = new OwnerApiClient({ token: "secret-token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher: async (input, init) => {
+      if (String(input).endsWith("/preflight")) return preflightResponse(String(init?.body));
+      const result = responseFor("studio.retention.1", "explicit");
+      result.seed_binding.state = state;
+      return new Response(JSON.stringify(result));
+    } });
+    const options = await preflightBody(client, "studio.retention.1");
+    await client.submitSeededRunV2(definition(), "instance.1", "live", options);
+    expect(storage.records.size).toBe(1);
+    expect(JSON.stringify([...storage.records])).not.toContain("secret-token");
+  });
+
+  it("replays after replacement when a resolved receipt was lost before application persistence", async () => {
+    const storage = recoveryStorage();
+    const bodies: string[] = [];
+    const settled = responseFor("studio.retention.2", "derive_once");
+    settled.seed_binding.state = "resolved";
+    const first = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher: async (input, init) => {
+      if (String(input).endsWith("/preflight")) return preflightResponse(String(init?.body));
+      bodies.push(String(init?.body));
+      return new Response(JSON.stringify(settled));
+    } });
+    const options = await preflightBody(first, "studio.retention.2");
+    options.seed = { schema_version: "ascension.workflow-seed-request/v2", mode: "derive_once" };
+    // Model a crash boundary: discard the accepted response without ever
+    // persisting its workflow_run_id or receipt in the integrating application.
+    await first.submitSeededRunV2(definition(), "instance.1", "live", options);
+    expect(storage.records.size).toBe(1);
+    const replacement = new OwnerApiClient({ token: "new-token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher: async (input, init) => {
+      expect(String(input)).toBe("/v2/workflow-runs");
+      bodies.push(String(init?.body));
+      return new Response(JSON.stringify(settled));
+    } });
+    const recovered = await replacement.recoverSeededRunV2("studio.retention.2");
+    expect(recovered).toEqual(settled);
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1]).toBe(bodies[0]);
+    expect(storage.records.size).toBe(1);
+  });
+
+  it("does not alter a newer storage record when accepting a settled response", async () => {
+    const storage = recoveryStorage();
+    const client = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher: async (input, init) => {
+      if (String(input).endsWith("/preflight")) return preflightResponse(String(init?.body));
+      const key = [...storage.records.keys()][0];
+      storage.setItem(key, "changed during request");
+      const result = responseFor("studio.retention.3", "explicit");
+      result.seed_binding.state = "resolved";
+      return new Response(JSON.stringify(result));
+    } });
+    const options = await preflightBody(client, "studio.retention.3");
+    await client.submitSeededRunV2(definition(), "instance.1", "live", options);
+    expect([...storage.records.values()]).toEqual(["changed during request"]);
+  });
+});
