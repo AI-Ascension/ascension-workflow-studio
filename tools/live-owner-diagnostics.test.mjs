@@ -171,40 +171,47 @@ test("DIAGNOSTIC_LOG_NAMES covers the evidence AC1 requires", () => {
   ]);
 });
 
-// Structural guard: the stack script must preserve diagnostics in BOTH removal
-// paths -- the orderly `shutdown()` and the `process.on("exit")` emergency path
-// -- and must do so before the recursive removal that used to destroy the logs.
-// This fails loudly if a future refactor drops the wiring.
+// Follow the orderly cleanup through its shared helper and retain the separate
+// synchronous exit-path gate. The source assertions protect actual call order,
+// not an obsolete import on the stack script.
 test("the live-owner stack preserves diagnostics before every fixture removal", async () => {
-  const stackScript = resolve(
-    dirname(fileURLToPath(import.meta.url)),
-    "live-owner-production-stack.mjs",
-  );
-  const source = await readFile(stackScript, "utf8");
+  const stackPath = resolve(dirname(fileURLToPath(import.meta.url)), "live-owner-production-stack.mjs");
+  const fixturePath = resolve(dirname(fileURLToPath(import.meta.url)), "live-owner-stack-fixture.mjs");
+  const stack = await readFile(stackPath, "utf8");
+  const fixture = await readFile(fixturePath, "utf8");
+  assert.match(stack, /import \{[^}]*removeFixtureDataAfterChildren[^}]*\} from "\.\/live-owner-stack-fixture\.mjs";/s);
+  assert.match(stack, /preserveDiagnosticLogsSync,\s*\n\} from "\.\/live-owner-diagnostics\.mjs";/);
 
-  // Locate each removal of targetDir and assert a preserve call precedes it
-  // within the same function body.
-  assert.match(source, /from "\.\/live-owner-diagnostics\.mjs";/);
-  assert.match(source, /preserveDiagnosticLogs,/);
-  assert.match(source, /preserveDiagnosticLogsSync,/);
-
-  const shutdownBody = source.slice(source.indexOf("function shutdown("));
-  const shutdownPreserveIndex = shutdownBody.indexOf("await preserveDiagnosticLogs(targetDir)");
-  const shutdownRemoveIndex = shutdownBody.indexOf("rm(targetDir");
-  assert.ok(shutdownPreserveIndex !== -1, "shutdown() must call preserveDiagnosticLogs");
-  assert.ok(shutdownRemoveIndex !== -1, "shutdown() still removes targetDir");
-  assert.ok(
-    shutdownPreserveIndex < shutdownRemoveIndex,
-    "shutdown() must preserve diagnostics before removing targetDir",
+  const shutdownStart = stack.indexOf("function shutdown(");
+  const emergencyStart = stack.indexOf("function emergencyCleanup(", shutdownStart);
+  assert.ok(shutdownStart >= 0 && emergencyStart > shutdownStart, "both cleanup entry points must exist");
+  const shutdown = stack.slice(shutdownStart, emergencyStart);
+  assert.match(
+    shutdown,
+    /await removeFixtureDataAfterChildren\(targetDir,\s*\(\) => lifecycle\.stopChildren\(/,
+    "orderly shutdown must route removal through the all-child settlement gate",
   );
+  assert.match(shutdown, /if \(!removed\) \{ shutdownFailed = true;/);
 
-  const emergencyBody = source.slice(source.indexOf("function emergencyCleanup("));
-  const emergencyPreserveIndex = emergencyBody.indexOf("preserveDiagnosticLogsSync(targetDir)");
-  const emergencyRemoveIndex = emergencyBody.indexOf("rmSync(targetDir");
-  assert.ok(emergencyPreserveIndex !== -1, "emergencyCleanup() must call preserveDiagnosticLogsSync");
-  assert.ok(emergencyRemoveIndex !== -1, "emergencyCleanup() still removes targetDir");
-  assert.ok(
-    emergencyPreserveIndex < emergencyRemoveIndex,
-    "emergencyCleanup() must preserve diagnostics before removing targetDir",
-  );
+  const removeStart = fixture.indexOf("export async function removeFixtureData(");
+  const gateStart = fixture.indexOf("export async function removeFixtureDataAfterChildren(", removeStart);
+  const fixtureStart = fixture.indexOf("export function createStackFixture(", gateStart);
+  assert.ok(removeStart >= 0 && gateStart > removeStart && fixtureStart > gateStart);
+  const removeBody = fixture.slice(removeStart, gateStart);
+  const preserve = removeBody.indexOf("await preserveDiagnosticLogs(targetDir)");
+  const remove = removeBody.indexOf("await rm(targetDir");
+  assert.ok(preserve >= 0 && remove > preserve, "shared async removal must preserve named logs before rm");
+
+  const gate = fixture.slice(gateStart, fixtureStart);
+  assert.match(gate, /const outcome = await stopChildren\(\)/);
+  assert.match(gate, /if \(!outcome\?\.settled \|\| !outcome\.ok\) return false/);
+  assert.match(gate, /await removeFixtureData\(targetDir\);\s*return true/);
+
+  const emergency = stack.slice(emergencyStart);
+  const stop = emergency.indexOf("lifecycle.emergencyCleanupSync()");
+  const emergencyGate = emergency.indexOf("if (!lifecycle.canRemoveFixtureData()) return");
+  const syncPreserve = emergency.indexOf("preserveDiagnosticLogsSync(targetDir)");
+  const syncRemove = emergency.indexOf("rmSync(targetDir");
+  assert.ok(stop >= 0 && emergencyGate > stop, "emergency cleanup must stop owned children before checking settlement");
+  assert.ok(syncPreserve > emergencyGate && syncRemove > syncPreserve, "emergency removal requires the settled gate and preserves first");
 });

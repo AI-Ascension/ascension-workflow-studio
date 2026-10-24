@@ -7,6 +7,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import "./live-owner-process-lifecycle.test.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const stackScript = join(root, "tools/live-owner-production-stack.mjs");
@@ -223,31 +224,31 @@ function stubExecutable(stubs, stubDirectory, name) {
 }
 
 test("the owned children report names each process without leaking its environment", () => {
-  const reportPath = join(root, "tools/live-owner-production-stack.mjs");
+  const reportPath = join(root, "tools/live-owner-process-lifecycle.mjs");
   const source = readFileSync(reportPath, "utf8");
 
   // The exit status is the whole point of this file (#214): the captured
   // stdout/stderr logs are empty for a child that stopped answering, so
-  // `exit: null` is precisely the unattributable state. If the `close`
-  // handler stops recording it, this report can no longer distinguish a
+  // `exit: null` is precisely the unattributable state. If the actual process
+  // exit event stops recording it, this report can no longer distinguish a
   // crash from a clean exit and AC3 regresses silently.
-  assert.match(source, /child\.on\("close", \(code, signal\) =>/);
-  assert.match(source, /entry\.exit = \{ code: code \?\? null, signal: signal \?\? null }/);
-  // The status must be flushed to the report, not merely held in memory,
-  // because the fixture directory is deleted during shutdown.
-  const closeHandler = source.slice(source.indexOf('child.on("close"'));
-  const closeHandlerEnd = closeHandler.indexOf('child.on("error"');
-  const closeBody = closeHandler.slice(0, closeHandlerEnd === -1 ? closeHandler.indexOf("return entry") : closeHandlerEnd);
+  assert.match(source, /child\.on\("exit", \(code, signal\) =>/);
+  assert.match(source, /entry\.exit = \{ code: code \?\? null, signal: signal \?\? null, \.\.\.stamp\(entry, "child_exit", entry\.stopRequest \?\? \{\}\) }/);
+  // The timestamped status is flushed as soon as the process exits, before
+  // stream close and fixture deletion can change the observed cleanup phase.
+  const exitHandler = source.slice(source.indexOf('child.on("exit"'));
+  const exitHandlerEnd = exitHandler.indexOf('child.on("close"');
+  const exitBody = exitHandler.slice(0, exitHandlerEnd);
   assert.match(
-    closeBody,
+    exitBody,
     /entry\.exit = \{[^}]*\}[^]*recordOwnedChildren\(\)/,
-    "the close handler must persist the exit status before ending captured output",
+    "the exit event must persist terminal status and time before stream closure",
   );
 
   // The report is the only per-child evidence uploaded for #214, so it must
   // identify the process from values passed to startChild rather than from
   // ChildProcess internals, which are not part of the public API.
-  assert.match(source, /const entry = \{ child, output, logPath, command, args,/);
+  assert.match(source, /const entry = \{\s*child, output: outputWriter\?\.stream, logPath, command, args: \[\.\.\.args\]/);
   assert.doesNotMatch(source, /entry\.child\.spawnfile/);
 
   // `entry` carries `command`/`args` but no environment: the service
@@ -261,7 +262,7 @@ test("the owned children report names each process without leaking its environme
 });
 
 test("teardown keeps every owned child in the report it preserves", () => {
-  const source = readFileSync(join(root, "tools/live-owner-production-stack.mjs"), "utf8");
+  const source = readFileSync(join(root, "tools/live-owner-process-lifecycle.mjs"), "utf8");
 
   // The fixture always spawns two children (gateway and owner), and
   // `recordOwnedChildren()` serialises whatever `children` holds at the instant
@@ -328,67 +329,75 @@ test("teardown keeps every owned child in the report it preserves", () => {
   // Retained entries must not make teardown unbounded or repeat the signal work:
   // an already-exited child is detected and skipped, so a second `stopChild`
   // over the retained map is a no-op rather than a fresh wait.
-  assert.match(source, /const exited = childHasExited\(child\);\s*\n\s*if \(!exited\)/);
+  assert.match(
+    source,
+    /const exited = childHasExited\(child\);\s*\n\s*if \(Number\.isInteger\(child\.pid\) && !exited\)/,
+    "teardown signals only a registered child with a valid PID that is still running",
+  );
 });
 
 test("owner output is captured outside the fixture directory cleanup removes", async () => {
   const source = readFileSync(join(root, "tools/live-owner-production-stack.mjs"), "utf8");
+  const fixtureSource = readFileSync(join(root, "tools/live-owner-stack-fixture.mjs"), "utf8");
+  const lifecycleSource = readFileSync(join(root, "tools/live-owner-process-lifecycle.mjs"), "utf8");
 
   // #227 AC2 asks for proof by test, not by inspection. The capture paths are
   // derived from `diagnosticDestination(targetDir)`, which is rooted at the
   // diagnostics root and keyed by the fixture directory's basename -- never
   // inside `targetDir`. Assert the construction, so moving a capture back into
   // the fixture directory fails here.
+  assert.match(fixtureSource, /const diagnosticsPath = diagnosticDestination\(targetDir\)/);
   assert.match(
-    source,
-    /const ownerOutputPath = join\(diagnosticDestination\(targetDir\), "owner-stdout\.log"\)/,
+    fixtureSource,
+    /const ownerOutputPath = join\(diagnosticsPath, "owner-stdout\.log"\)/,
     "owner stdout must be captured under the diagnostics destination, not targetDir",
   );
   assert.match(
-    source,
-    /const ownerErrorPath = join\(diagnosticDestination\(targetDir\), "owner-stderr\.log"\)/,
+    fixtureSource,
+    /const ownerErrorPath = join\(diagnosticsPath, "owner-stderr\.log"\)/,
     "owner stderr must be captured under the diagnostics destination, not targetDir",
   );
   assert.doesNotMatch(
-    source,
+    fixtureSource,
     /join\(targetDir, "owner-std(out|err)\.log"\)/,
     "no owner capture may be written inside the directory cleanup removes",
   );
 
   // Both `serve-workflow` and the runtime path must be captured (#227 AC4):
   // it is not established which process the reset occurs in.
-  assert.match(source, /startWorkflowService\(\)[\s\S]*?owner-stderr\.log|owner-stdout\.log[\s\S]*?return startChild\(\s*harnessBinary/);
+  assert.match(source, /function startWorkflowService\(\)[\s\S]*?harnessBinary, \["serve-workflow"\]/);
   assert.match(source, /ownerOutputPath, stderr: ownerErrorPath/);
   assert.match(source, /stdout: gatewayOutputPath, stderr: gatewayErrorPath/);
 
-  // The captured streams must be created outside the in-fixture log path, and
-  // the lifecycle markers must be written with appendFileSync so they survive a
-  // capture stream that could not be opened.
-  assert.match(source, /function createDiagnosticCapture\(path\)/);
-  assert.match(source, /function appendDiagnosticLine\(path, line, stream\)/);
+  // The captured streams and timestamped lifecycle events live in the helpers;
+  // their call sites must remain wired to the owner and gateway children.
+  assert.match(lifecycleSource, /function createDiagnosticCapture\(path, createCaptureStream\)/);
+  assert.match(lifecycleSource, /function appendDiagnosticLine\(path, event, writer, legacyLine\)/);
   assert.match(
-    source,
-    /starting serve-workflow owner at/,
-    "each owner start is marked so a restart is visible in the captured output",
+    lifecycleSource,
+    /event,\s*at: new Date\(\)\.toISOString\(\),[\s\S]*?elapsed_ms: Number\(now - fixtureOriginNs\)/,
+    "each lifecycle event needs wallclock and monotonic fixture timing",
   );
   assert.match(
-    source,
-    /exited code=\$\{code \?\? "null"\} signal=\$\{signal \?\? "null"\}/,
-    "each owner exit is marked so a crash is not inferred from silence",
+    lifecycleSource,
+    /entry\.exit = \{ code: code \?\? null, signal: signal \?\? null, \.\.\.stamp\(entry, "child_exit", entry\.stopRequest \?\? \{\}\) }/,
+    "each owner exit is persisted with its event time, phase, and reason",
   );
+  assert.match(lifecycleSource, /starting serve-workflow owner at \$\{entry\.start\.at\}/);
+  assert.match(lifecycleSource, /exited code=\$\{entry\.exit\.code \?\? "null"\} signal=\$\{entry\.exit\.signal \?\? "null"\}/);
   // The exit marker must go through the same stream as the owner's output.
   // Writing it with `appendFileSync` after `stream.end()` would open the file
   // independently and could land ahead of output still buffered in the stream,
   // making the marker appear to precede the owner's last words.
   assert.match(
-    source,
-    /appendDiagnosticLine\(\s*stderrCapture \? capture\.stderr : undefined,[\s\S]*?stderrCapture,?\s*\);/,
-    "the exit marker must be written through the capture stream, not appended independently",
+    lifecycleSource,
+    /pipeInto\(child\.stderr, stderrCapture\);[\s\S]*?child\.on\("close", \(code, signal\) => \{[\s\S]*?appendDiagnosticLine\(capture\?\.stderr, \{ \.\.\.entry\.exit, pid: child\.pid \?\? null }, stderrCapture, legacyExit\)/,
+    "the legacy exit marker must share the owner's stderr writer and its ordered terminal event",
   );
   assert.match(
-    source,
-    /function appendDiagnosticLine\(path, line, stream\)[\s\S]*?stream\.end\(`\$\{line\}\\n`\);/,
-    "appendDiagnosticLine must write through the stream when one is supplied",
+    lifecycleSource,
+    /writer\.stream\.write\(line\)/,
+    "lifecycle markers must be written through the capture stream before it is ended",
   );
 
   // The CI job must print the captures, not only upload them (#227 AC1).
@@ -446,7 +455,19 @@ async function allocateLoopbackPorts(count) {
 // declared there. Counting braces is enough for this file: `stopChild`
 // contains no string or template literal with an unbalanced brace.
 function sliceFunctionBody(source, start) {
-  const open = source.indexOf("{", start);
+  const parameters = source.indexOf("(", start);
+  assert.notEqual(parameters, -1, "function parameters must open");
+  let parameterDepth = 0;
+  let parameterEnd = -1;
+  for (let index = parameters; index < source.length; index += 1) {
+    if (source[index] === "(") parameterDepth += 1;
+    else if (source[index] === ")") {
+      parameterDepth -= 1;
+      if (parameterDepth === 0) { parameterEnd = index; break; }
+    }
+  }
+  assert.notEqual(parameterEnd, -1, "function parameters must close");
+  const open = source.indexOf("{", parameterEnd + 1);
   assert.notEqual(open, -1, "function body must open with a brace");
   let depth = 0;
   for (let index = open; index < source.length; index += 1) {
