@@ -111,6 +111,12 @@ test("the proxy records the owner status it forwarded for a served owner route",
     assert.ok(ownerResponse, `an answered owner route must be recorded, got ${JSON.stringify(entries)}`);
     assert.equal(ownerResponse.outcome, "upstream_response");
     assert.equal(ownerResponse.detail, "status=503");
+    assert.equal(ownerResponse.terminal, false);
+    const terminal = entries.filter((entry) => (
+      entry.role === "owner" && entry.path === "/v1/health" && entry.terminal
+    ));
+    assert.equal(terminal.length, 1);
+    assert.equal(terminal[0].outcome, "upstream_response_complete");
   } finally {
     await stopOwnedServer(fixture.child);
     await close(owner);
