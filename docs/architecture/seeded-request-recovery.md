@@ -59,7 +59,15 @@ outcomes remain unknown. Credentials/subject changes do not delete or replay old
 records. Constructing a client never reads or automatically sends a pending request.
 
 After reauthentication, an operator can explicitly invoke
-`recoverSeededRunV2(requestId)`. It bounds and validates stored JSON and checks
+`recoverSeededRunV2(requestId, independentlyWitnessedOriginalBody)`. The required
+second argument is the exact serialized request body from a separately trusted,
+immutable original-dispatch record, **not** another value read from mutable
+`seededRecoveryStorage`. If that independent evidence is absent, the client
+fails closed and sends no request. A digest saved beside the mutable body is not
+an independent witness. The integration must preserve this evidence separately
+and verify its provenance; the client cannot establish provenance for caller
+supplied strings. A mismatched original rejects before network dispatch. Only
+then does the client bound and validate stored JSON and check
 request/target/workflow identities and the definition digest before dispatch. A
 wrong subject or base has no matching record. A session change during validation
 or receipt handling refuses acceptance. No retry loop is installed.
