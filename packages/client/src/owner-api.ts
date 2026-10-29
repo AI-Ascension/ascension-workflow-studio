@@ -750,7 +750,10 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
    * admission and change the operation digest. The owner remains responsible for
    * authentication, durable deduplication and admission of an unreceived request.
    * Storage is untrusted and never grants local or downstream authority. */
-  public async recoverSeededRunV2(requestId: string): Promise<SeededRunSubmissionResponseV2> {
+  public async recoverSeededRunV2(
+    requestId: string,
+    independentlyWitnessedOriginalBody: string,
+  ): Promise<SeededRunSubmissionResponseV2> {
     const generation = this.authGeneration;
     const key = this.seededRecoveryKey(requestId);
     let serializedBody: string | null;
@@ -761,6 +764,15 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
     }
     if (serializedBody === null) {
       throw new ClientError("No exact seeded request is stored for this owner and request ID", "seeded_recovery_missing", 409);
+    }
+    // The retained body is mutable and not proof of what was originally dispatched.
+    // Require a separately trusted, exact-byte original from the integrating owner
+    // application. A digest colocated with the same untrusted body is NOT a witness.
+    if (typeof independentlyWitnessedOriginalBody !== "string" || independentlyWitnessedOriginalBody.length === 0) {
+      throw new ClientError("Recovery requires an independently witnessed original request body", "seeded_recovery_witness_missing", 409);
+    }
+    if (serializedBody !== independentlyWitnessedOriginalBody) {
+      throw new ClientError("Retained seeded request differs from the independently witnessed original", "seeded_recovery_witness_mismatch", 409);
     }
     const value = parseBoundedJson(serializedBody, {
       maxBytes: SEEDED_REQUEST_MAX_BYTES,
