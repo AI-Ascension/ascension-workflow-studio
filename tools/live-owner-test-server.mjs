@@ -1,3 +1,4 @@
+import { createProxyHandler } from "./live-owner-proxy.mjs";
 import http from "node:http";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { spawn } from "node:child_process";
@@ -42,59 +43,7 @@ preview.once("error", (error) => {
   void shutdown().finally(() => process.exit());
 });
 
-proxyServer = http.createServer((req, res) => {
-  const target = req.url?.startsWith("/v1/") ? ownerPort : previewPort;
-  const role = target === ownerPort ? "owner" : "preview";
-  const startedAt = Date.now();
-  let settled = false;
-  const record = (outcome, detail) => {
-    if (settled) return;
-    settled = true;
-    recordProxyDiagnostic({
-      at: new Date().toISOString(),
-      role,
-      method: req.method ?? null,
-      path: req.url ?? null,
-      target_port: target,
-      outcome,
-      detail,
-      duration_ms: Date.now() - startedAt,
-    });
-  };
-  const { origin: _browserOrigin, ...forwardedHeaders } = req.headers;
-  const headers = { ...forwardedHeaders, host: `127.0.0.1:${target}` };
-  const proxy = http.request({
-    host: "127.0.0.1",
-    port: target,
-    path: req.url,
-    method: req.method,
-    headers,
-  }, (upstream) => {
-    upstream.once("error", (error) => {
-      record("upstream_stream_error", describeError(error));
-      if (!res.headersSent) res.writeHead(502);
-      res.end();
-    });
-    if (upstream.statusCode === undefined) {
-      // An upstream that completes without producing a response has no status
-      // to forward. That is a transport failure, so name it instead of letting
-      // it masquerade as an owner refusal.
-      record("upstream_response_without_status", "socket produced no response");
-      if (!res.headersSent) res.writeHead(502);
-      res.end();
-      return;
-    }
-    record("upstream_response", `status=${upstream.statusCode}`);
-    res.writeHead(upstream.statusCode, upstream.headers);
-    upstream.pipe(res);
-  });
-  proxy.on("error", (error) => {
-    record("upstream_transport_error", describeError(error));
-    if (!res.headersSent) res.writeHead(502);
-    res.end();
-  });
-  req.pipe(proxy);
-});
+proxyServer = http.createServer(createProxyHandler({ ownerPort, previewPort, recordProxyDiagnostic }));
 proxyServer.once("error", (error) => {
   console.error(`studio preview proxy failed to start: ${error.message}`);
   process.exitCode = 1;
@@ -134,12 +83,6 @@ function waitForPreview(timeoutMillis) {
     new Promise((resolveClose) => preview.once("close", resolveClose)),
     new Promise((resolveTimeout) => setTimeout(resolveTimeout, timeoutMillis)),
   ]);
-}
-
-function describeError(error) {
-  const code = typeof error?.code === "string" ? error.code : null;
-  const message = typeof error?.message === "string" ? error.message : null;
-  return { code, message };
 }
 
 function recordProxyDiagnostic(entry) {

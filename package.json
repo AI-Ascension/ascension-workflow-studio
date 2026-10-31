@@ -16,7 +16,7 @@
     "typecheck:fixed-owner-preparation": "tsc -p tsconfig.fixed-owner-preparation.json",
     "test:browser": "playwright test",
     "test:effective-limits-browser": "playwright test --config playwright.effective-limits.config.ts",
-    "test:live-owner-browser": "npm run build && node --test tools/live-owner-test-server.test.mjs && playwright test --config playwright.live-owner.config.ts",
+    "test:live-owner-browser": "npm run build && node --test tools/live-owner-proxy.test.mjs tools/live-owner-test-server.test.mjs && playwright test --config playwright.live-owner.config.ts",
     "test:production-policy-browser": "npm run build && node tools/production-policy-browser.mjs",
     "test:owner-restart": "node --test tests/process/at-046-owner-restart.test.mjs",
     "test:owner-negative-auth": "node --test tests/process/studio109-owner-negative-auth.test.mjs",
@@ -47,6 +47,6 @@
     "jsdom": "30.1.3",
     "typescript": "7.0.2",
     "vite": "8.3.5",
-    "vitest": "5.0.3"
+    "vitest": "5.0.5"
   }
 }
