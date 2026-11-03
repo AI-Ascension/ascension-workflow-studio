@@ -1,8 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { SeededRunV2Client } from "@studio/client";
-import type { TargetCatalogResponse, TargetDescriptor, TargetSeedSupportCatalogV2 } from "@studio/contracts";
-import { SeedSetupDraftPanel, type SeedDraft } from "./SeedSetupDraftPanel";
+import { WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION, type TargetCatalogResponse, type TargetDescriptor, type TargetSeedSupportCatalogV2 } from "@studio/contracts";
+import { restoreLocalSeedDraft, SeedSetupDraftPanel, type SeedDraft } from "./SeedSetupDraftPanel";
 import { useMemo, useState } from "react";
 
 const target = {
@@ -34,6 +34,42 @@ function Harness({ owner = current }: { owner?: TargetSeedSupportCatalogV2 }) {
 }
 
 describe("local-only seed authoring and exact owner support", () => {
+
+  it("restores only a closed, current-target local copy, never a foreign or malformed request", () => {
+    const copy = {
+      schema_version: "studio.seed-setup-draft/v1",
+      catalog_revision: catalog.catalog_revision,
+      instance_id: target.instance_id,
+      seed_request: { schema_version: WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION, mode: "explicit", seed: "repro.seed" },
+      status: "local_draft_only_not_admitted_or_launched",
+    };
+    const text = JSON.stringify(copy);
+    expect(restoreLocalSeedDraft(text, catalog.catalog_revision, target.instance_id, ["explicit"])).toEqual(
+      { mode: "explicit", requestedSeed: "repro.seed" },
+    );
+    expect(() => restoreLocalSeedDraft(text, catalog.catalog_revision, "foreign-owner", ["explicit"])).toThrow();
+    expect(() => restoreLocalSeedDraft(text, "changed", target.instance_id, ["explicit"])).toThrow();
+    expect(() => restoreLocalSeedDraft(text, catalog.catalog_revision, target.instance_id, ["derive_once"])).toThrow();
+    expect(() => restoreLocalSeedDraft(JSON.stringify({ ...copy, admitted: true }), catalog.catalog_revision, target.instance_id, ["explicit"])).toThrow();
+    expect(() => restoreLocalSeedDraft(JSON.stringify({ ...copy, seed_request: { ...copy.seed_request, extra: 1 } }), catalog.catalog_revision, target.instance_id, ["explicit"])).toThrow();
+    expect(() => restoreLocalSeedDraft(JSON.stringify({ ...copy, seed_request: { ...copy.seed_request, seed: "é".repeat(33) } }), catalog.catalog_revision, target.instance_id, ["explicit"])).toThrow();
+    expect(() => restoreLocalSeedDraft("x".repeat(4097), catalog.catalog_revision, target.instance_id, ["explicit"])).toThrow();
+  });
+  it("restores an owner-matched pasted draft into the local form only", async () => {
+    render(<Harness />);
+    await screen.findByRole("combobox", { name: "Seed draft mode" });
+    const copy = JSON.stringify({
+      schema_version: "studio.seed-setup-draft/v1",
+      catalog_revision: catalog.catalog_revision, instance_id: target.instance_id,
+      seed_request: { schema_version: WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION, mode: "explicit", seed: "repro.seed" },
+      status: "local_draft_only_not_admitted_or_launched",
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Paste local seed draft configuration" }), { target: { value: copy } });
+    fireEvent.click(screen.getByRole("button", { name: "Restore local seed draft" }));
+    expect(screen.getByRole("textbox", { name: "Requested seed draft" })).toHaveValue("repro.seed");
+    expect(screen.getByText(/No run was submitted/)).toBeInTheDocument();
+  });
+
   it("never advertises a native launch and validates explicit UTF-8 byte bounds", async () => {
     render(<Harness />);
     const select = await screen.findByRole("combobox", { name: "Seed draft mode" });

@@ -28,13 +28,56 @@ type Support =
   | { state: "unavailable"; reason: string }
   | { state: "ready"; entry: TargetSeedSupportV2 };
 
+
+/** Restore only a closed, current-owner local draft. Never admit or launch. */
+export function restoreLocalSeedDraft(
+  text: string,
+  catalogRevision: string,
+  instanceId: string,
+  allowedModes: readonly SeedDraft["mode"][],
+): SeedDraft {
+  if (new TextEncoder().encode(text).length > 4096) throw new Error("Draft exceeds the local import limit.");
+  let decoded: unknown;
+  try { decoded = JSON.parse(text); } catch { throw new Error("Draft is not valid JSON."); }
+  if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)) throw new Error("Draft envelope is invalid.");
+  const record = decoded as Record<string, unknown>;
+  const envelopeFields = ["catalog_revision", "instance_id", "schema_version", "seed_request", "status"];
+  if (Object.keys(record).sort().join(",") !== envelopeFields.join(",")
+    || record.schema_version !== "studio.seed-setup-draft/v1"
+    || record.status !== "local_draft_only_not_admitted_or_launched") {
+    throw new Error("Draft envelope is not a local-only seed configuration.");
+  }
+  if (record.catalog_revision !== catalogRevision || record.instance_id !== instanceId) {
+    throw new Error("Draft belongs to a different target or catalog revision.");
+  }
+  const request = SeedRequestV2Schema.safeParse(record.seed_request);
+  if (!request.success || !allowedModes.includes(request.data.mode)) {
+    throw new Error("Draft seed mode is invalid or unsupported by the current owner.");
+  }
+  const rawRequest = record.seed_request;
+  if (!rawRequest || typeof rawRequest !== "object" || Array.isArray(rawRequest)) {
+    throw new Error("Draft seed request is invalid.");
+  }
+  const expectedFields = request.data.mode === "explicit" ? "mode,schema_version,seed" : "mode,schema_version";
+  if (Object.keys(rawRequest).sort().join(",") !== expectedFields) {
+    throw new Error("Draft seed request has unexpected fields.");
+  }
+  return request.data.mode === "explicit"
+    ? { mode: "explicit", requestedSeed: request.data.seed }
+    : { mode: "derive_once", requestedSeed: "" };
+}
+
 export function SeedSetupDraftPanel({ client, catalog, target, draft, onChange }: SeedSetupDraftPanelProps): JSX.Element {
   const [support, setSupport] = useState<Support>({ state: "loading" });
   const [copyStatus, setCopyStatus] = useState("");
+  const [importText, setImportText] = useState("");
+  const [importStatus, setImportStatus] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     setCopyStatus("");
+    setImportText("");
+    setImportStatus("");
     if (!client) {
       setSupport({ state: "unavailable", reason: "This adapter does not expose owner-authenticated seed support." });
       return;
@@ -86,6 +129,17 @@ export function SeedSetupDraftPanel({ client, catalog, target, draft, onChange }
     }
   };
 
+  const restore = (): void => {
+    if (support.state !== "ready") return;
+    try {
+      const recovered = restoreLocalSeedDraft(importText, catalog.catalog_revision, target.instance_id, permitted);
+      onChange(recovered);
+      setImportStatus("Local seed draft restored for this exact owner target. No run was submitted.");
+    } catch (error) {
+      setImportStatus(error instanceof Error ? `Import rejected: ${error.message}` : "Import rejected.");
+    }
+  };
+
   return <section className="panel-card" aria-label="Seed setup draft">
     <h3>Seed setup preparation</h3>
     <p className="muted">Read-only owner capability discovery. A seed draft is never sent by the legacy Start run action. No native seeded launch is advertised or authorized here.</p>
@@ -122,6 +176,14 @@ export function SeedSetupDraftPanel({ client, catalog, target, draft, onChange }
         </button>
         {copyStatus ? <p role="status">{copyStatus}</p> : null}
       </> : null}
+      <label className="field-label">Paste local seed draft configuration
+        <textarea aria-label="Paste local seed draft configuration" value={importText}
+          onChange={(event) => { setImportText(event.target.value); setImportStatus(""); }} />
+      </label>
+      <button className="button button-secondary" type="button" disabled={!importText} onClick={restore}>
+        Restore local seed draft
+      </button>
+      {importStatus ? <p role="status">{importStatus}</p> : null}
     </> : null}
     {draft && support.state !== "ready" ? <button className="button button-secondary" type="button" onClick={() => onChange(undefined)}>Clear unsupported seed draft</button> : null}
   </section>;
