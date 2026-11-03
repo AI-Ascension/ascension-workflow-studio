@@ -1,0 +1,128 @@
+import { useEffect, useState } from "react";
+
+import type { SeededRunV2Client } from "@studio/client";
+import {
+  SeedRequestV2Schema,
+  WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION,
+  type TargetCatalogResponse,
+  type TargetDescriptor,
+  type TargetSeedSupportV2,
+} from "@studio/contracts";
+import { canonicalJsonComplete } from "@studio/document";
+
+export interface SeedDraft {
+  mode: "explicit" | "derive_once";
+  requestedSeed: string;
+}
+
+interface SeedSetupDraftPanelProps {
+  client?: Pick<SeededRunV2Client, "listSeedTargetSupportV2">;
+  catalog: TargetCatalogResponse;
+  target: TargetDescriptor;
+  draft?: SeedDraft;
+  onChange: (draft?: SeedDraft) => void;
+}
+
+type Support =
+  | { state: "loading" }
+  | { state: "unavailable"; reason: string }
+  | { state: "ready"; entry: TargetSeedSupportV2 };
+
+export function SeedSetupDraftPanel({ client, catalog, target, draft, onChange }: SeedSetupDraftPanelProps): JSX.Element {
+  const [support, setSupport] = useState<Support>({ state: "loading" });
+  const [copyStatus, setCopyStatus] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    setCopyStatus("");
+    if (!client) {
+      setSupport({ state: "unavailable", reason: "This adapter does not expose owner-authenticated seed support." });
+      return;
+    }
+    setSupport({ state: "loading" });
+    void client.listSeedTargetSupportV2().then((current) => {
+      if (cancelled) return;
+      // Compare to THIS admission form's catalog as well as the independent
+      // V1 snapshot already checked by the client. Never accept a stale hint.
+      if (current.catalog_revision !== catalog.catalog_revision || current.targets.length !== catalog.targets.length
+        || current.targets.some((entry) => {
+          const original = catalog.targets.find((item) => item.instance_id === entry.target.instance_id);
+          return !original || canonicalJsonComplete(original) !== canonicalJsonComplete(entry.target);
+        })) {
+        setSupport({ state: "unavailable", reason: "Owner seed support no longer matches the visible target catalog." });
+        return;
+      }
+      const entry = current.targets.find((item) => item.target.instance_id === target.instance_id);
+      if (!entry) {
+        setSupport({ state: "unavailable", reason: "Selected target is absent from owner seed support." });
+        return;
+      }
+      setSupport({ state: "ready", entry });
+    }).catch(() => {
+      if (!cancelled) setSupport({ state: "unavailable", reason: "Seed support could not be authenticated and checked." });
+    });
+    return () => { cancelled = true; };
+  }, [client, catalog, target]);
+
+  const permitted = support.state === "ready" ? support.entry.durable_candidate_binding_modes : [];
+  const seedRequest = draft?.mode === "explicit"
+    ? { schema_version: WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION, mode: "explicit", seed: draft.requestedSeed }
+    : { schema_version: WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION, mode: "derive_once" };
+  const valid = Boolean(draft && permitted.includes(draft.mode) && SeedRequestV2Schema.safeParse(seedRequest).success);
+  const copy = async (): Promise<void> => {
+    if (!valid || !draft || !globalThis.navigator?.clipboard?.writeText) return;
+    const record = {
+      schema_version: "studio.seed-setup-draft/v1",
+      catalog_revision: catalog.catalog_revision,
+      instance_id: target.instance_id,
+      seed_request: seedRequest,
+      status: "local_draft_only_not_admitted_or_launched",
+    };
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(record, null, 2));
+      setCopyStatus("Local draft copied; effective seed is not yet known.");
+    } catch {
+      setCopyStatus("Clipboard unavailable; no run was submitted.");
+    }
+  };
+
+  return <section className="panel-card" aria-label="Seed setup draft">
+    <h3>Seed setup preparation</h3>
+    <p className="muted">Read-only owner capability discovery. A seed draft is never sent by the legacy Start run action. No native seeded launch is advertised or authorized here.</p>
+    {support.state === "loading" ? <p role="status">Checking current owner seed support…</p> : null}
+    {support.state === "unavailable" ? <p role="status">{support.reason}</p> : null}
+    {support.state === "ready" ? <>
+      <p>Candidate binding: {support.entry.durable_candidate_binding_modes.join(", ") || "none"}.
+        Ready candidates: {support.entry.ready_candidate_modes.join(", ") || "none"}.
+        Native launch setups: {support.entry.supported_launch_setups.length}.</p>
+      <label className="field-label">Seed draft mode
+        <select aria-label="Seed draft mode" value={draft?.mode ?? "none"} onChange={(event) => {
+          const mode = event.target.value;
+          if (mode === "none") onChange(undefined);
+          else if (mode === "explicit" || mode === "derive_once") {
+            if (permitted.includes(mode)) onChange({ mode, requestedSeed: mode === "explicit" ? draft?.requestedSeed ?? "" : "" });
+          }
+        }}>
+          <option value="none">No seed draft (legacy run)</option>
+          {permitted.includes("explicit") ? <option value="explicit">Explicit seed draft</option> : null}
+          {permitted.includes("derive_once") ? <option value="derive_once">Generate once on owner admission (draft)</option> : null}
+        </select>
+      </label>
+      {draft?.mode === "explicit" ? <label className="field-label">Requested seed (UTF-8, maximum 64 bytes)
+        <input aria-label="Requested seed draft" type="text" value={draft.requestedSeed}
+          onChange={(event) => onChange({ mode: "explicit", requestedSeed: event.target.value })} />
+      </label> : null}
+      {draft ? <>
+        <p role="status">{valid ? "Draft passes canonical seed validation." : "Draft is invalid or no longer supported by this owner. No request will be sent."}</p>
+        <p>Requested seed: {draft.mode === "explicit" ? (draft.requestedSeed || "(empty)") : "owner derive-once request"}.
+          Effective seed: unavailable until an authoritative settled owner receipt.</p>
+        <p className="muted">Matching seed text alone does not reproduce a run. Exact build, profile, context, baseline and accepted launch parameters must match.</p>
+        <button className="button button-secondary" type="button" disabled={!valid} onClick={() => void copy()}>
+          Copy local draft configuration
+        </button>
+        {copyStatus ? <p role="status">{copyStatus}</p> : null}
+      </> : null}
+    </> : null}
+    {draft && support.state !== "ready" ? <button className="button button-secondary" type="button" onClick={() => onChange(undefined)}>Clear unsupported seed draft</button> : null}
+  </section>;
+}

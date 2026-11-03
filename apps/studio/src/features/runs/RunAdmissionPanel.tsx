@@ -7,7 +7,9 @@ import type {
   WorkflowDefinition,
 } from "@studio/contracts";
 
+import type { SeededRunV2Client } from "@studio/client";
 import { StatusBadge } from "../../components/StatusBadge";
+import { SeedSetupDraftPanel, type SeedDraft } from "./SeedSetupDraftPanel";
 
 export type RunAdmissionPhase =
   | "loading"
@@ -42,6 +44,8 @@ export interface PendingRun {
   phase: RunAdmissionPhase;
   message?: string;
   liveConfirmed: boolean;
+  /** Local preparation only; NEVER included in the v1 submission. */
+  seedDraft?: SeedDraft;
   submissionAttempted?: boolean;
   recovery?: SubmissionRecoveryResponse;
 }
@@ -99,6 +103,8 @@ export interface RunAdmissionPanelProps {
   onTargetChange: (targetId: string) => void;
   onProfileChange: (field: RunSelectionField, value: string | null) => void;
   onLiveConfirmation: (confirmed: boolean) => void;
+  seedSupportClient?: Pick<SeededRunV2Client, "listSeedTargetSupportV2">;
+  onSeedDraftChange: (draft?: SeedDraft) => void;
 }
 
 function phaseLabel(phase: RunAdmissionPhase): string {
@@ -152,7 +158,7 @@ function AdmissionSummary({ admission, digest, requestId }: { admission: TargetA
 }
 
 export function RunAdmissionPanel(props: RunAdmissionPanelProps): JSX.Element {
-  const { pending, onCancel, onRetryCatalog, onPreflight, onRetry, onRecover, onInspect, onSubmit, onTargetChange, onProfileChange, onLiveConfirmation } = props;
+  const { pending, onCancel, onRetryCatalog, onPreflight, onRetry, onRecover, onInspect, onSubmit, onTargetChange, onProfileChange, onLiveConfirmation, seedSupportClient, onSeedDraftChange } = props;
   const catalog = pending.catalog;
   const selection = pending.selection;
   const descriptor = selection ? catalog?.targets.find((target) => target.instance_id === selection.targetId) : undefined;
@@ -224,8 +230,14 @@ export function RunAdmissionPanel(props: RunAdmissionPanelProps): JSX.Element {
       </label>
     </div> : null}
 
+    {catalog && canChangeSelection && descriptor ? <SeedSetupDraftPanel
+      client={seedSupportClient} catalog={catalog} target={descriptor}
+      draft={pending.seedDraft} onChange={onSeedDraftChange} /> : null}
+
+    {pending.seedDraft ? <p role="status">A seed draft is selected. Legacy preflight and Start run are disabled: this draft cannot be silently dropped from a v1 request. Clear the draft to use the legacy flow.</p> : null}
+
     {pending.phase === "ready" ? <div className="control-grid">
-      <button className="button button-primary" onClick={onPreflight} disabled={!selection || !selection.executionProfile || !selection.gameProfile}>Run preflight</button>
+      <button className="button button-primary" onClick={onPreflight} disabled={!!pending.seedDraft || !selection || !selection.executionProfile || !selection.gameProfile}>Run preflight</button>
       <button className="button button-secondary" onClick={onRetryCatalog}>Refresh targets</button>
       <button className="button button-quiet" onClick={onCancel}>Cancel run setup</button>
     </div> : null}
@@ -244,7 +256,7 @@ export function RunAdmissionPanel(props: RunAdmissionPanelProps): JSX.Element {
         I explicitly authorize this live execution on the selected target.
       </label> : null}
       <div className="control-grid">
-        <button className="button button-primary" onClick={onSubmit} disabled={isLive && !pending.liveConfirmed}>Start run</button>
+        <button className="button button-primary" onClick={onSubmit} disabled={!!pending.seedDraft || (isLive && !pending.liveConfirmed)}>Start run</button>
         <button className="button button-secondary" onClick={onRetryCatalog} disabled={!canChangeSelection}>Change selection</button>
         <button className="button button-quiet" onClick={onCancel}>Cancel run setup</button>
       </div>
