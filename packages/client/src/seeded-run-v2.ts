@@ -4,6 +4,7 @@ import type {
   SeedRequestV2,
   SeededRunSubmissionResponseV2,
   TargetAdmissionBinding,
+  TargetSeedSupportCatalogV2,
   WorkflowDefinition,
 } from "@studio/contracts";
 
@@ -20,6 +21,8 @@ export interface SeededRunSubmissionOptionsV2 {
  * required StudioClient interface, so existing fixture and v1 clients remain
  * source-compatible and cannot impersonate owner seed authority. */
 export interface SeededRunV2Client {
+  /** Read-only catalog hints, not evidence of native launch acceptance. */
+  listSeedTargetSupportV2(): Promise<TargetSeedSupportCatalogV2>;
   submitSeededRunV2(
     definition: WorkflowDefinition,
     instanceId: string,

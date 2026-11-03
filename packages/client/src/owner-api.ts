@@ -33,6 +33,7 @@ import {
   TargetAdmissionBindingSchema,
   TargetAdmissionRequestSchema,
   TargetCatalogResponseSchema,
+  TargetSeedSupportCatalogV2Schema,
   TargetPreflightResponseSchema,
   RunTargetConfigurationSchema,
   ValidateResponseSchema,
@@ -69,6 +70,7 @@ import {
   type TargetAdmissionBinding,
   type TargetAdmissionRequest,
   type TargetCatalogResponse,
+  type TargetSeedSupportCatalogV2,
   type TargetPreflightResponse,
   type RunTargetConfiguration,
   type ValidateResponse,
@@ -77,7 +79,7 @@ import {
   type CommandResponse,
   adoptInferenceProfileRevision,
 } from "@studio/contracts";
-import { definitionIdentityDigest, parseBoundedJson, validateNodeBindings } from "@studio/document";
+import { canonicalJsonComplete, definitionIdentityDigest, parseBoundedJson, sha256Hex, validateNodeBindings } from "@studio/document";
 import { readContextCatalogBody } from "./context-owner-catalog";
 import { CapabilityGateError, ClientError, RunSubmissionNotStartedError } from "./errors";
 import { assertPolicyCommandOperation, assertPolicyUpload, policyRevisionQuery } from "./provider-policy";
@@ -459,6 +461,52 @@ export class OwnerApiClient implements StudioClient, ProviderSessionPolicyClient
   public async listTargets(): Promise<TargetCatalogResponse> {
     const response = await this.request("/workflow-targets", { method: "GET" });
     return decodeWith(TargetCatalogResponseSchema, response, "workflow target catalog");
+  }
+  /** Read-only support discovery; owner hint never asserts a launch-ready game.
+   * Fail closed on session, revision, descriptor or SHA-256 mismatches. */
+  public async listSeedTargetSupportV2(): Promise<TargetSeedSupportCatalogV2> {
+    const generation = this.authGeneration;
+    const v1 = await this.listTargets();
+    if (generation !== this.authGeneration) {
+      throw new ClientError("Owner session changed during seed catalog read", "seed_support_session_changed", 409);
+    }
+    let response: { response: Response; body: unknown };
+    try {
+      response = await this.fetchBoundedV2(
+        "/workflow-targets", { method: "GET" }, SEEDED_RESPONSE_MAX_BYTES, 5_000,
+      );
+    } catch (error) {
+      throw new ClientError(
+        `Seed support catalog read failed: ${error instanceof Error ? error.message : "transport failure"}`,
+        "seed_support_read_failed",
+      );
+    }
+    if (generation !== this.authGeneration) {
+      throw new ClientError("Owner session changed during seed catalog read", "seed_support_session_changed", 409);
+    }
+    if (!response.response.ok) {
+      const error = ErrorResponseSchema.safeParse(response.body);
+      throw new ClientError(
+        error.success ? error.data.error.message : `Owner API returned HTTP ${response.response.status}`,
+        error.success ? error.data.error.code : "http_error", response.response.status,
+      );
+    }
+    const v2 = decodeWith(TargetSeedSupportCatalogV2Schema, response.body, "owner seed support catalog");
+    if (v2.catalog_revision !== v1.catalog_revision || v2.targets.length !== v1.targets.length) {
+      throw new ClientError("Seed support revision or coverage differs from owner target catalog", "seed_support_catalog_mismatch", 409);
+    }
+    const v1ById = new Map(v1.targets.map((target) => [target.instance_id, target]));
+    for (const entry of v2.targets) {
+      const original = v1ById.get(entry.target.instance_id);
+      if (!original || canonicalJsonComplete(original) !== canonicalJsonComplete(entry.target)
+        || await sha256Hex(canonicalJsonComplete(original)) !== entry.descriptor_digest) {
+        throw new ClientError("Seed support target descriptor differs from owner target catalog", "seed_support_descriptor_mismatch", 409);
+      }
+    }
+    if (generation !== this.authGeneration) {
+      throw new ClientError("Owner session changed before seed support acceptance", "seed_support_session_changed", 409);
+    }
+    return v2;
   }
 
   public async preflightTarget(request: TargetAdmissionRequest): Promise<TargetPreflightResponse> {
