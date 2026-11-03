@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { SeededRunV2Client } from "@studio/client";
 import type { TargetCatalogResponse, TargetDescriptor, TargetSeedSupportCatalogV2 } from "@studio/contracts";
 import { SeedSetupDraftPanel, type SeedDraft } from "./SeedSetupDraftPanel";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 const target = {
   instance_id: "owner-a", execution_profiles: ["live.workflow.v1"],
@@ -25,7 +25,10 @@ const current = {
 
 function Harness({ owner = current }: { owner?: TargetSeedSupportCatalogV2 }) {
   const [draft, setDraft] = useState<SeedDraft>();
-  const client = { listSeedTargetSupportV2: vi.fn(async () => owner) } as unknown as Pick<SeededRunV2Client, "listSeedTargetSupportV2">;
+  // Keep the authenticated client identity stable across controlled form edits.
+  // A new object on each render would force a legitimate new owner discovery.
+  const client = useMemo(() => ({ listSeedTargetSupportV2: vi.fn(async () => owner) })
+    as unknown as Pick<SeededRunV2Client, "listSeedTargetSupportV2">, [owner]);
   return <SeedSetupDraftPanel client={client} catalog={catalog} target={target} draft={draft} onChange={setDraft} />;
 }
 
