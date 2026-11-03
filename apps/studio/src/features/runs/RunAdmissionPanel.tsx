@@ -9,7 +9,7 @@ import type {
 
 import type { SeededRunV2Client } from "@studio/client";
 import { StatusBadge } from "../../components/StatusBadge";
-import { SeedSetupDraftPanel, type SeedDraft } from "./SeedSetupDraftPanel";
+import { SeedSetupDraftPanel, type SeedDraft, type SeedDraftSetupIdentity } from "./SeedSetupDraftPanel";
 
 export type RunAdmissionPhase =
   | "loading"
@@ -166,6 +166,23 @@ export function RunAdmissionPanel(props: RunAdmissionPanelProps): JSX.Element {
   const isLive = admitted?.target.execution_mode === "live";
   const busy = pending.phase === "loading" || pending.phase === "preflighting" || pending.phase === "submitting" || pending.phase === "recovering";
   const canChangeSelection = !pending.submissionAttempted;
+  const setupIdentity: SeedDraftSetupIdentity | undefined =
+    descriptor && selection && pending.digest && selection.executionProfile && selection.gameProfile
+      ? {
+          workflow_id: pending.document.workflow_id,
+          workflow_revision: pending.document.version,
+          workflow_definition_digest: pending.digest,
+          execution_mode: descriptor.execution_mode,
+          execution_profile: selection.executionProfile,
+          game_profile: selection.gameProfile,
+          save_profile: selection.saveProfile,
+          inference_profile: selection.inferenceProfile,
+          context_capability: selection.contextCapability,
+          provider_capability: selection.providerCapability,
+          compatibility_revision: descriptor.compatibility_revision,
+          capability_revision: descriptor.capability_revision,
+        }
+      : undefined;
 
   return <section className="panel-card run-admission" aria-label="Run admission" aria-live="polite">
     <div className="panel-title">
@@ -232,7 +249,8 @@ export function RunAdmissionPanel(props: RunAdmissionPanelProps): JSX.Element {
 
     {catalog && canChangeSelection && descriptor ? <SeedSetupDraftPanel
       client={seedSupportClient} catalog={catalog} target={descriptor}
-      draft={pending.seedDraft} onChange={onSeedDraftChange} /> : null}
+      draft={pending.seedDraft} onChange={onSeedDraftChange}
+      setupIdentity={setupIdentity} requireSetupIdentity /> : null}
 
     {pending.seedDraft ? <p role="status">A seed draft is selected. Legacy preflight and Start run are disabled: this draft cannot be silently dropped from a v1 request. Clear the draft to use the legacy flow.</p> : null}
 

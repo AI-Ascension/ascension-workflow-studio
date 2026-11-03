@@ -15,12 +15,31 @@ export interface SeedDraft {
   requestedSeed: string;
 }
 
+/** Copy-only comparison context, not an owner admission or native build attestation. */
+export interface SeedDraftSetupIdentity {
+  workflow_id: string;
+  workflow_revision: string;
+  workflow_definition_digest: string;
+  execution_mode: TargetDescriptor["execution_mode"];
+  execution_profile: string;
+  game_profile: string;
+  save_profile: string | null;
+  inference_profile: string | null;
+  context_capability: string | null;
+  provider_capability: string | null;
+  compatibility_revision: string;
+  capability_revision: string;
+}
+
 interface SeedSetupDraftPanelProps {
   client?: Pick<SeededRunV2Client, "listSeedTargetSupportV2">;
   catalog: TargetCatalogResponse;
   target: TargetDescriptor;
   draft?: SeedDraft;
   onChange: (draft?: SeedDraft) => void;
+  /** Required in the actual run-setup flow; older stand-alone viewers may omit it. */
+  setupIdentity?: SeedDraftSetupIdentity;
+  requireSetupIdentity?: boolean;
 }
 
 type Support =
@@ -35,20 +54,27 @@ export function restoreLocalSeedDraft(
   catalogRevision: string,
   instanceId: string,
   allowedModes: readonly SeedDraft["mode"][],
+  expectedSetupIdentity?: SeedDraftSetupIdentity,
 ): SeedDraft {
   if (new TextEncoder().encode(text).length > 4096) throw new Error("Draft exceeds the local import limit.");
   let decoded: unknown;
   try { decoded = JSON.parse(text); } catch { throw new Error("Draft is not valid JSON."); }
   if (!decoded || typeof decoded !== "object" || Array.isArray(decoded)) throw new Error("Draft envelope is invalid.");
   const record = decoded as Record<string, unknown>;
-  const envelopeFields = ["catalog_revision", "instance_id", "schema_version", "seed_request", "status"];
+  const envelopeFields = expectedSetupIdentity
+    ? ["catalog_revision", "instance_id", "schema_version", "seed_request", "setup_identity", "status"]
+    : ["catalog_revision", "instance_id", "schema_version", "seed_request", "status"];
   if (Object.keys(record).sort().join(",") !== envelopeFields.join(",")
-    || record.schema_version !== "studio.seed-setup-draft/v1"
+    || record.schema_version !== (expectedSetupIdentity ? "studio.seed-setup-draft/v2" : "studio.seed-setup-draft/v1")
     || record.status !== "local_draft_only_not_admitted_or_launched") {
-    throw new Error("Draft envelope is not a local-only seed configuration.");
+    throw new Error("Draft envelope is not a local-only seed configuration for this setup.");
   }
   if (record.catalog_revision !== catalogRevision || record.instance_id !== instanceId) {
     throw new Error("Draft belongs to a different target or catalog revision.");
+  }
+  if (expectedSetupIdentity
+    && canonicalJsonComplete(record.setup_identity) !== canonicalJsonComplete(expectedSetupIdentity)) {
+    throw new Error("Draft setup identity differs from the selected workflow, profile or context.");
   }
   const request = SeedRequestV2Schema.safeParse(record.seed_request);
   if (!request.success || !allowedModes.includes(request.data.mode)) {
@@ -67,7 +93,7 @@ export function restoreLocalSeedDraft(
     : { mode: "derive_once", requestedSeed: "" };
 }
 
-export function SeedSetupDraftPanel({ client, catalog, target, draft, onChange }: SeedSetupDraftPanelProps): JSX.Element {
+export function SeedSetupDraftPanel({ client, catalog, target, draft, onChange, setupIdentity, requireSetupIdentity = false }: SeedSetupDraftPanelProps): JSX.Element {
   const [support, setSupport] = useState<Support>({ state: "loading" });
   const [copyStatus, setCopyStatus] = useState("");
   const [importText, setImportText] = useState("");
@@ -111,14 +137,16 @@ export function SeedSetupDraftPanel({ client, catalog, target, draft, onChange }
   const seedRequest = draft?.mode === "explicit"
     ? { schema_version: WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION, mode: "explicit", seed: draft.requestedSeed }
     : { schema_version: WORKFLOW_SEED_REQUEST_V2_SCHEMA_VERSION, mode: "derive_once" };
-  const valid = Boolean(draft && permitted.includes(draft.mode) && SeedRequestV2Schema.safeParse(seedRequest).success);
+  const identityReady = !requireSetupIdentity || Boolean(setupIdentity);
+  const valid = Boolean(identityReady && draft && permitted.includes(draft.mode) && SeedRequestV2Schema.safeParse(seedRequest).success);
   const copy = async (): Promise<void> => {
     if (!valid || !draft || !globalThis.navigator?.clipboard?.writeText) return;
     const record = {
-      schema_version: "studio.seed-setup-draft/v1",
+      schema_version: setupIdentity ? "studio.seed-setup-draft/v2" : "studio.seed-setup-draft/v1",
       catalog_revision: catalog.catalog_revision,
       instance_id: target.instance_id,
       seed_request: seedRequest,
+      ...(setupIdentity ? { setup_identity: setupIdentity } : {}),
       status: "local_draft_only_not_admitted_or_launched",
     };
     try {
@@ -130,9 +158,9 @@ export function SeedSetupDraftPanel({ client, catalog, target, draft, onChange }
   };
 
   const restore = (): void => {
-    if (support.state !== "ready") return;
+    if (support.state !== "ready" || !identityReady) return;
     try {
-      const recovered = restoreLocalSeedDraft(importText, catalog.catalog_revision, target.instance_id, permitted);
+      const recovered = restoreLocalSeedDraft(importText, catalog.catalog_revision, target.instance_id, permitted, setupIdentity);
       onChange(recovered);
       setImportStatus("Local seed draft restored for this exact owner target. No run was submitted.");
     } catch (error) {
@@ -166,6 +194,11 @@ export function SeedSetupDraftPanel({ client, catalog, target, draft, onChange }
         <input aria-label="Requested seed draft" type="text" value={draft.requestedSeed}
           onChange={(event) => onChange({ mode: "explicit", requestedSeed: event.target.value })} />
       </label> : null}
+      {requireSetupIdentity && !setupIdentity ? <p role="status">Select exact execution and game profiles and a verified workflow digest before copying or restoring a seed draft.</p> : null}
+      {setupIdentity ? <details><summary>Exact copied setup identity</summary>
+        <pre>{JSON.stringify(setupIdentity, null, 2)}</pre>
+        <p className="muted">These are selected revisions and profiles, not a verified native game build or settled owner receipt.</p>
+      </details> : null}
       {draft ? <>
         <p role="status">{valid ? "Draft passes canonical seed validation." : "Draft is invalid or no longer supported by this owner. No request will be sent."}</p>
         <p>Requested seed: {draft.mode === "explicit" ? (draft.requestedSeed || "(empty)") : "owner derive-once request"}.
@@ -180,7 +213,7 @@ export function SeedSetupDraftPanel({ client, catalog, target, draft, onChange }
         <textarea aria-label="Paste local seed draft configuration" value={importText}
           onChange={(event) => { setImportText(event.target.value); setImportStatus(""); }} />
       </label>
-      <button className="button button-secondary" type="button" disabled={!importText} onClick={restore}>
+      <button className="button button-secondary" type="button" disabled={!importText || !identityReady} onClick={restore}>
         Restore local seed draft
       </button>
       {importStatus ? <p role="status">{importStatus}</p> : null}
