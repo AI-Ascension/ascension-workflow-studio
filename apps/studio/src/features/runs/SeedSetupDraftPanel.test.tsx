@@ -27,8 +27,9 @@ function Harness({ owner = current }: { owner?: TargetSeedSupportCatalogV2 }) {
   const [draft, setDraft] = useState<SeedDraft>();
   // Keep the authenticated client identity stable across controlled form edits.
   // A new object on each render would force a legitimate new owner discovery.
-  const client = useMemo(() => ({ listSeedTargetSupportV2: vi.fn(async () => owner) })
-    as unknown as Pick<SeededRunV2Client, "listSeedTargetSupportV2">, [owner]);
+  const client = useMemo<Pick<SeededRunV2Client, "listSeedTargetSupportV2">>(
+    () => ({ listSeedTargetSupportV2: vi.fn(async () => owner) }), [owner],
+  );
   return <SeedSetupDraftPanel client={client} catalog={catalog} target={target} draft={draft} onChange={setDraft} />;
 }
 
