@@ -569,6 +569,38 @@ export const SeedRequestV2Schema = z.discriminatedUnion("mode", [
 ]);
 export type SeedRequestV2 = z.infer<typeof SeedRequestV2Schema>;
 
+/** A read-only candidate seed support projection, not native launch acceptance. */
+export const TargetSeedSupportV2Schema = z.object({
+  target: TargetDescriptorSchema,
+  descriptor_digest: z.string().regex(/^[a-f0-9]{64}$/),
+  durable_candidate_binding_modes: z.array(SeedModeV2Schema).max(2).refine(
+    (modes) => new Set(modes).size === modes.length, "duplicate durable seed mode",
+  ),
+  ready_candidate_modes: z.array(SeedModeV2Schema).max(2).refine(
+    (modes) => new Set(modes).size === modes.length, "duplicate ready seed mode",
+  ),
+  supported_launch_setups: z.array(z.never()).max(0),
+}).strict().superRefine((entry, ctx) => {
+  if (entry.ready_candidate_modes.some((mode) => !entry.durable_candidate_binding_modes.includes(mode))) {
+    ctx.addIssue({ code: "custom", path: ["ready_candidate_modes"], message: "ready modes require durable support" });
+  }
+});
+export type TargetSeedSupportV2 = z.infer<typeof TargetSeedSupportV2Schema>;
+
+export const TargetSeedSupportCatalogV2Schema = z.object({
+  schema_version: z.literal("ascension.workflow-targets/v2"),
+  catalog_revision: z.string().min(1).max(128),
+  support_revision: z.literal("seed-support.v1"),
+  targets: z.array(TargetSeedSupportV2Schema).max(32),
+}).strict().superRefine((catalog, ctx) => {
+  const ids = catalog.targets.map((entry) => entry.target.instance_id);
+  if (new Set(ids).size !== ids.length) {
+    ctx.addIssue({ code: "custom", path: ["targets"], message: "duplicate seed support target" });
+  }
+});
+export type TargetSeedSupportCatalogV2 = z.infer<typeof TargetSeedSupportCatalogV2Schema>;
+
+
 export const WorkflowRunRequestV2Schema = z.object({
   schema_version: z.literal(WORKFLOW_RUN_REQUEST_V2_SCHEMA_VERSION),
   request_id: SeedV2IdentifierSchema,

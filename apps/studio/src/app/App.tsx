@@ -13,6 +13,7 @@ import { LibraryView } from "../features/library/LibraryView";
 import { ReplayView } from "../features/replay/ReplayView";
 import { RunAdmissionPanel, createRunRequestId, selectionForTarget, targetConfigurationForSelection } from "../features/runs/RunAdmissionPanel";
 import type { PendingRun, RunSelectionField, RunTargetSelection } from "../features/runs/RunAdmissionPanel";
+import type { SeedDraft } from "../features/runs/SeedSetupDraftPanel";
 import { RunsView } from "../features/runs/RunsView";
 import { RecordingsView } from "../features/recordings/RecordingsView";
 import { useRecording } from "../features/recordings/useRecording";
@@ -171,6 +172,10 @@ export function App(): JSX.Element {
   const preflightPendingRun = async (): Promise<void> => {
     const current = pendingRunRef.current;
     if (!current || !current.catalog || !current.selection || !current.digest || current.phase !== "ready") return;
+    if (current.seedDraft) {
+      updatePendingRun((candidate) => ({ ...candidate, message: "Seed drafts are not part of the legacy preflight; clear the draft before continuing." }));
+      return;
+    }
     const descriptor = current.catalog.targets.find((candidate) => candidate.instance_id === current.selection?.targetId);
     if (!descriptor) {
       updatePendingRun((candidate) => ({ ...candidate, phase: "error", message: "Select an available target before preflight." }));
@@ -208,6 +213,10 @@ export function App(): JSX.Element {
   const submitPendingRun = async (): Promise<void> => {
     const current = pendingRunRef.current;
     if (!current || current.mode !== mode || !current.selection || !current.admission || !["admitted", "retryable"].includes(current.phase)) return;
+    if (current.seedDraft) {
+      updatePendingRun((candidate) => ({ ...candidate, message: "The legacy submit API cannot include the requested seed draft; no run was submitted." }));
+      return;
+    }
     if (current.admission.target.execution_mode === "live" && !current.liveConfirmed) {
       updatePendingRun((candidate) => ({ ...candidate, message: "Explicit live confirmation is required before starting this run." }));
       return;
@@ -316,6 +325,7 @@ export function App(): JSX.Element {
       ...candidate,
       requestId: identity,
       selection: mutate(candidate.selection),
+      seedDraft: undefined,
       admission: undefined,
       phase: "ready",
       liveConfirmed: false,
@@ -335,6 +345,25 @@ export function App(): JSX.Element {
     resetPendingSelection((selection) => selection ? { ...selection, [field]: value } : selection);
   };
 
+  /** Changing a seed draft never starts a native run, and invalidates any
+   * previously reviewed legacy binding to prevent silent seed omission. */
+  const changePendingSeedDraft = (draft?: SeedDraft): void => {
+    const current = pendingRunRef.current;
+    if (!current || current.submissionAttempted) return;
+    const identity = current.admission ? createRunRequestId() : current.requestId;
+    updatePendingRun((candidate) => ({
+      ...candidate,
+      requestId: identity,
+      seedDraft: draft,
+      admission: undefined,
+      phase: "ready",
+      liveConfirmed: false,
+      message: draft
+        ? "Seed draft retained locally only; legacy admission and start are disabled until the draft is cleared."
+        : "Seed draft cleared. Review the selected target and run legacy preflight again.",
+    }));
+  };
+
   const retryTargetCatalog = (): void => {
     const current = pendingRunRef.current;
     if (!current || current.submissionAttempted) return;
@@ -348,6 +377,7 @@ export function App(): JSX.Element {
         ...candidate,
         catalog,
         selection: undefined,
+        seedDraft: undefined,
         admission: undefined,
         phase: hasAvailable ? "ready" : "error",
         message: hasAvailable
@@ -380,7 +410,7 @@ export function App(): JSX.Element {
       <header className="topbar"><div className="breadcrumbs"><span>AI-Ascension</span><span aria-hidden="true">/</span><strong>{view === "recordings" ? "Recorded runs" : view === "compatibility" ? "Compatibility" : view === "designer" ? selectedDefinition.title : view === "runs" ? "Runs" : view === "replay" ? "Replay" : "Library"}</strong></div><div className="topbar-actions"><span className="secure-label"><span aria-hidden="true">⌁</span> {view === "recordings" ? "Read-only inspection" : "Owner-authoritative"}</span><button className="avatar-button" aria-label="Open settings" onClick={() => setView("compatibility")}>TW</button></div></header>
       {appMessage ? <div className="app-message" role="status"><span>{appMessage}</span><button aria-label="Dismiss message" onClick={() => setAppMessage(undefined)}>×</button></div> : null}
       <div className="content-shell">
-        {pendingRun ? <RunAdmissionPanel pending={pendingRun} onCancel={cancelPendingRun} onRetryCatalog={retryTargetCatalog} onPreflight={() => void preflightPendingRun()} onRetry={() => void retryPendingRun()} onRecover={() => void recoverPendingRun()} onInspect={inspectRetainedRun} onSubmit={() => void submitPendingRun()} onTargetChange={changePendingTarget} onProfileChange={changePendingProfile} onLiveConfirmation={(confirmed) => updatePendingRun((current) => ({ ...current, liveConfirmed: confirmed }))} /> : null}
+        {pendingRun ? <RunAdmissionPanel pending={pendingRun} onCancel={cancelPendingRun} onRetryCatalog={retryTargetCatalog} onPreflight={() => void preflightPendingRun()} onRetry={() => void retryPendingRun()} onRecover={() => void recoverPendingRun()} onInspect={inspectRetainedRun} onSubmit={() => void submitPendingRun()} onTargetChange={changePendingTarget} onProfileChange={changePendingProfile} onSeedDraftChange={changePendingSeedDraft} seedSupportClient={mode === "live" ? liveClient : undefined} onLiveConfirmation={(confirmed) => updatePendingRun((current) => ({ ...current, liveConfirmed: confirmed }))} /> : null}
         {view === "recordings" ? <RecordingsView {...recording} /> : null}
         {view === "library" ? <LibraryView definitions={definitions} loading={loadingDefinitions} catalogNotice={catalogNotice} onOpen={openDefinition} onCreate={createDraft} onRefresh={() => setCatalogRefresh((current) => current + 1)} /> : null}
         {view === "designer" ? <DesignerView client={client} catalog={definitions} definition={selectedDefinition} initialDocument={activeDocument} initialRawText={rawCandidateTexts[selectedDefinition.id]} mode={mode} onBack={() => setView("library")} onRun={(document) => void runDocument(document)} onRawTextChange={rememberRawCandidate} /> : null}
