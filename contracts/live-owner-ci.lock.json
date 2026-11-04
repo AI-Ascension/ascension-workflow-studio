@@ -1,11 +1,11 @@
 {
   "repository": "AI-Ascension/sts2-harness",
-  "revision": "3a641cc6669818e4709c3a58a68ef41302d8860a",
+  "revision": "942a0f4e4384dd6f33f2dfc80bc9006f518829f9",
   "gateway_repository": "AI-Ascension/sts2-gateway",
   "gateway_revision": "34464acc443fe4f683581668cdacd249d09f76cd",
   "mcp_repository": "AI-Ascension/sts2-mcp-server",
   "mcp_revision": "f7db2d4ac5346a9124fff0f1e121fc3a7979d3f4",
   "scope": "Synthetic authenticated live-owner journeys plus a production serve-workflow browser journey on one explicitly prebound admitted run; the durable owner journal is encrypted, while temporary fixture JSON stays in a private mode-0700 directory and is not logged",
   "baseline_admission": "contracts/accepted/phase1-integration.lock.json",
-  "note": "The Harness source pin advances to 3a641cc6669818e4709c3a58a68ef41302d8860a for the additive seed-v2 request and readback contract consumed by this client slice. This records contract provenance only; it does not claim an executed Studio runtime journey, browser persistence, native game or provider compatibility, or issue completion. The Gateway and MCP producer pins are unchanged."
+  "note": "CI-only owner pin qualification for Studio #214: Harness 942a0f4e4384dd6f33f2dfc80bc9006f518829f9 contains independently bounded management dispatch and request-lifecycle logs, absent from the previous 3a641cc6669818e4709c3a58a68ef41302d8860a pin. Gateway and MCP revisions and the historical Phase 1 admission baseline are unchanged. This candidate alone does not establish elimination of the intermittent reset, native-game/provider acceptance, or completion of #214/#820; validate full live-owner and browser CI at the exact candidate head before promotion."
 }
