@@ -434,7 +434,7 @@ describe("opt-in durable exact seeded request recovery", () => {
     }) as unknown as typeof fetch;
     const replacement = new OwnerApiClient({ token: " replacement-token ", actorScope: " owner.1 ", seededRecoveryStorage: storage, fetcher });
     expect(fetcher).not.toHaveBeenCalled(); // Loading/authentication is never automatic replay.
-    const recovery = replacement.recoverSeededRunV2("studio.recover.1");
+    const recovery = replacement.recoverSeededRunV2("studio.recover.1", bodies[0]!);
     // Preserve #264 normalized no-op authentication updates during validation.
     replacement.setToken("replacement-token");
     replacement.setActorScope("owner.1");
@@ -470,7 +470,7 @@ describe("opt-in durable exact seeded request recovery", () => {
     const original = [...storage.records];
     for (const override of [{ actorScope: "owner.2" }, { baseUrl: "/another/v1" }, { token: undefined }]) {
       const client = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher, ...override });
-      await expect(client.recoverSeededRunV2("studio.recover.3")).rejects.toThrow();
+      await expect(client.recoverSeededRunV2("studio.recover.3", original[0]![1])).rejects.toThrow();
     }
     expect(fetcher).toHaveBeenCalledTimes(2);
     const replacement = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher });
@@ -498,9 +498,22 @@ describe("opt-in durable exact seeded request recovery", () => {
       JSON.stringify({ ...JSON.parse(original), seed: { schema_version: "ascension.workflow-seed-request/v2", mode: "explicit", seed: "é".repeat(33) } }),
     ]) {
       storage.setItem(key, body);
-      await expect(replacement.recoverSeededRunV2("studio.recover.4")).rejects.toThrow();
+      await expect(replacement.recoverSeededRunV2("studio.recover.4", original)).rejects.toThrow();
       expect(storage.getItem(key)).toBe(body);
     }
+    // A schema-valid seed substitution is still a different operation and must
+    // fail before network dispatch, even when its stored JSON validates.
+    storage.setItem(key, JSON.stringify({
+      ...JSON.parse(original),
+      seed: { schema_version: "ascension.workflow-seed-request/v2", mode: "derive_once" },
+    }));
+    await expect(replacement.recoverSeededRunV2("studio.recover.4", original))
+      .rejects.toMatchObject({ code: "seeded_recovery_witness_mismatch" });
+    storage.setItem(key, original);
+    await expect(replacement.recoverSeededRunV2("studio.recover.4", ""))
+      .rejects.toMatchObject({ code: "seeded_recovery_witness_missing" });
+    await expect(replacement.recoverSeededRunV2("studio.recover.4", undefined as unknown as string))
+      .rejects.toMatchObject({ code: "seeded_recovery_witness_missing" });
     expect(fetcher).not.toHaveBeenCalled();
   });
 
@@ -515,12 +528,12 @@ describe("opt-in durable exact seeded request recovery", () => {
     const original = [...storage.records];
     for (const status of [401, 409, 500]) {
       const client = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher: async () => new Response("{}", { status }) });
-      await expect(client.recoverSeededRunV2("studio.recover.5")).rejects.toThrow();
+      await expect(client.recoverSeededRunV2("studio.recover.5", original[0]![1])).rejects.toThrow();
       expect([...storage.records]).toEqual(original);
     }
     const fetcher = vi.fn() as unknown as typeof fetch;
     const client = new OwnerApiClient({ token: "token", actorScope: "owner.1", seededRecoveryStorage: storage, fetcher });
-    const recovery = client.recoverSeededRunV2("studio.recover.5");
+    const recovery = client.recoverSeededRunV2("studio.recover.5", original[0]![1]);
     client.setToken("changed");
     client.setToken("token"); // A-to-B-to-A still fences the original generation.
     await expect(recovery).rejects.toMatchObject({ code: "seeded_session_changed" });
@@ -566,7 +579,7 @@ describe("seeded recovery retention lifecycle", () => {
       bodies.push(String(init?.body));
       return new Response(JSON.stringify(settled));
     } });
-    const recovered = await replacement.recoverSeededRunV2("studio.retention.2");
+    const recovered = await replacement.recoverSeededRunV2("studio.retention.2", bodies[0]!);
     expect(recovered).toEqual(settled);
     expect(bodies).toHaveLength(2);
     expect(bodies[1]).toBe(bodies[0]);
