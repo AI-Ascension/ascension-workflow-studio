@@ -27,4 +27,7 @@ export interface SeededRunV2Client {
     options: SeededRunSubmissionOptionsV2,
   ): Promise<SeededRunSubmissionResponseV2>;
   readSeedBindingV2(workflowRunId: string): Promise<SeedBindingReadbackV2>;
+  /** Explicit replay only, after separate trusted evidence of the exact original
+   * serialized request body. Never derive this witness from recovery storage. */
+  recoverSeededRunV2(requestId: string, independentlyWitnessedOriginalBody: string): Promise<SeededRunSubmissionResponseV2>;
 }
