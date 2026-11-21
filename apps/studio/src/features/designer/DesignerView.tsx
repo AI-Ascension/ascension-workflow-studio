@@ -8,10 +8,9 @@ import {
   useState,
 } from "react";
 import {
-  applyNodeChanges,
   type Connection,
   type Edge,
-  type NodeChange,
+  type NodeChangeset,
 } from "@xyflow/react";
 
 import {
@@ -413,9 +412,9 @@ export function DesignerView({ client, catalog, definition, initialDocument, ini
 
   // Stable handler identities keep React Flow's memoized node/edge wrappers
   // from re-rendering on every unrelated state update (P2-089).
-  const onNodesChange = useCallback((changes: NodeChange<FlowNode>[]): void => {
+  const onNodesChange = useCallback((changes: NodeChangeset<FlowNode>): void => {
     setNodes((currentNodes) => {
-      const nextNodes = applyNodeChanges(changes, currentNodes);
+      const nextNodes = changes.applyTo(currentNodes);
       const positions: Record<string, { x: number; y: number }> = {};
       for (const node of nextNodes) {
         positions[node.id] = node.position;
