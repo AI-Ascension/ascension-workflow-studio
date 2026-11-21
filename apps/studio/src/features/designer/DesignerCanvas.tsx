@@ -8,7 +8,7 @@ import {
   type Connection,
   type Edge,
   type Node,
-  type NodeChange,
+  type NodeChangeset,
 } from "@xyflow/react";
 
 import { type StudioFlowNode } from "@studio/document";
@@ -27,7 +27,7 @@ export interface DesignerCanvasProps {
   edges: CanvasEdge[];
   viewport: { x: number; y: number; zoom: number } | undefined;
   onMoveEnd: (event: unknown, viewport: { x: number; y: number; zoom: number }) => void;
-  onNodesChange: (changes: NodeChange<FlowNode>[]) => void;
+  onNodesChange: (changes: NodeChangeset<FlowNode>) => void;
   onConnect: (connection: Connection) => void;
   onNodeClick: (event: ReactMouseEvent, node: FlowNode) => void;
   onEdgeClick: (event: ReactMouseEvent, edge: Edge) => void;
